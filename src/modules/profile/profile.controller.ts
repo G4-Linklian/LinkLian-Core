@@ -17,7 +17,7 @@ export class ProfileController {
   @ApiParam({ name: 'userId', description: 'User Sys ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
-  getUserProfile(@Param('userId', ParseIntPipe) userId: number) {
+  async getUserProfile(@Param('userId', ParseIntPipe) userId: number) {
     return this.profileService.getUserProfile(userId);
   }
 
@@ -35,5 +35,17 @@ export class ProfileController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.profileService.updateProfile(userId, dto);
+  }
+
+  /**
+   * Get teaching schedule for educator
+   */
+  @Get(':userId/teaching-schedule')
+  @ApiOperation({ summary: 'Get teaching schedule for educator' })
+  @ApiParam({ name: 'userId', description: 'User Sys ID', example: 1 })
+  @ApiResponse({ status: 200, description: 'Teaching schedule retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getTeachingSchedule(@Param('userId', ParseIntPipe) userId: number) {
+    return this.profileService.getTeachingSchedule(userId);
   }
 }

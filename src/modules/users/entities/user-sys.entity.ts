@@ -55,9 +55,17 @@ export class UserSys {
   @Column({ name: 'flag_valid', default: true })
   flag_valid: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ 
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
   created_at: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @Column({ 
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
   updated_at: Date;
 }

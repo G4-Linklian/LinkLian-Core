@@ -17,6 +17,18 @@ export class GetPostsInClassDto {
   @IsOptional()
   @IsString()
   type?: string;
+
+  @ApiPropertyOptional({ description: 'Offset for pagination', example: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  offset?: number = 0;
+
+  @ApiPropertyOptional({ description: 'Limit for pagination', example: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  limit?: number = 10;
 }
 
 /**
@@ -30,15 +42,27 @@ export class AttachmentDto {
   @ApiProperty({ description: 'File type (e.g., pdf, image, video)', example: 'pdf' })
   @IsString()
   file_type: string;
+
+  @ApiPropertyOptional({ description: 'Original file name', example: 'my-document.pdf' })
+  @IsOptional()
+  @IsString()
+  original_name?: string;
 }
 
 /**
  * DTO for creating a new post in class
  */
 export class CreatePostDto {
-  @ApiProperty({ description: 'Section ID', example: 1 })
+  @ApiPropertyOptional({ description: 'Single Section ID (deprecated, use section_ids)', example: 1 })
+  @IsOptional()
   @IsInt()
-  section_id: number;
+  section_id?: number;
+
+  @ApiPropertyOptional({ description: 'Multiple Section IDs', example: [1, 2, 3], type: [Number] })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  section_ids?: number[];
 
   @ApiPropertyOptional({ description: 'Post title', example: 'Week 1 Assignment' })
   @IsOptional()
@@ -81,6 +105,13 @@ export class UpdatePostDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @ApiPropertyOptional({ description: 'Attachments to add/replace', type: [AttachmentDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
 }
 
 /**
@@ -104,5 +135,6 @@ export interface PostWithUserResponse {
   attachments: Array<{
     file_url: string;
     file_type: string;
+    original_name?: string;
   }>;
 }

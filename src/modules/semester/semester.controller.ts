@@ -18,14 +18,14 @@ export class SemesterController {
   // ========== Semester Endpoints ==========
 
   /**
-   * Get semester by ID
+   * Get active semesters (open + close) sorted by semester name
+   * NOTE: This must be placed BEFORE @Get(':id') to avoid route conflict
    */
-  @Get(':id')
-  @ApiOperation({ summary: 'Get semester by ID' })
-  @ApiResponse({ status: 200, description: 'Semester found' })
-  @ApiResponse({ status: 404, description: 'Semester not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.semesterService.findById(id);
+  @Get('active/list')
+  @ApiOperation({ summary: 'Get active semesters sorted by semester name' })
+  @ApiResponse({ status: 200, description: 'Active semesters retrieved successfully' })
+  getActiveSemesters() {
+    return this.semesterService.getActiveSemesters();
   }
 
   /**
@@ -37,6 +37,17 @@ export class SemesterController {
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
   search(@Query() dto: SearchSemesterDto) {
     return this.semesterService.search(dto);
+  }
+
+  /**
+   * Get semester by ID
+   */
+  @Get(':id')
+  @ApiOperation({ summary: 'Get semester by ID' })
+  @ApiResponse({ status: 200, description: 'Semester found' })
+  @ApiResponse({ status: 404, description: 'Semester not found' })
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.semesterService.findById(id);
   }
 
   /**
