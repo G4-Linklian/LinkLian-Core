@@ -115,6 +115,33 @@ export class UpdatePostDto {
 }
 
 /**
+ * DTO for searching posts by keyword
+ */
+export class SearchPostDto {
+  @ApiPropertyOptional({ description: 'Section ID to filter posts', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  section_id?: number;
+
+  @ApiProperty({ description: 'Keyword to search', example: 'homework' })
+  @IsString()
+  keyword: string;
+
+  @ApiPropertyOptional({ description: 'Limit', example: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  limit?: number = 50;
+
+  @ApiPropertyOptional({ description: 'Offset', example: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  offset?: number = 0;
+}
+
+/**
  * Response interface for post with user info
  */
 export interface PostWithUserResponse {

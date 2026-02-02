@@ -2,12 +2,22 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, Headers, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { PostService } from './post.service';
-import { CreatePostDto, UpdatePostDto, GetPostsInClassDto } from './dto/post.dto';
+import { CreatePostDto, UpdatePostDto, GetPostsInClassDto, SearchPostDto } from './dto/post.dto';
 
 @ApiTags('Social Feed - Post')
 @Controller('social-feed/post')
 export class PostController {
   constructor(private readonly postService: PostService) {}
+
+  /**
+   * Search posts by keyword
+   */
+  @Get('search')
+  @ApiOperation({ summary: 'Search posts by keyword' })
+  @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
+  searchPosts(@Query() dto: SearchPostDto) {
+    return this.postService.searchPosts(dto);
+  }
 
   /**
    * Get posts in a class/section

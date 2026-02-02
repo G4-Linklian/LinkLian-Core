@@ -5,7 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { PostContent } from './entities/post-content.entity';
 import { PostInClass } from './entities/post-in-class.entity';
 import { PostAttachment } from './entities/post-attachment.entity';
-import { CreatePostDto, UpdatePostDto, GetPostsInClassDto, PostWithUserResponse } from './dto/post.dto';
+import { CreatePostDto, UpdatePostDto, GetPostsInClassDto, SearchPostDto } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 
 @Injectable()
@@ -61,10 +61,9 @@ export class PostService {
   }
 
   /**
-   * Get posts in a class/section with optional filter by post type
-   * Returns posts with user info (handles anonymous posts)
+   * Get posts in a class (section)
    */
-  async getPostsInClass(dto: GetPostsInClassDto): Promise<PostWithUserResponse[]> {
+  async getPostsInClass(dto: GetPostsInClassDto): Promise<any[]> {
     console.log(`[GetPostsInClass] Fetching posts for section_id: ${dto.section_id}`);
     
     const values: any[] = [dto.section_id];
@@ -730,6 +729,114 @@ export class PostService {
       }
       console.error('Error deleting post:', error);
       throw new InternalServerErrorException('Error deleting post');
+    }
+  }
+
+  /**
+   * Search posts by keyword
+   * Searches in title and content
+   */
+  async searchPosts(dto: SearchPostDto) {
+    const { section_id, keyword, limit = 50, offset = 0 } = dto;
+
+    if (!keyword || keyword.trim() === '') {
+      return [];
+    }
+
+    let query = `
+      SELECT 
+        p.post_id,
+        p.section_id,
+        pc.post_content_id,
+        pc.title,
+        pc.content,
+        pc.post_type,
+        pc.is_anonymous,
+        pc.created_at,
+        pc.user_sys_id,
+        TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) as _display_name,
+        u.email,
+        u.profile_pic,
+        r.role_name,
+        COALESCE(
+          (
+            SELECT json_agg(
+              jsonb_build_object(
+                'file_url', pa.file_url,
+                'file_type', pa.file_type,
+                'original_name', pa.original_name
+              )
+            )
+            FROM post_attachment pa
+            WHERE pa.post_content_id = pc.post_content_id
+              AND pa.flag_valid = true
+          ),
+          '[]'::json
+        ) AS attachments
+      FROM post_in_class p
+      JOIN post_content pc ON p.post_content_id = pc.post_content_id
+      LEFT JOIN user_sys u ON pc.user_sys_id = u.user_sys_id
+      LEFT JOIN role r ON u.role_id = r.role_id
+      WHERE p.flag_valid = true
+        AND pc.flag_valid = true
+        AND (pc.title ILIKE $1 OR pc.content ILIKE $1)
+    `;
+
+    const values: any[] = [`%${keyword.trim()}%`];
+    let paramIndex = 2;
+
+    if (section_id) {
+      query += ` AND p.section_id = $${paramIndex++}`;
+      values.push(section_id);
+    }
+
+    query += ` ORDER BY pc.created_at DESC`;
+    query += ` LIMIT $${paramIndex++}`;
+    values.push(limit);
+    query += ` OFFSET $${paramIndex++}`;
+    values.push(offset);
+
+    try {
+      const result = await this.dataSource.query(query, values);
+      
+      // Transform result to handle anonymous posts (same as getPostsInClass)
+      return result.map((row: any) => {
+        const isAnonymous = row.is_anonymous;
+        const userSysId = Number(row.user_sys_id);
+        const sectionId = row.section_id;
+
+        // Generate anonymous name if is_anonymous is true
+        const displayName = isAnonymous
+          ? generateAnonymousName(userSysId, sectionId)
+          : row._display_name;
+
+        return {
+          post_id: row.post_id,
+          post_content_id: row.post_content_id,
+          title: row.title,
+          content: row.content,
+          post_type: row.post_type,
+          is_anonymous: isAnonymous,
+          created_at: row.created_at,
+          user: isAnonymous ? {
+            user_sys_id: userSysId,
+            email: null,
+            profile_pic: null,
+            display_name: displayName,
+            role_name: null,
+          } : {
+            user_sys_id: userSysId,
+            email: row.email,
+            profile_pic: row.profile_pic,
+            display_name: row._display_name,
+            role_name: row.role_name,
+          },
+          attachments: row.attachments || [],
+        };
+      });
+    } catch (error) {
+      console.error('Error searching posts:', error);
+      throw new InternalServerErrorException('Error searching posts');
     }
   }
 }

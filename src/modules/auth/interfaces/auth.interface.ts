@@ -23,6 +23,7 @@ export interface ILoginResponse {
   otp_session_id?: string;
   otp_expires_at?: string;
   _dev_otp?: string;
+  require_reset_password?: boolean; // ✅ เพิ่มนี้
 }
 
 /**

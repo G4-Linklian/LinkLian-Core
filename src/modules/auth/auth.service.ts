@@ -378,7 +378,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         message: 'Please reset your password',
         user_id: user.user_sys_id,
         require_reset_password: true,
-      } as any;
+      };
     }
 
     // ✅ Check if user has valid token (skip OTP)
@@ -548,11 +548,15 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const tempPassword = generateInitialPassword();
     const hashedPassword = await hashPassword(tempPassword);
 
+    // 🔥 Update password + set flag_valid = false (ต้อง reset password ก่อนใช้งาน)
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
+      flag_valid: false, // ✅ เพิ่มนี้
+      updated_at: new Date(),
     });
 
     console.log(`📧 [AUTH] Temporary password for ${email}: ${tempPassword}`);
+    console.log(`🔑 [AUTH] flag_valid set to false - require password reset`);
 
     // ส่งอีเมล Temporary Password
     try {
