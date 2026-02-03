@@ -5,11 +5,8 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
  * Enum for education type
  */
 export enum EduType {
-  KINDERGARTEN = 'อนุบาล',
-  PRIMARY = 'ประถมศึกษา',
-  SECONDARY = 'มัธยมศึกษา',
-  VOCATIONAL = 'อาชีวศึกษา',
-  HIGHER = 'อุดมศึกษา',
+  HIGH = 'high school',
+  UNI = 'bachelor',
 }
 
 @Entity('edu_level')

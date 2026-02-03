@@ -169,10 +169,10 @@ export class UsersService {
     try {
       const result = await this.dataSource.query(query, values);
       // Remove password from results
-      return result.map((user: any) => {
+      return { data: result.map((user: any) => {
         const { password, ...rest } = user;
         return rest;
-      });
+      }) };
     } catch (error) {
       console.error('Error fetching users:', error);
       throw new InternalServerErrorException('Server Error');

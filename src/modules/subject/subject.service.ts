@@ -125,7 +125,7 @@ export class SubjectService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error fetching subjects:', error);
       throw new InternalServerErrorException('Internal server error');

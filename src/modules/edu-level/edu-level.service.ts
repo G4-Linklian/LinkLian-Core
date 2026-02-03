@@ -78,7 +78,7 @@ export class EduLevelService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data : result };
     } catch (err) {
       console.error('Error fetching edu levels:', err);
       throw new InternalServerErrorException('Error fetching edu levels');
@@ -167,7 +167,7 @@ export class EduLevelService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (err) {
       console.error('Error fetching edu levels:', err);
       throw new InternalServerErrorException('Error fetching edu levels');

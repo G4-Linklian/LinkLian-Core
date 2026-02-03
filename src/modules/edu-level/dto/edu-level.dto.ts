@@ -10,6 +10,7 @@ import { EduType } from '../entities/edu-level.entity';
 export class SearchEduLevelMasterDto {
   @ApiPropertyOptional({ description: 'Edu Level ID', example: 1 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   edu_lev_id?: number;
@@ -26,7 +27,14 @@ export class SearchEduLevelMasterDto {
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      return value.toLowerCase() === 'true';
+    }
+    return false;
+  })
   @IsBoolean()
   flag_valid?: boolean;
 }
@@ -37,6 +45,7 @@ export class SearchEduLevelMasterDto {
 export class SearchEduLevelDto {
   @ApiPropertyOptional({ description: 'Edu Level ID', example: 1 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   edu_lev_id?: number;
@@ -53,25 +62,35 @@ export class SearchEduLevelDto {
 
   @ApiPropertyOptional({ description: 'Program ID', example: 1 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   program_id?: number;
 
   @ApiPropertyOptional({ description: 'Institution ID', example: 1 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   inst_id?: number;
 
   @ApiPropertyOptional({ description: 'Parent ID', example: 1 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   parent_id?: number;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      return value.toLowerCase() === 'true';
+    }
+    return false;
+  })
   @IsBoolean()
   flag_valid?: boolean;
 
@@ -87,12 +106,14 @@ export class SearchEduLevelDto {
 
   @ApiPropertyOptional({ description: 'Limit', example: 10 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   limit?: number;
 
   @ApiPropertyOptional({ description: 'Offset', example: 0 })
   @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
   @Type(() => Number)
   @IsInt()
   offset?: number;

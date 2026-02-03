@@ -122,7 +122,7 @@ export class LearningAreaService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (err) {
       console.error('Error fetching learning areas:', err);
       throw new InternalServerErrorException('Error fetching learning areas');

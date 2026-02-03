@@ -95,7 +95,7 @@ export class BuildingService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (err) {
       console.error('Error executing search building query:', err);
       throw new InternalServerErrorException('Error fetching buildings');

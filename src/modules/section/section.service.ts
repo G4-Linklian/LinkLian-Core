@@ -137,7 +137,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error querying sections:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -252,7 +252,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error querying sections:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -322,7 +322,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error querying schedules:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -474,7 +474,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error querying section educators:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -571,7 +571,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (error) {
       console.error('Error querying enrollments:', error);
       throw new InternalServerErrorException('Internal server error');
