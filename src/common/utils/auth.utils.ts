@@ -3,8 +3,8 @@ import * as bcrypt from 'bcrypt';
 
 /**
  * Generate random initial password
- * Format: LINKLIIAN + 8 random characters (uppercase, lowercase, numbers)
- * Example: LINKLIIANBs4Uds
+ * Format: LINKLIAN + 8 random characters (uppercase, lowercase, numbers)
+ * Example: LINKLIANBs4Uds12
  */
 export function generateInitialPassword(): string {
   const prefix = 'LINKLIAN';
@@ -15,21 +15,45 @@ export function generateInitialPassword(): string {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   
-  return prefix + randomPart;
+  const password = prefix + randomPart;
+  console.log('🔑 [AUTH UTILS] Generated initial password:', password);
+  
+  return password;
 }
 
 /**
- * Hash password with bcrypt salt
+ * Hash password with bcrypt + custom salt from env
+ * Flow: password + SALTNUMBER → bcrypt.hash()
  */
 export async function hashPasswordWithSalt(password: string): Promise<string> {
-  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
-  return bcrypt.hash(password, saltRounds);
+  const customSalt = process.env.SALTNUMBER || '';
+  const saltedPassword = password + customSalt;
+  const bcryptRounds = 10;
+  
+  console.log('🔐 [AUTH UTILS] hashPasswordWithSalt');
+  console.log('🔐 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
+  
+  const hash = await bcrypt.hash(saltedPassword, bcryptRounds);
+  
+  console.log('✅ [AUTH UTILS] Password hashed with custom salt');
+  
+  return hash;
 }
 
 /**
  * Compare password with hash
+ * Flow: password + SALTNUMBER → bcrypt.compare()
  */
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
-  return bcrypt.compare(password+saltRounds, hash);
+  const customSalt = process.env.SALTNUMBER || '';
+  const saltedPassword = password + customSalt;
+  
+  console.log('🔍 [AUTH UTILS] comparePassword');
+  console.log('🔍 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
+  
+  const isValid = await bcrypt.compare(saltedPassword, hash);
+  
+  console.log('🔍 [AUTH UTILS] Compare result:', isValid ? '✅ MATCH' : '❌ NOT MATCH');
+  
+  return isValid;
 }
