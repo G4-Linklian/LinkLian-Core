@@ -22,7 +22,7 @@ export function generateInitialPassword(): string {
  * Hash password with bcrypt salt
  */
 export async function hashPasswordWithSalt(password: string): Promise<string> {
-  const saltRounds = 10;
+  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
   return bcrypt.hash(password, saltRounds);
 }
 
@@ -30,5 +30,6 @@ export async function hashPasswordWithSalt(password: string): Promise<string> {
  * Compare password with hash
  */
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
+  return bcrypt.compare(password+saltRounds, hash);
 }
