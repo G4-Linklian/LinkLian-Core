@@ -16,7 +16,7 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
   const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
-  return bcrypt.compare(password + saltRounds, hashedPassword);
+  return bcrypt.compare(password+saltRounds, hashedPassword);
 }
 
 /**
