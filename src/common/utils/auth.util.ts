@@ -7,7 +7,7 @@ import { SignOptions } from 'jsonwebtoken';
  * Hash password with bcrypt
  */
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10;
+  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
   return bcrypt.hash(password, saltRounds);
 }
 
@@ -15,7 +15,8 @@ export async function hashPassword(password: string): Promise<string> {
  * Verify password against hashed password
  */
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
+  return bcrypt.compare(password + saltRounds, hashedPassword);
 }
 
 /**

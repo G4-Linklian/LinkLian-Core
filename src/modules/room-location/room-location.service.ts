@@ -101,7 +101,7 @@ export class RoomLocationService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data: result };
     } catch (err) {
       console.error('Error executing search room location query:', err);
       throw new InternalServerErrorException('Error fetching room locations');
