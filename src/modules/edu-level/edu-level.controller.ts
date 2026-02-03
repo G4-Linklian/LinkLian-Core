@@ -19,17 +19,6 @@ export class EduLevelController {
   // ========== EduLevel Master Endpoints ==========
 
   /**
-   * Get edu_level by ID
-   */
-  @Get(':id')
-  @ApiOperation({ summary: 'Get edu_level by ID' })
-  @ApiResponse({ status: 200, description: 'EduLevel found' })
-  @ApiResponse({ status: 404, description: 'EduLevel not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.eduLevelService.findById(id);
-  }
-
-  /**
    * Search edu_level master data with filters
    */
   @Get('master')
@@ -49,6 +38,17 @@ export class EduLevelController {
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
   search(@Query() dto: SearchEduLevelDto) {
     return this.eduLevelService.search(dto);
+  }
+
+  /**
+   * Get edu_level by ID
+   */
+  @Get(':id')
+  @ApiOperation({ summary: 'Get edu_level by ID' })
+  @ApiResponse({ status: 200, description: 'EduLevel found' })
+  @ApiResponse({ status: 404, description: 'EduLevel not found' })
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.eduLevelService.findById(id);
   }
 
   /**

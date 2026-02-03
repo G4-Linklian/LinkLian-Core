@@ -36,7 +36,7 @@ export class SemesterService {
       throw new NotFoundException('Semester not found');
     }
 
-    return semester;
+    return { data : semester };
   }
 
   /**
@@ -119,7 +119,7 @@ export class SemesterService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
+      return { data : result };
     } catch (error) {
       console.error('Error fetching semesters:', error);
       throw new InternalServerErrorException('Error fetching data');
