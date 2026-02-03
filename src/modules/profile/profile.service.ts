@@ -12,7 +12,7 @@ export class ProfileService {
    * - High school: level, classroom, study_plan
    * - University: level, classroom, faculty, program (department)
    */
-  async getUserProfile(userId: number): Promise<ProfileResponse> {
+  async getUserProfile(userId: number): Promise<any> {
     // Query basic profile info with role
     const profileQuery = `
       SELECT 
@@ -74,9 +74,13 @@ export class ProfileService {
       const roleGroup = isTeacher ? 'teacher' : 'student';
 
       return {
-        ...profile,
-        role_group: roleGroup,
-        education,
+        success: true,
+        message: 'Profile retrieved successfully',
+        data: {
+          ...profile,
+          role_group: roleGroup,
+          education,
+        },
       };
 
     } catch (error) {
@@ -247,6 +251,51 @@ export class ProfileService {
       }
       console.error('Error updating profile:', error);
       throw new InternalServerErrorException('Internal server error');
+    }
+  }
+
+  /**
+   * Get teaching schedule for educators
+   */
+  async getTeachingSchedule(educatorId: number): Promise<any> {
+    const query = `
+      SELECT 
+        ss.schedule_id,
+        ss.day_of_week,
+        ss.start_time,
+        ss.end_time,
+        s.section_name,
+        subj.subject_code,
+        subj.name_th AS subject_name,
+        ss.room_location_id
+      FROM section_schedule ss
+      LEFT JOIN section s ON s.section_id = ss.section_id
+      LEFT JOIN section_educator se ON se.section_id = s.section_id
+      LEFT JOIN subject subj ON subj.subject_id = s.subject_id
+      WHERE se.educator_id = $1 AND se.flag_valid = true AND ss.flag_valid = true
+      ORDER BY ss.day_of_week ASC, ss.start_time ASC
+    `;
+
+    try {
+      const schedules = await this.dataSource.query(query, [educatorId]);
+      
+      return {
+        success: true,
+        message: 'Teaching schedules retrieved successfully',
+        data: schedules.map(schedule => ({
+          scheduleId: schedule.schedule_id,
+          dayOfWeek: schedule.day_of_week,
+          startTime: schedule.start_time,
+          endTime: schedule.end_time,
+          className: schedule.section_name,
+          subjectName: schedule.subject_name,
+          subjectCode: schedule.subject_code,
+          building: schedule.room_location_id || '-',
+        })),
+      };
+    } catch (error) {
+      console.error('Error fetching teaching schedule:', error);
+      throw new InternalServerErrorException('Failed to fetch teaching schedule');
     }
   }
 }

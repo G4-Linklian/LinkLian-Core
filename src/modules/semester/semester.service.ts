@@ -127,6 +127,34 @@ export class SemesterService {
   }
 
   /**
+   * Get active semesters (open + close) sorted by semester name (year then term)
+   * Returns semesters with status 'open' or 'close', ordered from oldest to newest
+   * Sorts by extracting year and term from semester name (e.g., "1/2567", "2/2567")
+   */
+  async getActiveSemesters() {
+    try {
+      const query = `
+        SELECT 
+          *,
+          CAST(SUBSTRING(semester FROM '/([0-9]+)$') AS INTEGER) as year_numeric,
+          CAST(SUBSTRING(semester FROM '^([0-9]+)/') AS INTEGER) as term_numeric
+        FROM semester
+        WHERE status IN ('open', 'close')
+          AND flag_valid = true
+        ORDER BY 
+          year_numeric ASC,
+          term_numeric ASC
+      `;
+
+      const result = await this.dataSource.query(query);
+      return result;
+    } catch (error) {
+      console.error('Error fetching active semesters:', error);
+      throw new InternalServerErrorException('Error fetching active semesters');
+    }
+  }
+
+  /**
    * Create a new semester
    */
   async create(dto: CreateSemesterDto) {

@@ -41,12 +41,21 @@ export class FileStorageService {
       await containerClient.setAccessPolicy('blob');
 
       // Upload all files in parallel
+      console.log(`[FileStorage] Uploading ${files.length} files to ${containerName}/${folderName}`);
+      
       const uploadPromises = files.map(async (file): Promise<UploadedFileResponse> => {
         // Extract file extension from original name
         const fileExtension = file.originalname.split('.').pop();
         
         // Generate unique blob name with UUID
         const blobName = `${folderName}/${uuidv4()}.${fileExtension}`;
+        
+        console.log(`[FileStorage] Uploading file:`, {
+          originalName: file.originalname,
+          blobName: blobName,
+          size: file.size,
+          mimetype: file.mimetype
+        });
         
         // Get block blob client
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -56,15 +65,21 @@ export class FileStorageService {
           blobHTTPHeaders: { blobContentType: file.mimetype }
         });
 
-        return {
+        const result = {
           originalName: file.originalname,
           fileType: fileExtension || '',
           fileName: blobName,
           fileUrl: blockBlobClient.url
         };
+        
+        console.log(`[FileStorage] File uploaded successfully:`, result);
+        
+        return result;
       });
 
       const uploadResult = await Promise.all(uploadPromises);
+      
+      console.log(`[FileStorage] All files uploaded. Total: ${uploadResult.length}`);
 
       return {
         success: true,
@@ -147,5 +162,63 @@ export class FileStorageService {
       console.error('Delete failed:', error);
       throw new InternalServerErrorException('Delete failed');
     }
+  }
+
+  /**
+   * Get file metadata from Azure Blob Storage
+   * @param containerName - The name of the blob container
+   * @param fileName - The file path (blob name)
+   * @returns File metadata including size
+   */
+  async getFileMetadata(containerName: string, fileName: string): Promise<{ size: number; contentType: string }> {
+    try {
+      const containerClient = blobServiceClient.getContainerClient(containerName);
+      const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+      
+      const properties = await blockBlobClient.getProperties();
+      
+      return {
+        size: properties.contentLength || 0,
+        contentType: properties.contentType || 'application/octet-stream'
+      };
+    } catch (error) {
+      console.error(`[FileStorage] Error getting file metadata:`, error);
+      return { size: 0, contentType: 'application/octet-stream' };
+    }
+  }
+
+  /**
+   * Get multiple files metadata in parallel
+   * @param containerName - The name of the blob container
+   * @param fileNames - Array of file paths
+   * @returns Array of file metadata
+   */
+  async getMultipleFileMetadata(
+    containerName: string, 
+    fileNames: string[]
+  ): Promise<Array<{ fileName: string; size: number; contentType: string }>> {
+    const containerClient = blobServiceClient.getContainerClient(containerName);
+    
+    const metadataPromises = fileNames.map(async (fileName) => {
+      try {
+        const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+        const properties = await blockBlobClient.getProperties();
+        
+        return {
+          fileName,
+          size: properties.contentLength || 0,
+          contentType: properties.contentType || 'application/octet-stream'
+        };
+      } catch (error) {
+        console.error(`[FileStorage] Error getting metadata for ${fileName}:`, error);
+        return {
+          fileName,
+          size: 0,
+          contentType: 'application/octet-stream'
+        };
+      }
+    });
+    
+    return Promise.all(metadataPromises);
   }
 }

@@ -1,32 +1,32 @@
 // profile.dto.ts
-import { IsString, IsOptional, Matches } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * DTO for updating user profile
  */
 export class UpdateProfileDto {
-  @ApiPropertyOptional({ description: 'First Name', example: 'John' })
+  @ApiPropertyOptional({ description: 'First Name', example: 'John', required: false })
   @IsOptional()
   @IsString()
   first_name?: string;
 
-  @ApiPropertyOptional({ description: 'Middle Name', example: 'William' })
+  @ApiPropertyOptional({ description: 'Middle Name', example: 'David', required: false })
   @IsOptional()
   @IsString()
   middle_name?: string;
 
-  @ApiPropertyOptional({ description: 'Last Name', example: 'Doe' })
+  @ApiPropertyOptional({ description: 'Last Name', example: 'Doe', required: false })
   @IsOptional()
   @IsString()
   last_name?: string;
 
-  @ApiPropertyOptional({ description: 'Phone (Thai format: 0XXXXXXXXX)', example: '0812345678' })
+  @ApiPropertyOptional({ description: 'Phone number', example: '0812345678', required: false })
+  @IsOptional()
   @IsString()
-  @Matches(/^(0)[0-9]{9}$/, { message: 'Invalid phone number format. Must be 10 digits starting with 0' })
-  phone: string;
+  phone?: string;
 
-  @ApiPropertyOptional({ description: 'Profile Picture URL', example: 'https://example.com/pic.jpg' })
+  @ApiPropertyOptional({ description: 'Profile Picture URL', example: 'https://example.com/pic.jpg', required: false })
   @IsOptional()
   @IsString()
   profile_pic?: string;
@@ -39,7 +39,7 @@ export interface EducationInfo {
   type: 'high_school' | 'university';
   level: string;
   classroom: string;
-  study_plan?: string | null;
+  study_plan?: string;
   faculty?: string;
   program?: string;
   display: string;

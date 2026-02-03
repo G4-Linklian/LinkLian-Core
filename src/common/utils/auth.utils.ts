@@ -3,15 +3,19 @@ import * as bcrypt from 'bcrypt';
 
 /**
  * Generate random initial password
- * Returns 8 character alphanumeric string
+ * Format: LINKLIIAN + 8 random characters (uppercase, lowercase, numbers)
+ * Example: LINKLIIANBs4Uds
  */
 export function generateInitialPassword(): string {
+  const prefix = 'LINKLIAN';
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let password = '';
+  let randomPart = '';
+  
   for (let i = 0; i < 8; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return password;
+  
+  return prefix + randomPart;
 }
 
 /**

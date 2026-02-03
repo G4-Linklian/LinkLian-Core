@@ -19,6 +19,8 @@ import { SubjectModule } from './modules/subject/subject.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { BookmarkModule } from './modules/bookmark/bookmark.module';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
         },
       },
     }),
+    AuthModule,
     InstitutionModule,
     RoleModule,
     AdminModule,
@@ -57,6 +60,7 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
     UsersModule,
     ProfileModule,
     SocialFeedModule,
+    BookmarkModule,  // ✅ เพิ่ม BookmarkModule
   ],
 
   controllers: [AppController],

@@ -16,6 +16,16 @@ export class GetClassFeedDto {
   @Type(() => Number)
   @IsInt()
   semester_id: number;
+
+  @ApiProperty({ description: 'Offset for pagination', example: 0, required: false })
+  @Type(() => Number)
+  @IsInt()
+  offset?: number = 0;
+
+  @ApiProperty({ description: 'Limit for pagination', example: 10, required: false })
+  @Type(() => Number)
+  @IsInt()
+  limit?: number = 10;
 }
 
 /**
@@ -50,12 +60,6 @@ export interface StudentClassFeedResponse {
   subject_name_en: string;
   learning_area_name: string | null;
   semester: string;
-  edu_type: string | null;
-  level_num: number | null;
-  level_name: string | null;
-  class_name: string | null;
-  program_type: string | null;
-  study_plan_name: string | null;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }
