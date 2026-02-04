@@ -44,6 +44,7 @@ export class SemesterService {
    */
   async search(dto: SearchSemesterDto) {
     // Validate that at least one search parameter is provided
+    console.log('Search DTO:', dto);
     const hasInput = dto.semester_id || dto.inst_id ||
                      dto.semester || dto.start_date ||
                      dto.end_date || dto.status ||
@@ -119,6 +120,8 @@ export class SemesterService {
 
     try {
       const result = await this.dataSource.query(query, values);
+      console.log('Search result:', {data : result});
+    
       return { data : result };
     } catch (error) {
       console.error('Error fetching semesters:', error);
@@ -147,7 +150,7 @@ export class SemesterService {
       `;
 
       const result = await this.dataSource.query(query);
-      return result;
+      return {data : result};
     } catch (error) {
       console.error('Error fetching active semesters:', error);
       throw new InternalServerErrorException('Error fetching active semesters');
