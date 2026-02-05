@@ -13,11 +13,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      mode: replicated
-      replicas: 3
-      restart_policy:
-        condition: on-failure
+    # deploy:
+    #   mode: replicated
+    #   replicas: 3
+    #   restart_policy:
+    #     condition: on-failure
     networks:
       - linklian-net
     
