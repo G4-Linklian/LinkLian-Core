@@ -1,0 +1,15 @@
+{
+  "name": "semester-tests",
+  "scripts": {
+    "test:semester": "jest --testPathPattern=semester",
+    "test:semester:watch": "jest --testPathPattern=semester --watch",
+    "test:semester:coverage": "jest --testPathPattern=semester --coverage",
+    "test:semester:service": "jest semester.service.spec.ts",
+    "test:semester:controller": "jest semester.controller.spec.ts", 
+    "test:semester:dto": "jest semester.dto.spec.ts",
+    "test:semester:e2e": "jest semester.e2e-spec.ts",
+    "test:semester:unit": "jest semester.service.spec.ts semester.controller.spec.ts semester.dto.spec.ts",
+    "test:semester:verbose": "jest --testPathPattern=semester --verbose",
+    "test:semester:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --testPathPattern=semester --runInBand"
+  }
+}
