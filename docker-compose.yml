@@ -5,19 +5,19 @@ services:
     build: .
     expose:
       - "5400"
-    # env_file:
-    #   - .env
+    env_file:
+      - .env
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5400/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    # deploy:
-    #   mode: replicated
-    #   replicas: 3
-    #   restart_policy:
-    #     condition: on-failure
+    deploy:
+      mode: replicated
+      replicas: 3
+      restart_policy:
+        condition: on-failure
     networks:
       - linklian-net
     
