@@ -91,7 +91,7 @@ export class PostController {
     return this.postService.updatePost(
       parsedUserId, 
       0, 
-      { title: body.title, content: body.content, attachments: body.attachments },
+      body,
       body.post_content_id
     );
   }

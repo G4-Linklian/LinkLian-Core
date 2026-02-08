@@ -98,6 +98,11 @@ export class PostService {
         TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS _display_name,
         r.role_name          AS _role_name,
 
+        -- Assignment fields
+        a.due_date           AS due_date,
+        a.max_score          AS max_score,
+        a.is_group           AS is_group,
+
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
@@ -126,6 +131,10 @@ export class PostService {
       LEFT JOIN post_attachment pa
         ON pc.post_content_id = pa.post_content_id
 
+      LEFT JOIN assignment a
+        ON a.post_id = pic.post_id
+       AND a.flag_valid = true
+
       WHERE ${conditions}
 
       GROUP BY
@@ -137,7 +146,10 @@ export class PostService {
         u.last_name,
         u.email,
         u.profile_pic,
-        r.role_name
+        r.role_name,
+        a.due_date,
+        a.max_score,
+        a.is_group
 
       ORDER BY pc.created_at DESC
       LIMIT $${idx} OFFSET $${idx + 1}
@@ -176,6 +188,10 @@ export class PostService {
           post_type: row.post_type,
           is_anonymous: isAnonymous,
           created_at: row.created_at,
+          // Assignment fields
+          due_date: row.due_date || null,
+          max_score: row.max_score ? Number(row.max_score) : null,
+          is_group: row.is_group ?? null,
           // For anonymous: still return user object but with generated name and null sensitive info
           user: isAnonymous ? {
             user_sys_id: userSysId,
@@ -345,6 +361,109 @@ export class PostService {
         console.log(`[CreatePost] No attachments to process`);
       }
 
+      // 4. Handle assignment-specific logic if post_type is 'assignment'
+      const assignmentIds: number[] = [];
+      const createdGroups: any[] = [];
+      
+      if (dto.post_type === 'assignment') {
+        console.log(`[CreatePost] Processing assignment creation`);
+        
+        // Validate assignment fields
+        if (!dto.due_date) {
+          throw new BadRequestException('due_date is required for assignments');
+        }
+        
+        if (dto.is_group === undefined || dto.is_group === null) {
+          throw new BadRequestException('is_group is required for assignments');
+        }
+
+        // Create assignment records for each post_id
+        for (const postId of postIds) {
+          const assignmentQuery = `
+            INSERT INTO assignment
+              (post_id, due_date, max_score, is_group, flag_valid)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING assignment_id, post_id, due_date, max_score, is_group, flag_valid
+          `;
+
+          const assignmentResult = await queryRunner.query(assignmentQuery, [
+            postId,
+            dto.due_date,
+            dto.max_score || null,
+            dto.is_group,
+            true, // ✅ Set flag_valid = true
+          ]);
+
+          const assignment = assignmentResult[0];
+          assignmentIds.push(assignment.assignment_id);
+          
+          console.log(`[CreatePost] Assignment created:`, assignment);
+
+          // Handle group creation based on is_group flag
+          if (!dto.is_group) {
+            // ===== งานเดี่ยว: สร้าง student_group + group_member ให้นักเรียนทุกคนใน section =====
+            console.log(`[CreatePost] Individual assignment - auto-creating groups for all enrolled students`);
+
+            // Find the section_id for this post_id
+            const sectionForPost = sectionIds[postIds.indexOf(postId)];
+
+            // Get all enrolled students in this section
+            const enrolledStudents = await queryRunner.query(`
+              SELECT student_id
+              FROM enrollment
+              WHERE section_id = $1
+                AND flag_valid = true
+            `, [sectionForPost]);
+
+            console.log(`[CreatePost] Found ${enrolledStudents.length} enrolled students in section ${sectionForPost}`);
+
+            // Create 1 student_group per student (งานเดี่ยว = 1 คน 1 กลุ่ม)
+            for (const student of enrolledStudents) {
+              const studentId = student.student_id;
+
+              // Create student_group
+              const groupResult = await queryRunner.query(`
+                INSERT INTO student_group
+                  (assignment_id, group_name,flag_valid)
+                VALUES ($1, $2,$3)
+                RETURNING group_id, assignment_id, group_name
+              `, [
+                assignment.assignment_id,
+                `individual_student_${studentId}`,
+                true
+              ]);
+
+              const createdGroup = groupResult[0];
+
+              // Create group_member
+              await queryRunner.query(`
+                INSERT INTO group_member
+                  (group_id, user_sys_id,flag_valid)
+                VALUES ($1, $2,$3)
+              `, [
+                createdGroup.group_id,
+                studentId,
+                true
+              ]);
+
+              createdGroups.push({
+                group_id: createdGroup.group_id,
+                group_name: createdGroup.group_name,
+                member_ids: [studentId],
+              });
+            }
+
+            console.log(`[CreatePost] Created ${enrolledStudents.length} individual groups`);
+
+          } else {
+            // ===== งานกลุ่ม: ไม่สร้าง group ตอนนี้ นักเรียนจะมาสร้างเองทีหลัง =====
+            console.log(`[CreatePost] Group assignment - students will create groups later`);
+          }
+        }
+        
+        console.log(`[CreatePost] Assignment processing completed`);
+      }
+
       await queryRunner.commitTransaction();
 
       return {
@@ -360,6 +479,15 @@ export class PostService {
           created_at: postContent.created_at,
           section_ids: sectionIds,
           attachments,
+          ...(dto.post_type === 'assignment' && {
+            assignment: {
+              assignment_ids: assignmentIds,
+              due_date: dto.due_date,
+              max_score: dto.max_score,
+              is_group: dto.is_group,
+              groups: createdGroups.length > 0 ? createdGroups : undefined,
+            },
+          }),
         },
         warnings: warnings.length > 0 ? warnings : null,
       };
@@ -534,6 +662,43 @@ export class PostService {
           console.log(`[UpdatePost] Attachments updated successfully`);
         } catch (attachmentError) {
           console.error(`[UpdatePost] Error updating attachments:`, attachmentError);
+        }
+      }
+
+      // Handle assignment field updates (due_date, max_score, is_group)
+      if (dto.due_date !== undefined || dto.max_score !== undefined || dto.is_group !== undefined) {
+        console.log(`[UpdatePost] Updating assignment fields: due_date=${dto.due_date}, max_score=${dto.max_score}, is_group=${dto.is_group}`);
+        
+        const setClauses: string[] = [];
+        const assignmentValues: any[] = [];
+        let aIdx = 1;
+
+        if (dto.due_date !== undefined) {
+          setClauses.push(`due_date = $${aIdx++}`);
+          assignmentValues.push(dto.due_date);
+        }
+        if (dto.max_score !== undefined) {
+          setClauses.push(`max_score = $${aIdx++}`);
+          assignmentValues.push(dto.max_score);
+        }
+        if (dto.is_group !== undefined) {
+          setClauses.push(`is_group = $${aIdx++}`);
+          assignmentValues.push(dto.is_group);
+        }
+
+        if (setClauses.length > 0) {
+          assignmentValues.push(targetPostContentId);
+          const assignmentQuery = `
+            UPDATE assignment a
+            SET ${setClauses.join(', ')}
+            FROM post_in_class pic
+            WHERE pic.post_content_id = $${aIdx}
+              AND a.post_id = pic.post_id
+              AND a.flag_valid = true
+          `;
+          
+          await this.dataSource.query(assignmentQuery, assignmentValues);
+          console.log(`[UpdatePost] Assignment fields updated successfully`);
         }
       }
 
