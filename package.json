@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "sca": "npm audit --audit-level=high",
+    "sca": "npm audit --audit-level=high --fund=false",
     "ci": "npm run lint && npm run test:cov && npm run sca && npm run build"
   },
   "dependencies": {
