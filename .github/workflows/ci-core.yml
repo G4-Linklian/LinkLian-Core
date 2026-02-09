@@ -1,0 +1,161 @@
+name: LINKLIAN-CORE CI
+
+on:
+  push:
+    branches: ["main", "staging"]
+    paths:
+      - "src/**"
+      - "test/**"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "tsconfig.build.json"
+      - "eslint.config.mjs"
+      - ".github/workflows/ci-core.yml"
+      - "go-ci.sh"
+  pull_request:
+    branches: ["main", "staging"]
+    paths:
+      - "src/**"
+      - "test/**"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "tsconfig.build.json"
+      - "eslint.config.mjs"
+      - ".github/workflows/ci-core.yml"
+      - "go-ci.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ci-core-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: Lint (go-ci.sh lint)
+    runs-on: ubuntu-latest
+    needs: [secret-scan]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Run lint
+        shell: bash
+        run: bash ./go-ci.sh lint
+
+  unit-test:
+    name: Unit Test + Coverage (go-ci.sh test)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Run unit tests (coverage)
+        shell: bash
+        run: bash ./go-ci.sh test
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-coverage
+          path: coverage
+          if-no-files-found: warn
+          retention-days: 7
+
+  sca:
+    name: SCA (dependency review + go-ci.sh sca)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # dependency-review-action for PR
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: npm audit (High+)
+        shell: bash
+        run: bash ./go-ci.sh sca
+
+  build:
+    name: Build (go-ci.sh build)
+    runs-on: ubuntu-latest
+    needs: [unit-test, sca]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Build app
+        shell: bash
+        run: bash ./go-ci.sh build
+
+  docker-build:
+    name: Docker Build (go-ci.sh docker)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      # go-ci.sh docker จะทำ npm ci เอง แล้วค่อย docker compose/build
+      - name: Docker build/compose (+ optional trivy)
+        shell: bash
+        run: bash ./go-ci.sh docker
