@@ -16,8 +16,9 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User found' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.usersService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -27,8 +28,9 @@ export class UsersController {
   @ApiOperation({ summary: 'Search users with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchUserSysDto) {
-    return this.usersService.search(dto);
+  async search(@Query() dto: SearchUserSysDto) {
+    const data = await this.usersService.search(dto);
+    return { success : true , data };
   }
 
   /**
@@ -39,8 +41,9 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Email already in use' })
-  create(@Body() dto: CreateUserSysDto) {
-    return this.usersService.create(dto);
+  async create(@Body() dto: CreateUserSysDto) {
+    const user_sys_id = await this.usersService.create(dto);
+    return { success: true, message: 'User created successfully', data: { user_sys_id } };
   }
 
   /**
@@ -51,8 +54,9 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 409, description: 'Email or code already in use' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserSysDto) {
-    return this.usersService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserSysDto) {
+    const data = await this.usersService.update(id, dto);
+    return { success: true, message: "User updated successfully", data };
   }
 
   /**
@@ -62,7 +66,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Delete user by ID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.usersService.delete(id);
+    return { success: true, message: "User deleted successfully", data };
   }
 }

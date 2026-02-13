@@ -4,23 +4,23 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity('section')
 export class Section {
   @PrimaryGeneratedColumn('increment')
-  section_id: number;
+  section_id!: number;
 
   @Column({ name: 'subject_id' })
-  subject_id: number;
+  subject_id!: number;
 
   @Column({ name: 'semester_id' })
-  semester_id: number;
+  semester_id!: number;
 
   @Column({ name: 'section_name', type: 'varchar', nullable: true })
-  section_name: string | null;
+  section_name!: string | null;
 
   @Column({ name: 'flag_valid', default: true })
-  flag_valid: boolean;
+  flag_valid!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  updated_at!: Date;
 }

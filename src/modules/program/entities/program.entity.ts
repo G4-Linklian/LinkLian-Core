@@ -6,7 +6,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
  */
 export enum TreeType {
   ROOT = 'root',
-  BRANCH = 'branch',
+  TWIG = 'twig',
   LEAF = 'leaf',
 }
 
@@ -23,32 +23,40 @@ export enum ProgramType {
 @Entity('program')
 export class Program {
   @PrimaryGeneratedColumn('increment')
-  program_id: number;
+  program_id!: number;
 
   @Column({ name: 'inst_id' })
-  inst_id: number;
+  inst_id!: number;
 
   @Column({ name: 'program_name' })
-  program_name: string;
+  program_name!: string;
 
   @Column({ name: 'program_type' })
-  program_type: string;
+  program_type!: string;
 
   @Column({ name: 'parent_id', type: 'int', nullable: true })
-  parent_id: number | null;
+  parent_id?: number | null;
 
   @Column({ name: 'remark', type: 'text', nullable: true })
-  remark: string | null;
+  remark?: string | null;
 
   @Column({ name: 'tree_type' })
-  tree_type: string;
+  tree_type!: string;
 
   @Column({ name: 'flag_valid', default: true })
-  flag_valid: boolean;
+  flag_valid!: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
+  created_at?: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
+  updated_at?: Date;
 }

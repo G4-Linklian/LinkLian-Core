@@ -16,8 +16,9 @@ export class BuildingController {
   @ApiOperation({ summary: 'Get building by ID' })
   @ApiResponse({ status: 200, description: 'Building found' })
   @ApiResponse({ status: 404, description: 'Building not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.buildingService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.buildingService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -27,8 +28,9 @@ export class BuildingController {
   @ApiOperation({ summary: 'Search buildings with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Buildings retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchBuildingDto) {
-    return this.buildingService.search(dto);
+  async search(@Query() dto: SearchBuildingDto) {
+    const data = await this.buildingService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -38,8 +40,9 @@ export class BuildingController {
   @ApiOperation({ summary: 'Create a new building' })
   @ApiResponse({ status: 201, description: 'Building created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
-  create(@Body() dto: CreateBuildingDto) {
-    return this.buildingService.create(dto);
+  async create(@Body() dto: CreateBuildingDto) {
+    const data = await this.buildingService.create(dto);
+    return { success: true, message: 'Building created successfully!', data };
   }
 
   /**
@@ -49,8 +52,9 @@ export class BuildingController {
   @ApiOperation({ summary: 'Update building by ID' })
   @ApiResponse({ status: 200, description: 'Building updated successfully' })
   @ApiResponse({ status: 404, description: 'Building not found' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBuildingDto) {
-    return this.buildingService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBuildingDto) {
+    const data = await this.buildingService.update(id, dto);
+    return { success: true, message: 'Building updated successfully!', data };
   }
 
   /**
@@ -60,7 +64,8 @@ export class BuildingController {
   @ApiOperation({ summary: 'Delete building by ID' })
   @ApiResponse({ status: 200, description: 'Building deleted successfully' })
   @ApiResponse({ status: 404, description: 'Building not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.buildingService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.buildingService.delete(id);
+    return { success: true, message: 'Building deleted successfully!', data };
   }
 }
