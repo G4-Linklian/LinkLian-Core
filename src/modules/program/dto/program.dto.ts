@@ -103,19 +103,19 @@ export class SearchProgramDto {
 export class CreateProgramDto {
   @ApiProperty({ description: 'Institution ID', example: 1 })
   @IsInt()
-  inst_id: number;
+  inst_id!: number;
 
   @ApiProperty({ description: 'Program Name', example: 'Computer Science' })
   @IsString()
-  program_name: string;
+  program_name!: string;
 
   @ApiProperty({ description: 'Program Type', example: 'major', enum: ProgramType })
   @IsString()
-  program_type: string;
+  program_type!: string;
 
   @ApiProperty({ description: 'Tree Type', example: 'leaf', enum: TreeType })
   @IsString()
-  tree_type: string;
+  tree_type!: string;
 
   @ApiPropertyOptional({ description: 'Parent ID', example: 1 })
   @IsOptional()
@@ -169,11 +169,11 @@ export class UpdateProgramDto {
 export class CreateProgramUserSysDto {
   @ApiProperty({ description: 'Program ID', example: 1 })
   @IsInt()
-  program_id: number;
+  program_id!: number;
 
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 }
 
 /**
@@ -182,7 +182,7 @@ export class CreateProgramUserSysDto {
 export class UpdateProgramUserSysDto {
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 
   @ApiPropertyOptional({ description: 'Program ID', example: 1 })
   @IsOptional()
@@ -201,9 +201,9 @@ export class UpdateProgramUserSysDto {
 export class DeleteProgramUserSysDto {
   @ApiProperty({ description: 'Program ID', example: 1 })
   @IsInt()
-  program_id: number;
+  program_id!: number;
 
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 }

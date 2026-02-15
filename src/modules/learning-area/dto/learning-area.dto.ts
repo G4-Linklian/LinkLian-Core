@@ -62,6 +62,11 @@ export class SearchLearningAreaDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Keyword search for learning_area_name, remark', example: 'Math' })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
 }
 
 /**
@@ -70,11 +75,11 @@ export class SearchLearningAreaDto {
 export class CreateLearningAreaDto {
   @ApiProperty({ description: 'Institution ID', example: 1 })
   @IsInt()
-  inst_id: number;
+  inst_id!: number;
 
   @ApiProperty({ description: 'Learning Area Name', example: 'Mathematics' })
   @IsString()
-  learning_area_name: string;
+  learning_area_name!: string;
 
   @ApiPropertyOptional({ description: 'Remark', example: 'Core subject' })
   @IsOptional()
@@ -113,11 +118,11 @@ export class UpdateLearningAreaDto {
 export class CreateLearningAreaUserSysDto {
   @ApiProperty({ description: 'Learning Area ID', example: 1 })
   @IsInt()
-  learning_area_id: number;
+  learning_area_id!: number;
 
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 }
 
 /**
@@ -126,11 +131,11 @@ export class CreateLearningAreaUserSysDto {
 export class UpdateLearningAreaUserSysDto {
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 
   @ApiProperty({ description: 'Learning Area ID', example: 1 })
   @IsInt()
-  learning_area_id: number;
+  learning_area_id!: number;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()
@@ -144,9 +149,9 @@ export class UpdateLearningAreaUserSysDto {
 export class DeleteLearningAreaUserSysDto {
   @ApiProperty({ description: 'Learning Area ID', example: 1 })
   @IsInt()
-  learning_area_id: number;
+  learning_area_id!: number;
 
   @ApiProperty({ description: 'User Sys ID', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 }

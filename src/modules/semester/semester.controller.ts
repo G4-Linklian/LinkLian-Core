@@ -24,8 +24,9 @@ export class SemesterController {
   @Get('active/list')
   @ApiOperation({ summary: 'Get active semesters sorted by semester name' })
   @ApiResponse({ status: 200, description: 'Active semesters retrieved successfully' })
-  getActiveSemesters() {
-    return this.semesterService.getActiveSemesters();
+  async getActiveSemesters() {
+    const data = await this.semesterService.getActiveSemesters();
+    return { success: true, data };
   }
 
   /**
@@ -35,8 +36,9 @@ export class SemesterController {
   @ApiOperation({ summary: 'Search semesters with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Semesters retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchSemesterDto) {
-    return this.semesterService.search(dto);
+  async search(@Query() dto: SearchSemesterDto) {
+    const data = await this.semesterService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -46,8 +48,9 @@ export class SemesterController {
   @ApiOperation({ summary: 'Get semester by ID' })
   @ApiResponse({ status: 200, description: 'Semester found' })
   @ApiResponse({ status: 404, description: 'Semester not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.semesterService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.semesterService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -58,9 +61,10 @@ export class SemesterController {
   @ApiResponse({ status: 201, description: 'Semester created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Duplicate semester' })
-  create(@Body() dto: CreateSemesterDto) {
-    return this.semesterService.create(dto);
-  }
+  async create(@Body() dto: CreateSemesterDto) {
+    const data = await this.semesterService.create(dto);
+    return { success: true, message: "Semester created successfully", data };
+  } 
 
   /**
    * Update an existing semester
@@ -70,8 +74,9 @@ export class SemesterController {
   @ApiResponse({ status: 200, description: 'Semester updated successfully' })
   @ApiResponse({ status: 404, description: 'Semester not found' })
   @ApiResponse({ status: 409, description: 'Duplicate semester' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSemesterDto) {
-    return this.semesterService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSemesterDto) {
+    const data = await this.semesterService.update(id, dto);
+    return { success: true, message: "Semester updated successfully", data };
   }
 
   /**
@@ -81,8 +86,9 @@ export class SemesterController {
   @ApiOperation({ summary: 'Delete semester by ID' })
   @ApiResponse({ status: 200, description: 'Semester deleted successfully' })
   @ApiResponse({ status: 404, description: 'Semester not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.semesterService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.semesterService.delete(id);
+    return { success: true, message: "Semester deleted successfully" };
   }
 
   // ========== Semester Subject Normalize Endpoints ==========
@@ -95,8 +101,9 @@ export class SemesterController {
   @ApiResponse({ status: 201, description: 'Record created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Record already exists' })
-  createSemesterSubject(@Body() dto: CreateSemesterSubjectDto) {
-    return this.semesterService.createSemesterSubject(dto);
+  async createSemesterSubject(@Body() dto: CreateSemesterSubjectDto) {
+    const data = await this.semesterService.createSemesterSubject(dto);
+    return { success: true, message: "Record created successfully", data };
   }
 
   /**
@@ -106,7 +113,8 @@ export class SemesterController {
   @ApiOperation({ summary: 'Delete semester subject normalize record' })
   @ApiResponse({ status: 200, description: 'Record deleted successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  deleteSemesterSubject(@Body() dto: DeleteSemesterSubjectDto) {
-    return this.semesterService.deleteSemesterSubject(dto);
+  async deleteSemesterSubject(@Body() dto: DeleteSemesterSubjectDto) {
+    await this.semesterService.deleteSemesterSubject(dto);
+    return { success: true, message: "Record deleted successfully" };
   }
 }

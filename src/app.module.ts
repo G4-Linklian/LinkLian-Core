@@ -22,6 +22,7 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
 
 @Module({
   imports: [
@@ -62,7 +63,8 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
     ProfileModule,
     SocialFeedModule,
     AssignmentModule,       // ✅ เพิ่ม AssignmentModule
-    BookmarkModule,  // ✅ เพิ่ม BookmarkModule
+    BookmarkModule,
+    RegisSummaryModule,
   ],
 
   controllers: [AppController],

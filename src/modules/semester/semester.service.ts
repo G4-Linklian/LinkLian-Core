@@ -36,7 +36,7 @@ export class SemesterService {
       throw new NotFoundException('Semester not found');
     }
 
-    return { data : semester };
+    return semester;
   }
 
   /**
@@ -120,9 +120,7 @@ export class SemesterService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      console.log('Search result:', {data : result});
-    
-      return { data : result };
+      return result;
     } catch (error) {
       console.error('Error fetching semesters:', error);
       throw new InternalServerErrorException('Error fetching data');
@@ -179,7 +177,7 @@ export class SemesterService {
       });
 
       const savedSemester = await this.semesterRepo.save(newSemester);
-      return { message: 'Semester created successfully!', data: savedSemester };
+      return savedSemester;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -224,7 +222,7 @@ export class SemesterService {
         where: { semester_id: id }
       });
 
-      return { message: 'Semester updated successfully!', data: updatedSemester };
+      return updatedSemester;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -250,7 +248,7 @@ export class SemesterService {
 
     try {
       await this.semesterRepo.delete({ semester_id: id });
-      return { message: 'Semester deleted successfully!', data: existingSemester };
+      return existingSemester;
 
     } catch (error) {
       console.error('Error deleting semester:', error);
@@ -276,7 +274,7 @@ export class SemesterService {
       });
 
       const savedRecord = await this.semesterSubjectRepo.save(newRecord);
-      return { message: 'Semester subject created successfully!', data: savedRecord };
+      return savedRecord;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -303,7 +301,7 @@ export class SemesterService {
         throw new NotFoundException('Semester subject record not found');
       }
 
-      return { message: 'Semester subject deleted successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

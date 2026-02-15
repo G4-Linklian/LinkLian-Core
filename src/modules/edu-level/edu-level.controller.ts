@@ -25,8 +25,10 @@ export class EduLevelController {
   @ApiOperation({ summary: 'Search edu_level master data with filters' })
   @ApiResponse({ status: 200, description: 'EduLevels retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  searchMaster(@Query() dto: SearchEduLevelMasterDto) {
-    return this.eduLevelService.searchMaster(dto);
+  async searchMaster(@Query() dto: SearchEduLevelMasterDto) {
+    const data = await this.eduLevelService.searchMaster(dto);
+    return { success: true, data };
+    // return this.eduLevelService.searchMaster(dto);
   }
 
   /**
@@ -36,8 +38,9 @@ export class EduLevelController {
   @ApiOperation({ summary: 'Search edu_level with program joins and pagination' })
   @ApiResponse({ status: 200, description: 'EduLevels retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchEduLevelDto) {
-    return this.eduLevelService.search(dto);
+  async search(@Query() dto: SearchEduLevelDto) {
+    const data = await this.eduLevelService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -47,8 +50,9 @@ export class EduLevelController {
   @ApiOperation({ summary: 'Get edu_level by ID' })
   @ApiResponse({ status: 200, description: 'EduLevel found' })
   @ApiResponse({ status: 404, description: 'EduLevel not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.eduLevelService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.eduLevelService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -59,8 +63,9 @@ export class EduLevelController {
   @ApiResponse({ status: 201, description: 'EduLevel created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'EduLevel already exists' })
-  create(@Body() dto: CreateEduLevelDto) {
-    return this.eduLevelService.create(dto);
+  async create(@Body() dto: CreateEduLevelDto) {
+    const data = await this.eduLevelService.create(dto);
+    return { success: true, message: "EduLevel created successfully", data };
   }
 
   /**
@@ -71,8 +76,9 @@ export class EduLevelController {
   @ApiResponse({ status: 200, description: 'EduLevel updated successfully' })
   @ApiResponse({ status: 404, description: 'EduLevel not found' })
   @ApiResponse({ status: 409, description: 'EduLevel already exists' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateEduLevelDto) {
-    return this.eduLevelService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateEduLevelDto) {
+    const data = await this.eduLevelService.update(id, dto);
+    return { success: true, message: "EduLevel updated successfully", data };
   }
 
   /**
@@ -82,8 +88,9 @@ export class EduLevelController {
   @ApiOperation({ summary: 'Delete edu_level by ID' })
   @ApiResponse({ status: 200, description: 'EduLevel deleted successfully' })
   @ApiResponse({ status: 404, description: 'EduLevel not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.eduLevelService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.eduLevelService.delete(id);
+    return { success: true, message: "EduLevel deleted successfully", data };
   }
 
   // ========== EduLevel Normalize Endpoints ==========
@@ -96,8 +103,9 @@ export class EduLevelController {
   @ApiResponse({ status: 201, description: 'EduLevel normalize created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Record already exists' })
-  createNormalize(@Body() dto: CreateEduLevelNormDto) {
-    return this.eduLevelService.createNormalize(dto);
+  async createNormalize(@Body() dto: CreateEduLevelNormDto) {
+    const data = await this.eduLevelService.createNormalize(dto);
+    return { success: true, message: "EduLevel normalize created successfully", data };
   }
 
   /**
@@ -107,18 +115,20 @@ export class EduLevelController {
   @ApiOperation({ summary: 'Update edu_level_program_normalize to set flag_valid = true' })
   @ApiResponse({ status: 200, description: 'EduLevel normalize updated successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  updateNormalize(@Body() dto: CreateEduLevelNormDto) {
-    return this.eduLevelService.updateNormalize(dto);
+  async updateNormalize(@Body() dto: CreateEduLevelNormDto) {
+    const data = await this.eduLevelService.updateNormalize(dto);
+    return { success: true, message: "EduLevel normalize updated successfully", data };
   }
 
   /**
    * Delete edu_level_program_normalize record
    */
-  @Delete('normalize')
+  @Post('normalize/delete')
   @ApiOperation({ summary: 'Delete edu_level_program_normalize record' })
   @ApiResponse({ status: 200, description: 'EduLevel normalize deleted successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  deleteNormalize(@Body() dto: DeleteEduLevelNormDto) {
-    return this.eduLevelService.deleteNormalize(dto);
+  async deleteNormalize(@Body() dto: DeleteEduLevelNormDto) {
+    const data = await this.eduLevelService.deleteNormalize(dto);
+    return { success: true, message: "EduLevel normalize deleted successfully", data };
   }
 }
