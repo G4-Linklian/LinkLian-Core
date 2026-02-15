@@ -60,6 +60,7 @@ export interface StudentClassFeedResponse {
   subject_name_en: string;
   learning_area_name: string | null;
   semester: string;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }
@@ -76,6 +77,7 @@ export interface TeacherClassFeedResponse {
   learning_area_name: string | null;
   semester: string;
   position: string | null;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }

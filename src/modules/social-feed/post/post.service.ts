@@ -95,7 +95,7 @@ export class PostService {
         u.user_sys_id        AS _user_sys_id,
         u.email              AS _email,
         u.profile_pic        AS _profile_pic,
-        TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS _display_name,
+        TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS _display_name,
         r.role_name          AS _role_name,
 
         -- Assignment fields
@@ -391,7 +391,7 @@ export class PostService {
             dto.due_date,
             dto.max_score || null,
             dto.is_group,
-            true, // ✅ Set flag_valid = true
+            true, // Set flag_valid = true
           ]);
 
           const assignment = assignmentResult[0];
@@ -795,13 +795,15 @@ export class PostService {
   }
 
   /**
-   * Soft delete post and its attachments (only owner can delete)
+   * Hard delete post and its related data (only owner can delete)
    * Supports both post_id and post_content_id
+   * Deletes: assignment -> post_attachment -> post_in_class -> post_content
    */
   async deletePost(userId: number, postId: number, postContentId?: number) {
     try {
       let targetPostContentId: number;
       let ownerUserId: number;
+      let targetPostIds: number[] = [];
 
       console.log(`[DeletePost] userId=${userId}, postId=${postId}, postContentId=${postContentId}`);
 
@@ -810,7 +812,7 @@ export class PostService {
         const ownerQuery = `
           SELECT pc.user_sys_id, pc.post_content_id
           FROM post_content pc
-          WHERE pc.post_content_id = $1 AND pc.flag_valid = true
+          WHERE pc.post_content_id = $1
         `;
         const result = await this.dataSource.query(ownerQuery, [postContentId]);
         console.log(`[DeletePost] Query result:`, result);
@@ -820,16 +822,45 @@ export class PostService {
         }
         targetPostContentId = postContentId;
         ownerUserId = Number(result[0].user_sys_id);
+
+        // Get all post_ids associated with this post_content_id
+        const postIdsQuery = `
+          SELECT post_id FROM post_in_class WHERE post_content_id = $1
+        `;
+        const postIdsResult = await this.dataSource.query(postIdsQuery, [postContentId]);
+        targetPostIds = postIdsResult.map((row: any) => row.post_id);
+
       } else if (postId && postId > 0) {
         // Check ownership by postId
-        const owner = await this.findPostOwner(postId);
-        targetPostContentId = owner.post_content_id;
-        ownerUserId = Number(owner.user_sys_id);
+        const ownerQuery = `
+          SELECT pc.user_sys_id, pc.post_content_id
+          FROM post_in_class pic
+          JOIN post_content pc ON pic.post_content_id = pc.post_content_id
+          WHERE pic.post_id = $1
+        `;
+        const result = await this.dataSource.query(ownerQuery, [postId]);
+        
+        if (!result.length) {
+          throw new NotFoundException('Post not found');
+        }
+        
+        targetPostContentId = result[0].post_content_id;
+        ownerUserId = Number(result[0].user_sys_id);
+        targetPostIds = [postId];
+
+        // Get all other post_ids with same post_content_id
+        const allPostIdsQuery = `
+          SELECT post_id FROM post_in_class WHERE post_content_id = $1
+        `;
+        const allPostIdsResult = await this.dataSource.query(allPostIdsQuery, [targetPostContentId]);
+        targetPostIds = allPostIdsResult.map((row: any) => row.post_id);
+
       } else {
         throw new BadRequestException('post_id or post_content_id is required');
       }
 
       console.log(`[DeletePost] targetPostContentId=${targetPostContentId}, ownerUserId=${ownerUserId}, requesterId=${userId}`);
+      console.log(`[DeletePost] targetPostIds=${targetPostIds}`);
 
       // Check ownership
       if (ownerUserId !== userId) {
@@ -842,43 +873,79 @@ export class PostService {
       await queryRunner.startTransaction();
 
       try {
-        // 1. Soft delete post_in_class
-        if (postId && postId > 0) {
-          await queryRunner.query(`
-            UPDATE post_in_class
-            SET flag_valid = false
-            WHERE post_id = $1
-          `, [postId]);
-        } else {
-          await queryRunner.query(`
-            UPDATE post_in_class
-            SET flag_valid = false
-            WHERE post_content_id = $1
-          `, [targetPostContentId]);
+        // 1. Get all assignment_ids for these post_ids
+        let assignmentIds: number[] = [];
+        if (targetPostIds.length > 0) {
+          const assignmentIdsQuery = `
+            SELECT assignment_id FROM assignment WHERE post_id = ANY($1)
+          `;
+          const assignmentIdsResult = await queryRunner.query(assignmentIdsQuery, [targetPostIds]);
+          assignmentIds = assignmentIdsResult.map((row: any) => row.assignment_id);
+          console.log(`[DeletePost] Found assignment_ids: ${assignmentIds}`);
         }
 
-        // 2. Soft delete attachments
-        await queryRunner.query(`
-          UPDATE post_attachment
-          SET flag_valid = false
-          WHERE post_content_id = $1 AND flag_valid = true
-        `, [targetPostContentId]);
+        // 2. Delete group_member for all groups in these assignments
+        if (assignmentIds.length > 0) {
+          await queryRunner.query(`
+            DELETE FROM group_member
+            WHERE group_id IN (
+              SELECT group_id FROM student_group WHERE assignment_id = ANY($1)
+            )
+          `, [assignmentIds]);
+          console.log(`[DeletePost] Deleted group_member records for assignment_ids: ${assignmentIds}`);
+        }
 
-        // 3. Soft delete post_content
+        // 3. Delete student_group for these assignments
+        if (assignmentIds.length > 0) {
+          await queryRunner.query(`
+            DELETE FROM student_group
+            WHERE assignment_id = ANY($1)
+          `, [assignmentIds]);
+          console.log(`[DeletePost] Deleted student_group records for assignment_ids: ${assignmentIds}`);
+        }
+
+        // 4. Delete assignments
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(`
+            DELETE FROM assignment
+            WHERE post_id = ANY($1)
+          `, [targetPostIds]);
+          console.log(`[DeletePost] Deleted assignments for post_ids: ${targetPostIds}`);
+        }
+
+        // 5. Delete attachments
         await queryRunner.query(`
-          UPDATE post_content
-          SET flag_valid = false, updated_at = NOW()
+          DELETE FROM post_attachment
           WHERE post_content_id = $1
         `, [targetPostContentId]);
+        console.log(`[DeletePost] Deleted attachments for post_content_id: ${targetPostContentId}`);
+
+        // 6. Delete all post_in_class records
+        await queryRunner.query(`
+          DELETE FROM post_in_class
+          WHERE post_content_id = $1
+        `, [targetPostContentId]);
+        console.log(`[DeletePost] Deleted post_in_class records for post_content_id: ${targetPostContentId}`);
+
+        // 7. Delete post_content
+        await queryRunner.query(`
+          DELETE FROM post_content
+          WHERE post_content_id = $1
+        `, [targetPostContentId]);
+        console.log(`[DeletePost] Deleted post_content: ${targetPostContentId}`);
 
         await queryRunner.commitTransaction();
 
-        console.log(`[DeletePost] Post deleted successfully`);
+        console.log(`[DeletePost] Post hard deleted successfully`);
 
         return { 
           success: true,
           message: 'Post deleted successfully', 
-          data: { post_id: postId, post_content_id: targetPostContentId } 
+          data: { 
+            post_id: postId, 
+            post_content_id: targetPostContentId,
+            deleted_post_ids: targetPostIds
+          } 
         };
 
       } catch (error) {

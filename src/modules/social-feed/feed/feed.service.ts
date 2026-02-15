@@ -21,6 +21,12 @@ export class FeedService {
         sub.name_en AS subject_name_en,
         la.learning_area_name,
         sem.semester,
+        (
+          SELECT COUNT(*)::int
+          FROM enrollment e
+          WHERE e.section_id = s.section_id
+            AND e.flag_valid = true
+        ) AS student_count,
         
         -- ใช้ section_name โดยตรง ไม่ต้อง join edu_level
         s.section_name AS display_class_name,
@@ -123,6 +129,12 @@ export class FeedService {
         la.learning_area_name,
         sem.semester,
         se.position,
+        (
+          SELECT COUNT(*)::int
+          FROM enrollment e
+          WHERE e.section_id = s.section_id
+            AND e.flag_valid = true
+        ) AS student_count,
 
         -- ใช้ section_name โดยตรง ไม่ต้อง join edu_level
         s.section_name AS display_class_name,
