@@ -21,6 +21,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { CommunityModule } from './modules/community/community.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
     ProfileModule,
     SocialFeedModule,
     BookmarkModule,  // ✅ เพิ่ม BookmarkModule
+    CommunityModule,
   ],
 
   controllers: [AppController],
