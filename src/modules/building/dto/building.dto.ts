@@ -51,6 +51,10 @@ export class SearchBuildingDto {
   @Type(() => Number) 
   @IsInt() 
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Keyword search for building_no, building_name, remark', example: 'Main' })
+  @IsOptional() @IsString()
+  keyword?: string;
 }
 
 /**
@@ -58,13 +62,13 @@ export class SearchBuildingDto {
  */
 export class CreateBuildingDto {
   @ApiProperty({ description: 'Institution ID', example: 1 })
-  @IsInt() inst_id: number;
+  @IsInt() inst_id!: number;
 
   @ApiProperty({ description: 'Building number', example: 'A1' })
-  @IsString() building_no: string;
+  @IsString() building_no!: string;
 
   @ApiProperty({ description: 'Building name', example: 'Main Building' })
-  @IsString() building_name: string;
+  @IsString() building_name!: string;
 
   @ApiPropertyOptional({ description: 'Remark', example: 'Near parking lot' })
   @IsOptional() @IsString() remark?: string;

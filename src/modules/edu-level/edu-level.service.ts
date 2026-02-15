@@ -78,7 +78,7 @@ export class EduLevelService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data : result };
+      return result;
     } catch (err) {
       console.error('Error fetching edu levels:', err);
       throw new InternalServerErrorException('Error fetching edu levels');
@@ -167,7 +167,7 @@ export class EduLevelService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (err) {
       console.error('Error fetching edu levels:', err);
       throw new InternalServerErrorException('Error fetching edu levels');
@@ -190,7 +190,7 @@ export class EduLevelService {
       });
 
       const savedEduLevel = await this.eduLevelRepo.save(newEduLevel);
-      return { message: 'EduLevel created successfully!', data: savedEduLevel };
+      return savedEduLevel;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -232,7 +232,7 @@ export class EduLevelService {
         where: { edu_lev_id: id }
       });
 
-      return { message: 'EduLevel updated successfully!', data: updatedEduLevel };
+      return updatedEduLevel;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -258,7 +258,7 @@ export class EduLevelService {
 
     try {
       await this.eduLevelRepo.delete({ edu_lev_id: id });
-      return { message: 'EduLevel deleted successfully!', data: existingEduLevel };
+      return existingEduLevel;
 
     } catch (error) {
       console.error('Error deleting edu level:', error);
@@ -284,7 +284,7 @@ export class EduLevelService {
       });
 
       const savedNorm = await this.eduLevelNormRepo.save(newNorm);
-      return { message: 'EduLevel normalize created successfully!', data: savedNorm };
+      return savedNorm;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -311,7 +311,7 @@ export class EduLevelService {
         throw new NotFoundException('EduLevel normalize record not found');
       }
 
-      return { message: 'EduLevel normalize updated successfully!', data: result[0] };
+      return result[0];
 
     } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
@@ -339,7 +339,7 @@ export class EduLevelService {
         throw new NotFoundException('EduLevel normalize record not found');
       }
 
-      return { message: 'EduLevel normalize deleted successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

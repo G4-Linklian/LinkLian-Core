@@ -45,7 +45,7 @@ const USER_GROUP_ROLE_MAP: Record<string, number[]> = {
 @Injectable()
 export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly otpSessions: Map<string, IOTPSession>;
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval?: NodeJS.Timeout;
   
   private readonly OTP_EXPIRY_MS = 5 * 60 * 1000;
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -98,7 +98,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   private createOTPSession(
     user: UserSys, 
-    rememberMe: boolean
+    rememberMe: boolean = false
   ): { sessionId: string; otp: string; expiresAt: number } {
     const otp = this.generateOTP();
     const sessionId = randomUUID();
@@ -106,7 +106,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     this.otpSessions.set(sessionId, {
       otp,
-      email: user.email,
+      email: String(user.email),
       userId: user.user_sys_id,
       expiresAt,
       used: false,
@@ -181,7 +181,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     
     const payload: ITokenPayload = {
       user_id: user.user_sys_id.toString(),
-      username: user.email,
+      username: String(user.email),
       role_id: user.role_id?.toString() || '',
       inst_id: user.inst_id?.toString() || '',
       role_name: roleName,
@@ -232,12 +232,12 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   private async verifyUserPassword(user: UserSys, password: string): Promise<void> {
     console.log('🔍 [DEBUG] Password verification:', {
-    user_email: user.email,
+    user_email: String(user.email),
     password_length: password.length,
-    stored_password_prefix: user.password.substring(0, 10) + '...'
+    stored_password_prefix: String(user.password).substring(0, 10) + '...'
   });
     
-    const isValid = await verifyPassword(password, user.password);
+    const isValid = await verifyPassword(password, String(user.password));
     console.log('🔍 [DEBUG] Password verification result:', isValid);
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -285,89 +285,12 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  /**
-   * Register new user
-   */
-  async register(dto: RegisterDto) {
-    const {
-      email,
-      first_name,
-      middle_name,
-      last_name,
-      phone,
-      role_id,
-      code,
-      inst_id,
-      edu_lev_id,
-    } = dto;
-
-    // Check if user already exists
-    const existingUser = await this.userRepo.findOne({
-      where: { email },
-    });
-
-    if (existingUser) {
-      throw new BadRequestException('Email is already registered');
-    }
-
-    // Generate initial password
-    const initialPassword = generateInitialPassword();
-    const hashedPassword = await hashPassword(initialPassword);
-
-    console.log('🔑 [AUTH] Generated initial password:', initialPassword);
-
-    try {
-      // Create user with explicit timestamps
-      const now = new Date();
-      const newUser = this.userRepo.create({
-        email,
-        password: hashedPassword,
-        first_name,
-        middle_name: middle_name || null,
-        last_name,
-        phone: phone || null,
-        role_id,
-        code,
-        inst_id,
-        edu_lev_id: edu_lev_id || null,
-        flag_valid: false,
-        user_status: 'Active', // เพิ่มนี้
-        created_at: now,
-        updated_at: now,
-      });
-
-      const savedUser = await this.userRepo.save(newUser);
-
-      console.log(`✅ [AUTH] User created: ${email}`);
-
-      // Send initial password email
-      try {
-        console.log('📧 [AUTH] Attempting to send initial password email...');
-        await sendInitialPasswordEmail(email, initialPassword);
-        console.log('✅ [AUTH] Initial password email sent successfully');
-      } catch (error) {
-        console.error('❌ [AUTH] Failed to send initial password email:', error);
-        // ไม่ throw error เพื่อให้การสร้าง user สำเร็จ แม้ส่งอีเมลไม่สำเร็จ
-      }
-
-      return {
-        success: true,
-        message: 'User registered successfully. Initial password has been sent to your email.',
-        user_id: savedUser.user_sys_id,
-        email: savedUser.email,
-        ...(process.env.NODE_ENV === 'development' && { _dev_password: initialPassword }),
-      };
-    } catch (error) {
-      console.error('❌ [AUTH] Error creating user:', error);
-      throw new BadRequestException('Failed to register user');
-    }
-  }
 
   async login(dto: LoginDto, authorization?: string): Promise<ILoginResponse | IVerifyResponse> {
     const { username, password, user_group, remember_me = false } = dto;
 
     const user = await this.findUserByEmail(username);
-    this.validateUserGroup(user_group, user.role_id);
+    this.validateUserGroup(user_group, Number(user.role_id));
     await this.verifyUserPassword(user, password);
 
     // ✅ ตรวจสอบ flag_valid - ถ้า false ต้อง reset password ก่อน
@@ -396,7 +319,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     // 🔥 ส่งอีเมล OTP
     try {
       console.log('📧 [AUTH] Attempting to send OTP email...');
-      await sendOTPEmail(user.email, otp);
+      await sendOTPEmail(String(user.email), otp);
     } catch (error) {
       console.error('❌ [AUTH] Failed to send OTP email:', error);
     }
@@ -450,14 +373,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     // 🔥 ส่งอีเมล OTP ใหม่
     try {
       console.log('📧 [AUTH] Attempting to send OTP email...');
-      await sendOTPEmail(user.email, otp);
+      await sendOTPEmail(String(user.email), otp);
       console.log('✅ [AUTH] OTP email sent successfully');
     } catch (error) {
       console.error('❌ [AUTH] Failed to send OTP email:', error);
-      console.error('❌ [AUTH] Error details:', {
-        message: error.message,
-        code: error.code,
-      });
     }
 
     return this.createOTPResponse(sessionId, expiresAt, otp);

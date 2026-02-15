@@ -25,8 +25,9 @@ export class ProgramController {
   @ApiOperation({ summary: 'Get program by ID' })
   @ApiResponse({ status: 200, description: 'Program found' })
   @ApiResponse({ status: 404, description: 'Program not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.programService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.programService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -36,8 +37,9 @@ export class ProgramController {
   @ApiOperation({ summary: 'Search programs with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Programs retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchProgramDto) {
-    return this.programService.search(dto);
+  async search(@Query() dto: SearchProgramDto) {
+    const data = await this.programService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -48,8 +50,9 @@ export class ProgramController {
   @ApiResponse({ status: 201, description: 'Program created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Duplicate program' })
-  create(@Body() dto: CreateProgramDto) {
-    return this.programService.create(dto);
+  async create(@Body() dto: CreateProgramDto) {
+    const data = await this.programService.create(dto);
+    return { success: true, message: "Created program successfully", data };
   }
 
   /**
@@ -60,8 +63,9 @@ export class ProgramController {
   @ApiResponse({ status: 200, description: 'Program updated successfully' })
   @ApiResponse({ status: 404, description: 'Program not found' })
   @ApiResponse({ status: 409, description: 'Duplicate program' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProgramDto) {
-    return this.programService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProgramDto) {
+    const data = await this.programService.update(id, dto);
+    return { success: true, message: "Updated program successfully", data };
   }
 
   /**
@@ -71,8 +75,9 @@ export class ProgramController {
   @ApiOperation({ summary: 'Delete program by ID' })
   @ApiResponse({ status: 200, description: 'Program deleted successfully' })
   @ApiResponse({ status: 404, description: 'Program not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.programService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.programService.delete(id);
+    return { success: true, message: "Deleted program successfully", data };
   }
 
   // ========== User Sys Program Normalize Endpoints ==========
@@ -85,8 +90,9 @@ export class ProgramController {
   @ApiResponse({ status: 201, description: 'Record created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Record already exists' })
-  createUserSysNormalize(@Body() dto: CreateProgramUserSysDto) {
-    return this.programService.createUserSysNormalize(dto);
+  async createUserSysNormalize(@Body() dto: CreateProgramUserSysDto) {
+    const data = await this.programService.createUserSysNormalize(dto);
+    return { success: true, message: "Created user sys program normalize record successfully", data };
   }
 
   /**
@@ -96,8 +102,9 @@ export class ProgramController {
   @ApiOperation({ summary: 'Update user sys program normalize record' })
   @ApiResponse({ status: 200, description: 'Record updated successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  updateUserSysNormalize(@Body() dto: UpdateProgramUserSysDto) {
-    return this.programService.updateUserSysNormalize(dto);
+  async updateUserSysNormalize(@Body() dto: UpdateProgramUserSysDto) {
+    const data = await this.programService.updateUserSysNormalize(dto);
+    return { success: true, message: "Updated user sys program normalize record successfully", data };
   }
 
   /**
@@ -107,7 +114,8 @@ export class ProgramController {
   @ApiOperation({ summary: 'Delete user sys program normalize record' })
   @ApiResponse({ status: 200, description: 'Record deleted successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  deleteUserSysNormalize(@Body() dto: DeleteProgramUserSysDto) {
-    return this.programService.deleteUserSysNormalize(dto);
+  async deleteUserSysNormalize(@Body() dto: DeleteProgramUserSysDto) {
+    const data = await this.programService.deleteUserSysNormalize(dto);
+    return { success: true, message: "Deleted user sys program normalize record successfully", data };
   }
 }

@@ -25,8 +25,9 @@ export class LearningAreaController {
   @ApiOperation({ summary: 'Get learning area by ID' })
   @ApiResponse({ status: 200, description: 'Learning area found' })
   @ApiResponse({ status: 404, description: 'Learning area not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.learningAreaService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.learningAreaService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -36,8 +37,9 @@ export class LearningAreaController {
   @ApiOperation({ summary: 'Search learning areas with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Learning areas retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchLearningAreaDto) {
-    return this.learningAreaService.search(dto);
+  async search(@Query() dto: SearchLearningAreaDto) {
+    const data = await this.learningAreaService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -48,8 +50,9 @@ export class LearningAreaController {
   @ApiResponse({ status: 201, description: 'Learning area created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Learning area already exists' })
-  create(@Body() dto: CreateLearningAreaDto) {
-    return this.learningAreaService.create(dto);
+  async create(@Body() dto: CreateLearningAreaDto) {
+    const data = await this.learningAreaService.create(dto);
+    return { success: true, message: 'Learning area created successfully!', data };
   }
 
   /**
@@ -60,8 +63,9 @@ export class LearningAreaController {
   @ApiResponse({ status: 200, description: 'Learning area updated successfully' })
   @ApiResponse({ status: 404, description: 'Learning area not found' })
   @ApiResponse({ status: 409, description: 'Learning area already exists' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLearningAreaDto) {
-    return this.learningAreaService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLearningAreaDto) {
+    const data = await this.learningAreaService.update(id, dto);
+    return { success: true, message: 'Learning area updated successfully!', data };
   }
 
   /**
@@ -71,8 +75,9 @@ export class LearningAreaController {
   @ApiOperation({ summary: 'Delete learning area by ID' })
   @ApiResponse({ status: 200, description: 'Learning area deleted successfully' })
   @ApiResponse({ status: 404, description: 'Learning area not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.learningAreaService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.learningAreaService.delete(id);
+    return { success: true, message: 'Learning area deleted successfully!', data };
   }
 
   // ========== User Sys Learning Area Normalize Endpoints ==========
@@ -85,8 +90,9 @@ export class LearningAreaController {
   @ApiResponse({ status: 201, description: 'Record created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Record already exists' })
-  createUserSysNormalize(@Body() dto: CreateLearningAreaUserSysDto) {
-    return this.learningAreaService.createUserSysNormalize(dto);
+  async createUserSysNormalize(@Body() dto: CreateLearningAreaUserSysDto) {
+    const data = await this.learningAreaService.createUserSysNormalize(dto);
+    return { success: true, message: 'Record created successfully!', data };
   }
 
   /**
@@ -96,8 +102,9 @@ export class LearningAreaController {
   @ApiOperation({ summary: 'Update user sys learning area normalize record' })
   @ApiResponse({ status: 200, description: 'Record updated successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  updateUserSysNormalize(@Body() dto: UpdateLearningAreaUserSysDto) {
-    return this.learningAreaService.updateUserSysNormalize(dto);
+  async updateUserSysNormalize(@Body() dto: UpdateLearningAreaUserSysDto) {
+    const data = await this.learningAreaService.updateUserSysNormalize(dto);
+    return { success: true, message: 'Record updated successfully!', data };
   }
 
   /**
@@ -107,7 +114,8 @@ export class LearningAreaController {
   @ApiOperation({ summary: 'Delete user sys learning area normalize record' })
   @ApiResponse({ status: 200, description: 'Record deleted successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  deleteUserSysNormalize(@Body() dto: DeleteLearningAreaUserSysDto) {
-    return this.learningAreaService.deleteUserSysNormalize(dto);
+  async deleteUserSysNormalize(@Body() dto: DeleteLearningAreaUserSysDto) {
+    const data = await this.learningAreaService.deleteUserSysNormalize(dto);
+    return { success: true, message: 'Record deleted successfully!', data };
   }
 }

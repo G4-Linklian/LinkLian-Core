@@ -118,6 +118,17 @@ export class SectionService {
       values.push(dto.inst_id);
     }
 
+    if (dto.hour_per_week) {
+      query += ` AND sub.hour_per_week = $${index++}`;
+      values.push(dto.hour_per_week);
+    }
+
+    if (dto.keyword) {
+      query += ` AND (s.section_name ILIKE $${index} OR sub.subject_code ILIKE $${index} OR sub.name_th ILIKE $${index} OR sub.name_en ILIKE $${index})`;
+      values.push(`%${dto.keyword}%`);
+      index++;
+    }
+
     // Sort
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
@@ -137,7 +148,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error querying sections:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -252,7 +263,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error querying sections:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -279,6 +290,7 @@ export class SectionService {
       SELECT * FROM section_schedule sch
       LEFT JOIN room_location rl ON sch.room_location_id = rl.room_location_id
       LEFT JOIN building b ON rl.building_id = b.building_id
+      LEFT JOIN section s ON sch.section_id = s.section_id
       WHERE 1=1
     `;
 
@@ -322,7 +334,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error querying schedules:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -474,7 +486,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error querying section educators:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -552,6 +564,32 @@ export class SectionService {
       values.push(dto.flag_valid);
     }
 
+    if (dto.edu_level_id) {
+      query += ` AND el.edu_lev_id = $${index++}`;
+      values.push(dto.edu_level_id);
+    }
+
+    if (dto.program_id) {
+      query += ` AND p.program_id = $${index++}`;
+      values.push(dto.program_id);
+    }
+
+    if (dto.edu_lev_id) {
+      query += ` AND us.edu_lev_id = $${index++}`;
+      values.push(dto.edu_lev_id);
+    }
+
+    if (dto.user_status) {
+      query += ` AND us.user_status = $${index++}`;
+      values.push(dto.user_status);
+    }
+
+    if (dto.keyword) {
+      query += ` AND (us.code ILIKE $${index} OR us.first_name ILIKE $${index} OR us.last_name ILIKE $${index})`;
+      values.push(`%${dto.keyword}%`);
+      index++;
+    }
+
     // Sort
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
@@ -571,7 +609,7 @@ export class SectionService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error querying enrollments:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -589,15 +627,22 @@ export class SectionService {
     }
 
     try {
-      const newSection = this.sectionRepo.create({
-        subject_id: dto.subject_id,
-        semester_id: dto.semester_id,
-        section_name: dto.section_name || null,
-        flag_valid: true,
-      });
+      const query = `
+        INSERT INTO section
+        (subject_id, semester_id, section_name, flag_valid, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        RETURNING *
+      `;
 
-      const savedSection = await this.sectionRepo.save(newSection);
-      return { message: 'Section created successfully!', data: savedSection };
+      const values = [
+        dto.subject_id,
+        dto.semester_id,
+        dto.section_name || null,
+        true,
+      ];
+
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error) {
       console.error('Error creating section:', error);
@@ -614,17 +659,24 @@ export class SectionService {
     }
 
     try {
-      const newSchedule = this.scheduleRepo.create({
-        section_id: dto.section_id,
-        day_of_week: dto.day_of_week,
-        start_time: dto.start_time,
-        end_time: dto.end_time,
-        room_location_id: dto.room_location_id,
-        flag_valid: true,
-      });
+      const query = `
+        INSERT INTO section_schedule
+        (section_id, day_of_week, start_time, end_time, room_location_id, flag_valid)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
 
-      const savedSchedule = await this.scheduleRepo.save(newSchedule);
-      return { message: 'Schedule created successfully!', data: savedSchedule };
+      const values = [
+        dto.section_id,
+        dto.day_of_week,
+        dto.start_time,
+        dto.end_time,
+        dto.room_location_id,
+        true,
+      ];
+
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error) {
       console.error('Error creating schedule:', error);
@@ -668,8 +720,8 @@ export class SectionService {
       await queryRunner.commitTransaction();
 
       return {
-        message: 'Section and schedule created successfully!',
-        data: { section, schedule }
+        section,
+        schedule
       };
 
     } catch (error) {
@@ -690,15 +742,22 @@ export class SectionService {
     }
 
     try {
-      const newEducator = this.educatorRepo.create({
-        section_id: dto.section_id,
-        educator_id: dto.user_sys_id,
-        position: dto.position,
-        flag_valid: true,
-      });
+      const query = `
+        INSERT INTO section_educator
+        (section_id, educator_id, position, flag_valid)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `;
 
-      const savedEducator = await this.educatorRepo.save(newEducator);
-      return { message: 'Section educator created successfully!', data: savedEducator };
+      const values = [
+        dto.section_id,
+        dto.user_sys_id,
+        dto.position,
+        true,
+      ];
+
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -722,7 +781,7 @@ export class SectionService {
                      VALUES ($1, $2, $3, NOW()) RETURNING *`;
       const result = await this.dataSource.query(query, [dto.section_id, dto.user_sys_id, true]);
 
-      return { message: 'Enrollment created successfully!', data: result[0] };
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -745,21 +804,42 @@ export class SectionService {
       throw new NotFoundException('Section not found!');
     }
 
-    const updates: Partial<Section> = {};
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let index = 1;
 
-    if (dto.subject_id !== undefined) updates.subject_id = dto.subject_id;
-    if (dto.semester_id !== undefined) updates.semester_id = dto.semester_id;
-    if (dto.section_name !== undefined) updates.section_name = dto.section_name;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (dto.subject_id !== undefined) {
+      updateFields.push(`subject_id = $${index++}`);
+      values.push(dto.subject_id);
+    }
 
-    if (Object.keys(updates).length === 0) {
+    if (dto.semester_id !== undefined) {
+      updateFields.push(`semester_id = $${index++}`);
+      values.push(dto.semester_id);
+    }
+
+    if (dto.section_name !== undefined) {
+      updateFields.push(`section_name = $${index++}`);
+      values.push(dto.section_name);
+    }
+
+    if (typeof dto.flag_valid === 'boolean') {
+      updateFields.push(`flag_valid = $${index++}`);
+      values.push(dto.flag_valid);
+    }
+
+    if (updateFields.length === 0) {
       throw new BadRequestException('No fields to update!');
     }
 
+    // Add updated_at
+    updateFields.push(`updated_at = NOW()`);
+    values.push(id);
+
     try {
-      await this.sectionRepo.update({ section_id: id }, updates);
-      const updated = await this.sectionRepo.findOne({ where: { section_id: id } });
-      return { message: 'Section updated successfully!', data: updated };
+      const query = `UPDATE section SET ${updateFields.join(', ')} WHERE section_id = $${index} RETURNING *`;
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error) {
       console.error('Error updating section:', error);
@@ -824,15 +904,12 @@ export class SectionService {
       }
 
       if (!updatedSection && !updatedSchedule) {
-        return { message: 'No fields provided for update, nothing changed.', data: null };
+        return null;
       }
 
       return {
-        message: 'Section schedule updated successfully!',
-        data: {
-          section: updatedSection || 'No changes',
-          schedule: updatedSchedule || 'No changes',
-        }
+        section: updatedSection || 'No changes',
+        schedule: updatedSchedule || 'No changes',
       };
 
     } catch (error) {
@@ -896,7 +973,7 @@ export class SectionService {
         throw new NotFoundException('Section educator not found!');
       }
 
-      return { message: 'Section educator updated successfully!', data: result };
+      return result;
 
     } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
@@ -958,7 +1035,7 @@ export class SectionService {
         throw new NotFoundException('Enrollment not found!');
       }
 
-      return { message: 'Enrollment updated successfully!', data: result };
+      return result;
 
     } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
@@ -1018,6 +1095,7 @@ export class SectionService {
    * Delete section educator
    */
   async deleteEducator(dto: DeleteSectionEducatorDto) {
+    console.log('Delete Enrollment DTO:', dto);
     if (!dto.section_id && !dto.user_sys_id) {
       throw new BadRequestException('At least one of section_id or user_sys_id is required!');
     }
@@ -1044,7 +1122,7 @@ export class SectionService {
         throw new NotFoundException('No matching records found!');
       }
 
-      return { message: 'Section educator deleted successfully!', data: result };
+      return result;
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -1057,6 +1135,8 @@ export class SectionService {
    * Delete enrollment
    */
   async deleteEnrollment(dto: DeleteEnrollmentDto) {
+    console.log('Delete Enrollment DTO:', dto);
+
     if (!dto.section_id && !dto.user_sys_id) {
       throw new BadRequestException('At least one of section_id or user_sys_id is required!');
     }
@@ -1083,7 +1163,7 @@ export class SectionService {
         throw new NotFoundException('No matching records found!');
       }
 
-      return { message: 'Enrollment deleted successfully!', data: result };
+      return result;
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
