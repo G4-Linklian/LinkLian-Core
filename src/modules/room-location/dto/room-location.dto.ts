@@ -58,16 +58,16 @@ export class SearchRoomLocationDto {
  */
 export class CreateRoomLocationDto {
   @ApiProperty({ description: 'Building ID', example: 1 })
-  @IsInt() building_id: number;
+  @IsInt() building_id!: number;
 
   @ApiProperty({ description: 'Room number', example: '101' })
-  @IsString() room_number: string;
+  @IsString() room_number!: string;
 
   @ApiPropertyOptional({ description: 'Room remark', example: 'Conference room' })
   @IsOptional() @IsString() room_remark?: string;
 
   @ApiProperty({ description: 'Floor', example: '1' })
-  @IsString() floor: string;
+  @IsString() floor!: string;
 }
 
 /**
@@ -85,7 +85,7 @@ export class CreateRoomLocationBatchDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateRoomLocationDto)
-  rooms: CreateRoomLocationDto[];
+  rooms!: CreateRoomLocationDto[];
 }
 
 /**

@@ -76,6 +76,12 @@ export class BuildingService {
       values.push(dto.flag_valid);
     }
 
+    if (dto.keyword) {
+      query += ` AND (b.building_no ILIKE $${index} OR b.building_name ILIKE $${index} OR b.remark ILIKE $${index})`;
+      values.push(`%${dto.keyword}%`);
+      index++;
+    }
+
     // Sort
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
@@ -95,7 +101,7 @@ export class BuildingService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (err) {
       console.error('Error executing search building query:', err);
       throw new InternalServerErrorException('Error fetching buildings');
@@ -120,7 +126,7 @@ export class BuildingService {
       });
 
       const savedBuilding = await this.buildingRepo.save(newBuilding);
-      return { message: 'Building created successfully!', data: savedBuilding };
+      return savedBuilding;
 
     } catch (error) {
       console.error('Error creating building:', error);
@@ -162,7 +168,7 @@ export class BuildingService {
         where: { building_id: id }
       });
 
-      return { message: 'Building updated successfully!', data: updatedBuilding };
+      return updatedBuilding;
 
     } catch (error) {
       console.error('Error updating building:', error);
@@ -185,7 +191,7 @@ export class BuildingService {
 
     try {
       await this.buildingRepo.delete({ building_id: id });
-      return { message: 'Building deleted successfully!', data: existingBuilding };
+      return existingBuilding;
 
     } catch (error) {
       console.error('Error deleting building:', error);

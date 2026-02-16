@@ -16,8 +16,9 @@ export class SubjectController {
   @ApiOperation({ summary: 'Get subject by ID' })
   @ApiResponse({ status: 200, description: 'Subject found' })
   @ApiResponse({ status: 404, description: 'Subject not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.subjectService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.subjectService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -27,8 +28,9 @@ export class SubjectController {
   @ApiOperation({ summary: 'Search subjects with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Subjects retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchSubjectDto) {
-    return this.subjectService.search(dto);
+  async search(@Query() dto: SearchSubjectDto) {
+    const data = await this.subjectService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -39,8 +41,9 @@ export class SubjectController {
   @ApiResponse({ status: 201, description: 'Subject created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Duplicate subject' })
-  create(@Body() dto: CreateSubjectDto) {
-    return this.subjectService.create(dto);
+  async create(@Body() dto: CreateSubjectDto) {
+    const data = await this.subjectService.create(dto);
+    return { success: true, message: 'Subject created successfully', data };
   }
 
   /**
@@ -51,8 +54,9 @@ export class SubjectController {
   @ApiResponse({ status: 200, description: 'Subject updated successfully' })
   @ApiResponse({ status: 404, description: 'Subject not found' })
   @ApiResponse({ status: 409, description: 'Duplicate subject' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSubjectDto) {
-    return this.subjectService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSubjectDto) {
+    const data = await this.subjectService.update(id, dto);
+    return { success: true, message: 'Subject updated successfully', data };
   }
 
   /**
@@ -62,7 +66,8 @@ export class SubjectController {
   @ApiOperation({ summary: 'Delete subject by ID' })
   @ApiResponse({ status: 200, description: 'Subject deleted successfully' })
   @ApiResponse({ status: 404, description: 'Subject not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.subjectService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.subjectService.delete(id);
+    return { success: true, message: 'Subject deleted successfully' };
   }
 }

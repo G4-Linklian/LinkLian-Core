@@ -16,8 +16,9 @@ export class RoomLocationController {
   @ApiOperation({ summary: 'Get room location by ID' })
   @ApiResponse({ status: 200, description: 'Room location found' })
   @ApiResponse({ status: 404, description: 'Room location not found' })
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.roomLocationService.findById(id);
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.roomLocationService.findById(id);
+    return { success: true, data };
   }
 
   /**
@@ -27,8 +28,9 @@ export class RoomLocationController {
   @ApiOperation({ summary: 'Search room locations with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Room locations retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchRoomLocationDto) {
-    return this.roomLocationService.search(dto);
+  async search(@Query() dto: SearchRoomLocationDto) {
+    const data = await this.roomLocationService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -39,8 +41,9 @@ export class RoomLocationController {
   @ApiResponse({ status: 201, description: 'Room location created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Duplicate room number' })
-  create(@Body() dto: CreateRoomLocationDto) {
-    return this.roomLocationService.create(dto);
+  async create(@Body() dto: CreateRoomLocationDto) {
+    const data = await this.roomLocationService.create(dto);
+    return { success: true, message:"Room location created successfully!", data };
   }
 
   /**
@@ -51,8 +54,9 @@ export class RoomLocationController {
   @ApiResponse({ status: 201, description: 'Room locations created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input or missing required fields' })
   @ApiResponse({ status: 409, description: 'Duplicate room number' })
-  createBatch(@Body() dto: CreateRoomLocationBatchDto) {
-    return this.roomLocationService.createBatch(dto);
+  async createBatch(@Body() dto: CreateRoomLocationBatchDto) {
+    const data = await this.roomLocationService.createBatch(dto);
+    return data;
   }
 
   /**
@@ -63,8 +67,9 @@ export class RoomLocationController {
   @ApiResponse({ status: 200, description: 'Room location updated successfully' })
   @ApiResponse({ status: 404, description: 'Room location not found' })
   @ApiResponse({ status: 409, description: 'Duplicate room number' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomLocationDto) {
-    return this.roomLocationService.update(id, dto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomLocationDto) {
+    const data = await this.roomLocationService.update(id, dto);
+    return { success: true, message:"Room location updated successfully!", data };
   }
 
   /**
@@ -74,7 +79,8 @@ export class RoomLocationController {
   @ApiOperation({ summary: 'Delete room location by ID' })
   @ApiResponse({ status: 200, description: 'Room location deleted successfully' })
   @ApiResponse({ status: 404, description: 'Room location not found' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.roomLocationService.delete(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.roomLocationService.delete(id);
+    return { success: true, message: "Room location deleted successfully!" };
   }
 }

@@ -142,6 +142,17 @@ export class UsersService {
       values.push(dto.user_status);
     }
 
+    if (dto.role_id === 4 || dto.role_id === 5) {
+      if (dto.learning_area_id) {
+        query += ` AND la.learning_area_id = $${index++}`;
+        values.push(dto.learning_area_id);
+      }
+    } else if (dto.role_id === 2 || dto.role_id === 3) {
+      if (dto.program_id) {
+        query += ` AND p.program_id = $${index++}`;
+        values.push(dto.program_id);
+      }
+    }
     // Keyword search with ILIKE for case-insensitive partial match
     if (dto.keyword) {
       query += ` AND (u.code ILIKE $${index} OR u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index})`;
@@ -169,10 +180,10 @@ export class UsersService {
     try {
       const result = await this.dataSource.query(query, values);
       // Remove password from results
-      return { data: result.map((user: any) => {
+      return  result.map((user: any) => {
         const { password, ...rest } = user;
         return rest;
-      }) };
+      });
     } catch (error) {
       console.error('Error fetching users:', error);
       throw new InternalServerErrorException('Server Error');
@@ -258,7 +269,7 @@ export class UsersService {
         console.error('Error sending initial password email:', err);
       });
 
-      return { message: 'User created successfully', data: { user_sys_id: newUser.user_sys_id } };
+      return newUser.user_sys_id;
 
     } catch (error: any) {
       await queryRunner.rollbackTransaction();
@@ -351,22 +362,49 @@ export class UsersService {
       values.push(dto.profile_pic);
     }
 
-    if (updateFields.length === 0) {
+    // Check if there are any fields to update (including learning_area_id which updates normalize table)
+    if (updateFields.length === 0 && dto.learning_area_id === undefined && dto.program_id === undefined) {
       throw new BadRequestException('No fields to update!');
     }
 
-    // Add updated_at
-    updateFields.push(`updated_at = NOW()`);
-
-    values.push(id);
-
     try {
-      const query = `UPDATE user_sys SET ${updateFields.join(', ')} WHERE user_sys_id = $${index} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      let userData: any;
 
-      // Remove password from response
-      const { password, ...userData } = result[0];
-      return { message: 'User updated successfully', data: userData };
+      // Update user_sys table if there are fields to update
+      if (updateFields.length > 0) {
+        // Add updated_at
+        updateFields.push(`updated_at = NOW()`);
+        values.push(id);
+
+        const query = `UPDATE user_sys SET ${updateFields.join(', ')} WHERE user_sys_id = $${index} RETURNING *`;
+        const result = await this.dataSource.query(query, values);
+
+        // Remove password from response
+        const { password, ...rest } = result[0];
+        userData = rest;
+      } else {
+        // If no user fields to update, just get existing user data
+        const { password, ...rest } = existingUser;
+        userData = rest;
+      }
+
+      // Update learning_area_normalize if learning_area_id is provided
+      if (dto.learning_area_id !== undefined) {
+        await this.learningAreaService.updateUserSysNormalize({
+          user_sys_id: id,
+          learning_area_id: dto.learning_area_id,
+        });
+      }
+
+      // Update program_normalize if program_id is provided
+      if (dto.program_id !== undefined) {
+        await this.programService.updateUserSysNormalize({
+          user_sys_id: id,
+          program_id: dto.program_id,
+        });
+      }
+
+      return userData;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -393,7 +431,7 @@ export class UsersService {
     try {
       await this.userSysRepo.delete({ user_sys_id: id });
       const { password, ...userData } = existingUser;
-      return { message: 'User deleted successfully', data: userData };
+      return userData;
 
     } catch (error) {
       console.error('Error deleting user:', error);

@@ -12,20 +12,14 @@ export enum EduType {
 @Entity('edu_level')
 export class EduLevel {
   @PrimaryGeneratedColumn('increment')
-  edu_lev_id: number;
+  edu_lev_id!: number;
 
   @Column({ name: 'level_name' })
-  level_name: string;
+  level_name!: string;
 
   @Column({ name: 'edu_type' })
-  edu_type: string;
+  edu_type!: string;
 
   @Column({ name: 'flag_valid', default: true })
-  flag_valid: boolean;
-
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  flag_valid!: boolean;
 }

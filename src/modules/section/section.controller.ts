@@ -35,8 +35,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Search sections (master view with student count)' })
   @ApiResponse({ status: 200, description: 'Sections retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  searchMaster(@Query() dto: SearchSectionMasterDto) {
-    return this.sectionService.searchMaster(dto);
+  async searchMaster(@Query() dto: SearchSectionMasterDto) {
+    const data = await this.sectionService.searchMaster(dto);
+    return { success: true, data };
   }
 
   /**
@@ -46,8 +47,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Search sections with schedule and room details' })
   @ApiResponse({ status: 200, description: 'Sections retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  search(@Query() dto: SearchSectionDto) {
-    return this.sectionService.search(dto);
+  async search(@Query() dto: SearchSectionDto) {
+    const data = await this.sectionService.search(dto);
+    return { success: true, data };
   }
 
   /**
@@ -57,8 +59,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Search schedules with room and building info' })
   @ApiResponse({ status: 200, description: 'Schedules retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  searchSchedule(@Query() dto: SearchScheduleDto) {
-    return this.sectionService.searchSchedule(dto);
+  async searchSchedule(@Query() dto: SearchScheduleDto) {
+    const data = await this.sectionService.searchSchedule(dto);
+    return { success: true, data };
   }
 
   /**
@@ -68,8 +71,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Search section educators with profile info' })
   @ApiResponse({ status: 200, description: 'Section educators retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  searchEducator(@Query() dto: SearchSectionEducatorDto) {
-    return this.sectionService.searchEducator(dto);
+  async searchEducator(@Query() dto: SearchSectionEducatorDto) {
+    const data = await this.sectionService.searchEducator(dto);
+    return { success: true, data };
   }
 
   /**
@@ -79,8 +83,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Search enrollments with student info' })
   @ApiResponse({ status: 200, description: 'Enrollments retrieved successfully' })
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
-  searchEnrollment(@Query() dto: SearchEnrollmentDto) {
-    return this.sectionService.searchEnrollment(dto);
+  async searchEnrollment(@Query() dto: SearchEnrollmentDto) {
+    const data = await this.sectionService.searchEnrollment(dto);
+    return { success: true, data };
   }
 
   // ========== Create Endpoints ==========
@@ -92,8 +97,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Create a new section' })
   @ApiResponse({ status: 201, description: 'Section created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
-  createSection(@Body() dto: CreateSectionDto) {
-    return this.sectionService.createSection(dto);
+  async createSection(@Body() dto: CreateSectionDto) {
+    const data = await this.sectionService.createSection(dto);
+    return { success: true, message: 'Section created successfully', data };
   }
 
   /**
@@ -103,8 +109,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Create a new schedule' })
   @ApiResponse({ status: 201, description: 'Schedule created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields or invalid time format' })
-  createSchedule(@Body() dto: CreateScheduleDto) {
-    return this.sectionService.createSchedule(dto);
+  async createSchedule(@Body() dto: CreateScheduleDto) {
+    const data = await this.sectionService.createSchedule(dto);
+    return { success: true, message: 'Schedule created successfully', data };
   }
 
   /**
@@ -114,8 +121,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Create section with schedule together (transaction)' })
   @ApiResponse({ status: 201, description: 'Section and schedule created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
-  createSectionSchedule(@Body() dto: CreateSectionScheduleDto) {
-    return this.sectionService.createSectionSchedule(dto);
+  async createSectionSchedule(@Body() dto: CreateSectionScheduleDto) {
+    const data = await this.sectionService.createSectionSchedule(dto);
+    return { success: true, message: 'Section and schedule created successfully', data };
   }
 
   /**
@@ -126,8 +134,9 @@ export class SectionController {
   @ApiResponse({ status: 201, description: 'Section educator created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Educator already added to section' })
-  createEducator(@Body() dto: CreateSectionEducatorDto) {
-    return this.sectionService.createEducator(dto);
+  async createEducator(@Body() dto: CreateSectionEducatorDto) {
+    const data = await this.sectionService.createEducator(dto);
+    return { success: true, message: 'Section educator created successfully', data };
   }
 
   /**
@@ -138,8 +147,9 @@ export class SectionController {
   @ApiResponse({ status: 201, description: 'Enrollment created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Student already enrolled in section' })
-  createEnrollment(@Body() dto: CreateEnrollmentDto) {
-    return this.sectionService.createEnrollment(dto);
+  async createEnrollment(@Body() dto: CreateEnrollmentDto) {
+    const data = await this.sectionService.createEnrollment(dto);
+    return { success: true, message: 'Enrollment created successfully', data };
   }
 
   // ========== Update Endpoints ==========
@@ -151,8 +161,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Update section by ID' })
   @ApiResponse({ status: 200, description: 'Section updated successfully' })
   @ApiResponse({ status: 404, description: 'Section not found' })
-  updateSection(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSectionDto) {
-    return this.sectionService.updateSection(id, dto);
+  async updateSection(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSectionDto) {
+    const data = await this.sectionService.updateSection(id, dto);
+    return { success: true, message: 'Section updated successfully', data };
   }
 
   /**
@@ -162,8 +173,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Update section with schedule together' })
   @ApiResponse({ status: 200, description: 'Section and schedule updated successfully' })
   @ApiResponse({ status: 400, description: 'Missing section_id' })
-  updateSectionSchedule(@Body() dto: UpdateSectionScheduleDto) {
-    return this.sectionService.updateSectionSchedule(dto);
+  async updateSectionSchedule(@Body() dto: UpdateSectionScheduleDto) {
+    const data = await this.sectionService.updateSectionSchedule(dto);
+    return { success: true, message: 'Section and schedule updated successfully', data };
   }
 
   /**
@@ -174,8 +186,9 @@ export class SectionController {
   @ApiResponse({ status: 200, description: 'Section educator updated successfully' })
   @ApiResponse({ status: 404, description: 'Section educator not found' })
   @ApiResponse({ status: 409, description: 'Duplicate educator in section' })
-  updateEducator(@Body() dto: UpdateSectionEducatorDto) {
-    return this.sectionService.updateEducator(dto);
+  async updateEducator(@Body() dto: UpdateSectionEducatorDto) {
+    const data = await this.sectionService.updateEducator(dto);
+    return { success: true, message: 'Section educator updated successfully', data };
   }
 
   /**
@@ -186,8 +199,9 @@ export class SectionController {
   @ApiResponse({ status: 200, description: 'Enrollment updated successfully' })
   @ApiResponse({ status: 404, description: 'Enrollment not found' })
   @ApiResponse({ status: 409, description: 'Duplicate enrollment' })
-  updateEnrollment(@Body() dto: UpdateEnrollmentDto) {
-    return this.sectionService.updateEnrollment(dto);
+  async updateEnrollment(@Body() dto: UpdateEnrollmentDto) {
+    const data = await this.sectionService.updateEnrollment(dto);
+    return { success: true, message: 'Enrollment updated successfully', data };
   }
 
   // ========== Delete Endpoints ==========
@@ -199,8 +213,9 @@ export class SectionController {
   @ApiOperation({ summary: 'Delete section by ID' })
   @ApiResponse({ status: 200, description: 'Section deleted successfully' })
   @ApiResponse({ status: 404, description: 'Section not found' })
-  deleteSection(@Param('id', ParseIntPipe) id: number) {
-    return this.sectionService.deleteSection(id);
+  async deleteSection(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.sectionService.deleteSection(id);
+    return { success: true, message: 'Section deleted successfully', data };
   }
 
   /**
@@ -210,29 +225,32 @@ export class SectionController {
   @ApiOperation({ summary: 'Delete schedule by ID' })
   @ApiResponse({ status: 200, description: 'Schedule deleted successfully' })
   @ApiResponse({ status: 404, description: 'Schedule not found' })
-  deleteSchedule(@Param('id', ParseIntPipe) id: number) {
-    return this.sectionService.deleteSchedule(id);
+  async deleteSchedule(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.sectionService.deleteSchedule(id);
+    return { success: true, message: 'Schedule deleted successfully', data };
   }
 
   /**
    * Delete section educator
    */
-  @Delete('educator')
+  @Post('educator/delete')
   @ApiOperation({ summary: 'Delete section educator' })
   @ApiResponse({ status: 200, description: 'Section educator deleted successfully' })
   @ApiResponse({ status: 404, description: 'No matching records found' })
-  deleteEducator(@Body() dto: DeleteSectionEducatorDto) {
-    return this.sectionService.deleteEducator(dto);
+  async deleteEducator(@Body() dto: DeleteSectionEducatorDto) {
+    const data = await this.sectionService.deleteEducator(dto);
+    return { success: true, message: 'Section educator deleted successfully', data };
   }
 
   /**
    * Delete enrollment
    */
-  @Delete('enrollment')
+  @Post('enrollment/delete')
   @ApiOperation({ summary: 'Delete enrollment' })
   @ApiResponse({ status: 200, description: 'Enrollment deleted successfully' })
   @ApiResponse({ status: 404, description: 'No matching records found' })
-  deleteEnrollment(@Body() dto: DeleteEnrollmentDto) {
-    return this.sectionService.deleteEnrollment(dto);
+  async deleteEnrollment(@Body() dto: DeleteEnrollmentDto) {
+    const data = await this.sectionService.deleteEnrollment(dto);
+    return { success: true, message: 'Enrollment deleted successfully', data };
   }
 }

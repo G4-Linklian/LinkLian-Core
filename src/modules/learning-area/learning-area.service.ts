@@ -98,6 +98,12 @@ export class LearningAreaService {
       values.push(dto.flag_valid);
     }
 
+    if (dto.keyword) {
+      query += ` AND (la.learning_area_name ILIKE $${index} OR la.remark ILIKE $${index})`;
+      values.push(`%${dto.keyword}%`);
+      index++;
+    }
+
     // GROUP BY must come before ORDER BY
     if (dto.subject_count) {
       query += ` GROUP BY la.learning_area_id`;
@@ -122,7 +128,7 @@ export class LearningAreaService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (err) {
       console.error('Error fetching learning areas:', err);
       throw new InternalServerErrorException('Error fetching learning areas');
@@ -146,7 +152,7 @@ export class LearningAreaService {
       });
 
       const savedLearningArea = await this.learningAreaRepo.save(newLearningArea);
-      return { message: 'Learning area created successfully!', data: savedLearningArea };
+      return savedLearningArea;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -189,7 +195,7 @@ export class LearningAreaService {
         where: { learning_area_id: id }
       });
 
-      return { message: 'Learning area updated successfully!', data: updatedLearningArea };
+      return updatedLearningArea;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -215,7 +221,7 @@ export class LearningAreaService {
 
     try {
       await this.learningAreaRepo.delete({ learning_area_id: id });
-      return { message: 'Learning area deleted successfully!', data: existingLearningArea };
+      return existingLearningArea;
 
     } catch (error) {
       console.error('Error deleting learning area:', error);
@@ -241,7 +247,7 @@ export class LearningAreaService {
       });
 
       const savedNorm = await this.userSysLearningAreaNormRepo.save(newNorm);
-      return { message: 'Learning area user sys created successfully!', data: savedNorm };
+      return savedNorm;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -281,7 +287,7 @@ export class LearningAreaService {
         throw new NotFoundException('User sys learning area normalize record not found');
       }
 
-      return { message: 'Learning area user sys updated successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -306,7 +312,7 @@ export class LearningAreaService {
         throw new NotFoundException('User sys learning area normalize record not found');
       }
 
-      return { message: 'Learning area user sys deleted successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -331,7 +337,8 @@ export class LearningAreaService {
         flag_valid: true,
       });
 
-      return await this.userSysLearningAreaNormRepo.save(newNorm);
+      const result = await this.userSysLearningAreaNormRepo.save(newNorm);
+      return result;
     } catch (error) {
       console.error('Error creating learning area user sys internally:', error);
       throw error;

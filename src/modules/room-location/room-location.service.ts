@@ -101,7 +101,7 @@ export class RoomLocationService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (err) {
       console.error('Error executing search room location query:', err);
       throw new InternalServerErrorException('Error fetching room locations');
@@ -126,7 +126,7 @@ export class RoomLocationService {
       });
 
       const savedRoomLocation = await this.roomLocationRepo.save(newRoomLocation);
-      return { message: 'Room location created successfully!', data: savedRoomLocation };
+      return savedRoomLocation;
 
     } catch (error: any) {
       // Handle unique constraint violation
@@ -213,6 +213,7 @@ export class RoomLocationService {
       await queryRunner.commitTransaction();
 
       return { 
+        success: true,
         message: `Created ${result.length} rooms successfully!`, 
         data: result 
       };
@@ -266,7 +267,7 @@ export class RoomLocationService {
         where: { room_location_id: id }
       });
 
-      return { message: 'Room location updated successfully!', data: updatedRoom };
+      return updatedRoom;
 
     } catch (error: any) {
       // Handle unique constraint violation
@@ -293,7 +294,7 @@ export class RoomLocationService {
 
     try {
       await this.roomLocationRepo.delete({ room_location_id: id });
-      return { message: 'Room location deleted successfully!', data: existingRoom };
+      return existingRoom;
 
     } catch (error) {
       console.error('Error deleting room location:', error);
