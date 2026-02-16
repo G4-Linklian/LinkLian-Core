@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CommunityService } from '../core/community.service';
@@ -32,254 +33,124 @@ export class CommunityPostService {
     private fileStorageService: FileStorageService,
   ) { }
 
-//   async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
+  async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
 
-//     if (!dto || !dto.content?.trim()) {
-//       throw new BadRequestException('Content required');
-//     }
+    if (!dto || !dto.content?.trim()) {
+      throw new BadRequestException('Content required');
+    }
 
-//     const community = await queryRunner.query(
-//       `
-//     SELECT status
-//     FROM community
-//     WHERE community_id=$1
-//       AND flag_valid=true
-//     `,
-//       [dto.community_id],
-//     );
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-//     if (!community.length) {
-//       throw new BadRequestException('Community not found');
-//     }
+    try {
 
-//     if (community[0].status !== 'active') {
-//       throw new ForbiddenException('Community is inactive');
-//     }
-//     await this.communityService.checkReadPermission(
-//       userId,
-//       dto.community_id,
-//     );
-
-//     const queryRunner = this.dataSource.createQueryRunner();
-//     await queryRunner.connect();
-//     await queryRunner.startTransaction();
-
-//     try {
-
-//       const result = await queryRunner.manager.query(
-//         `
-//       INSERT INTO post_in_community
-//       (community_id,user_sys_id,content,flag_valid)
-//       VALUES ($1,$2,$3,true)
-//       RETURNING post_commu_id
-//       `,
-//         [dto.community_id, userId, dto.content.trim()],
-//       );
-
-//       const postId = result[0].post_commu_id;
-
-//     const detectedUrls = extractUrls(dto.content.trim());
-
-// if (detectedUrls.length > 0) {
-//   for (const url of detectedUrls) {
-
-//     const domainName = getDomainFromUrl(url);
-
-//     const linkResult = await queryRunner.query(
-//       `
-//       INSERT INTO community_attachment
-//       (post_commu_id,file_url,file_type,original_name,flag_valid)
-//       VALUES ($1,$2,'link',$3,true)
-//       RETURNING attachment_id,file_url,file_type,original_name
-//       `,
-//       [
-//         postId,
-//         url,
-//         domainName,
-//       ],
-//     );
-
-//     console.log('Inserted link attachment:', linkResult[0]);
-//   }
-// }
-
-
-
-//       if (files?.length) {
-
-//         const uploadResult =
-//           await this.fileStorageService.uploadFiles(
-//             'community',
-//             'post',
-//             files,
-//           );
-
-//         for (const uploaded of uploadResult.files) {
-
-//           let type = 'image';
-
-//           if (uploaded.fileType.startsWith('video')) {
-//             type = 'video';
-//           }
-
-//           if (uploaded.fileType.includes('pdf')) {
-//             type = 'pdf';
-//           }
-
-//           await queryRunner.manager.query(
-//             `
-//             INSERT INTO community_attachment
-//             (post_commu_id,file_url,file_type,original_name,flag_valid)
-//             VALUES ($1,$2,$3,$4,true)
-//             `,
-//             [
-//               postId,
-//               uploaded.fileUrl,
-//               type,
-//               uploaded.originalName,
-//             ],
-//           );
-
-//         }
-//       }
-
-
-
-
-//       await queryRunner.commitTransaction();
-
-//       return {
-//         success: true,
-//         post_id: postId,
-//       };
-
-//     } catch (error) {
-
-//       await queryRunner.rollbackTransaction();
-
-//       throw error;
-
-//     } finally {
-//       await queryRunner.release();
-//     }
-//   }
-async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
-
-  if (!dto || !dto.content?.trim()) {
-    throw new BadRequestException('Content required');
-  }
-
-  const queryRunner = this.dataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-
-  try {
-
-    const community = await queryRunner.query(
-      `
+      const community = await queryRunner.query(
+        `
       SELECT status
       FROM community
       WHERE community_id=$1
         AND flag_valid=true
       `,
-      [dto.community_id],
-    );
+        [dto.community_id],
+      );
 
-    if (!community.length) {
-      throw new BadRequestException('Community not found');
-    }
+      if (!community.length) {
+        throw new BadRequestException('Community not found');
+      }
 
-    if (community[0].status !== 'active') {
-      throw new ForbiddenException('Community is inactive');
-    }
+      if (community[0].status !== 'active') {
+        throw new ForbiddenException('Community is inactive');
+      }
 
-    await this.communityService.checkReadPermission(
-      userId,
-      dto.community_id,
-    );
+      await this.communityService.checkReadPermission(
+        userId,
+        dto.community_id,
+      );
 
-    const result = await queryRunner.query(
-      `
+      const result = await queryRunner.query(
+        `
       INSERT INTO post_in_community
       (community_id,user_sys_id,content,flag_valid)
       VALUES ($1,$2,$3,true)
       RETURNING post_commu_id
       `,
-      [dto.community_id, userId, dto.content.trim()],
-    );
+        [dto.community_id, userId, dto.content.trim()],
+      );
 
-    const postId = result[0].post_commu_id;
+      const postId = result[0].post_commu_id;
 
-    // ✅ Detect links
-    const detectedUrls = extractUrls(dto.content.trim());
+      //  Detect links
+      const detectedUrls = extractUrls(dto.content.trim());
 
-    for (const url of detectedUrls) {
-      const domainName = getDomainFromUrl(url);
+      for (const url of detectedUrls) {
+        const domainName = getDomainFromUrl(url);
 
-      await queryRunner.query(
-        `
+        await queryRunner.query(
+          `
         INSERT INTO community_attachment
         (post_commu_id,file_url,file_type,original_name,flag_valid)
         VALUES ($1,$2,'link',$3,true)
         `,
-        [postId, url, domainName],
-      );
-    }
-
-    // ✅ Handle files
-    if (files?.length) {
-      const uploadResult =
-        await this.fileStorageService.uploadFiles(
-          'community',
-          'post',
-          files,
+          [postId, url, domainName],
         );
+      }
 
-      for (const uploaded of uploadResult.files) {
+      //  Handle files
+      if (files?.length) {
+        const uploadResult =
+          await this.fileStorageService.uploadFiles(
+            'community',
+            'post',
+            files,
+          );
 
-        let type = 'image';
+        for (const uploaded of uploadResult.files) {
 
-        if (uploaded.fileType.startsWith('video')) {
-          type = 'video';
-        }
+          let type = 'image';
 
-        if (uploaded.fileType.includes('pdf')) {
-          type = 'pdf';
-        }
+          if (uploaded.fileType.startsWith('video')) {
+            type = 'video';
+          }
 
-        await queryRunner.query(
-          `
+          if (uploaded.fileType.includes('pdf')) {
+            type = 'pdf';
+          }
+
+          await queryRunner.query(
+            `
           INSERT INTO community_attachment
           (post_commu_id,file_url,file_type,original_name,flag_valid)
           VALUES ($1,$2,$3,$4,true)
           `,
-          [
-            postId,
-            uploaded.fileUrl,
-            type,
-            uploaded.originalName,
-          ],
-        );
+            [
+              postId,
+              uploaded.fileUrl,
+              type,
+              uploaded.originalName,
+            ],
+          );
+        }
       }
+
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        data: { post_id: postId },
+        message: 'Post created successfully!',
+      };
+
+    } catch (error) {
+
+      await queryRunner.rollbackTransaction();
+      throw error;
+
+    } finally {
+
+      await queryRunner.release();
     }
-
-    await queryRunner.commitTransaction();
-
-    return {
-      success: true,
-      post_id: postId,
-    };
-
-  } catch (error) {
-
-    await queryRunner.rollbackTransaction();
-    throw error;
-
-  } finally {
-
-    await queryRunner.release();
   }
-}
 
 
   async getPosts(
@@ -297,7 +168,7 @@ async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
 
     const order = sort === 'oldest' ? 'ASC' : 'DESC';
 
-    return await this.dataSource.query(
+    const result = await this.dataSource.query(
       `
     SELECT
       cp.post_commu_id,
@@ -335,7 +206,16 @@ COALESCE(
     `,
       [communityId, limit, offset],
     );
+    return {
+      success: true,
+      data: { posts: result },
+      message: 'Posts fetched successfully!',
+    };
+
+  } catch(error) {
+    throw new InternalServerErrorException('Error fetching posts');
   }
+
 
   async hardDeletePost(userId: number, postId: number) {
 
@@ -397,7 +277,10 @@ COALESCE(
 
       await queryRunner.commitTransaction();
 
-      return { success: true };
+      return {
+        success: true, data: { post_id: postId },
+        message: 'Post deleted successfully!',
+      };
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -479,26 +362,34 @@ COALESCE(
           [dto.content.trim(), postId],
         );
       }
+      await queryRunner.query(
+        `
+          DELETE FROM community_attachment
+          WHERE post_commu_id=$1
+            AND file_type='link'
+          `,
+        [postId],
+      );
       if (dto.content !== undefined) {
-  const detectedUrls = extractUrls(dto.content.trim());
+        const detectedUrls = extractUrls(dto.content.trim());
 
-  for (const url of detectedUrls) {
-    const domainName = getDomainFromUrl(url);
+        for (const url of detectedUrls) {
+          const domainName = getDomainFromUrl(url);
 
-    await queryRunner.query(
-      `
+          await queryRunner.query(
+            `
       INSERT INTO community_attachment
       (post_commu_id,file_url,file_type,original_name,flag_valid)
       VALUES ($1,$2,'link',$3,true)
       `,
-      [
-        postId,
-        url,
-        domainName,
-      ],
-    );
-  }
-}
+            [
+              postId,
+              url,
+              domainName,
+            ],
+          );
+        }
+      }
 
 
       // files update: delete old ones and add new ones
@@ -549,6 +440,7 @@ COALESCE(
 
       return {
         success: true,
+        data: { post_id: postId },
         message: 'Post updated successfully',
       };
 
@@ -568,14 +460,14 @@ COALESCE(
     keyword: string,
     limit: number = 50,
   ) {
+    try {
+      await this.communityService.checkReadPermission(
+        userId,
+        communityId,
+      );
 
-    await this.communityService.checkReadPermission(
-      userId,
-      communityId,
-    );
-
-    return await this.dataSource.query(
-      `
+      const result = await this.dataSource.query(
+        `
     SELECT
       cp.post_commu_id,
       cp.content,
@@ -588,11 +480,10 @@ COALESCE(
       (
         SELECT json_agg(
          json_build_object(
-  'url', ca.file_url,
-  'type', ca.file_type,
-  'original_name', ca.original_name
-)
-
+        'url', ca.file_url,
+        'type', ca.file_type,
+        'original_name', ca.original_name
+      )
           )
         )
         FROM community_attachment ca
@@ -612,8 +503,16 @@ COALESCE(
     ORDER BY cp.created_at DESC
     LIMIT $3
     `,
-      [communityId, keyword, limit],
-    );
-  }
+        [communityId, keyword, limit],
+      );
+      return {
+        success: true,
+        data: { posts: result },
+        message: 'Search completed successfully!',
+      };
 
+    } catch (error) {
+      throw new InternalServerErrorException('Error searching posts');
+    }
+  }
 }

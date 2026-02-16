@@ -55,6 +55,7 @@ export class CommunityBookmarkController {
     return this.service.getMyBookmarks(userId);
   }
   @Get('check/:postId')
+  @ApiHeader({ name: 'x-user-id', required: true })
   checkBookmark(
     @Headers('x-user-id') userId: string,
     @Param('postId') postId: string,

@@ -17,8 +17,9 @@ export class CommunityCommentService {
       throw new BadRequestException('post_commu_id is required');
     }
 
-    const countResult = await this.dataSource.query(
-      `
+    try {
+      const countResult = await this.dataSource.query(
+        `
     SELECT COUNT(*) as total
     FROM community_comment c
     WHERE c.post_commu_id=$1
@@ -30,13 +31,13 @@ export class CommunityCommentService {
           AND p.flag_valid=true
       )
     `,
-      [post_commu_id],
-    );
+        [post_commu_id],
+      );
 
-    const total = parseInt(countResult[0]?.total || '0', 10);
+      const total = parseInt(countResult[0]?.total || '0', 10);
 
-    const roots = await this.dataSource.query(
-      `
+      const roots = await this.dataSource.query(
+        `
   SELECT
     c.commu_comment_id AS comment_id,
     c.post_commu_id,
@@ -73,23 +74,30 @@ export class CommunityCommentService {
   ORDER BY c.created_at DESC
   LIMIT $2 OFFSET $3
   `,
-      [post_commu_id, limit, offset],
-    );
+        [post_commu_id, limit, offset],
+      );
 
-    const tree = await Promise.all(
-      roots.map(async (r: any) => ({
-        ...r,
-        children: await this.fetchChildren(r.comment_id),
-      })),
-    );
+      const tree = await Promise.all(
+        roots.map(async (r: any) => ({
+          ...r,
+          children: await this.fetchChildren(r.comment_id),
+        })),
+      );
+      const commentData = {
+        comments: tree,
+        total,
+        hasMore: offset + limit < total,
+      };
 
-
-    return {
-      success: true,
-      data: tree,
-      total,
-      hasMore: offset + limit < total,
-    };
+      return {
+        success: true,
+        data: commentData,
+        message: 'Comments fetched successfully!',
+      };
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      throw new InternalServerErrorException('Error fetching comments');
+    }
   }
 
   private async fetchChildren(parentId: number) {
@@ -226,11 +234,12 @@ export class CommunityCommentService {
       }
 
       await queryRunner.commitTransaction();
+      const commentData = { comment_id: newId };
 
       return {
         success: true,
         message: 'Comment created successfully',
-        data: { comment_id: newId },
+        data: commentData,
       };
     } catch (e) {
       await queryRunner.rollbackTransaction();
@@ -257,9 +266,9 @@ export class CommunityCommentService {
     if (post[0].status !== 'active')
       throw new ForbiddenException('Community is inactive');
 
-
-    const result = await this.dataSource.query(
-      `
+    try {
+      const result = await this.dataSource.query(
+        `
       UPDATE community_comment
       SET comment_text=$1, updated_at=now()
       WHERE commu_comment_id=$2
@@ -267,14 +276,22 @@ export class CommunityCommentService {
         AND flag_valid=true
       RETURNING *
       `,
-      [comment_text, comment_id, userId],
-    );
+        [comment_text, comment_id, userId],
+      );
 
-    if (!result.length) {
-      throw new ForbiddenException('Not allowed');
+      if (!result.length) {
+        throw new ForbiddenException('Not allowed');
+      }
+
+      return {
+        success: true, data: { comment_id },
+        message: 'Comment updated successfully!',
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      console.error('Error updating comment:', error);
+      throw new InternalServerErrorException('Error updating comment');
     }
-
-    return { success: true };
   }
 
   async hardDeleteComment(userId: number, commentId: number) {
@@ -325,7 +342,10 @@ export class CommunityCommentService {
     `, [ids]);
 
       await queryRunner.commitTransaction();
-      return { success: true };
+      return {
+        success: true, data: { deleted_ids: ids },
+        message: 'Comment deleted successfully!',
+      };
 
     } catch (err) {
       await queryRunner.rollbackTransaction();

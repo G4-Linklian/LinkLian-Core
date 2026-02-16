@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, ILike } from 'typeorm';
 import { CommunityEntity } from './entities/community.entity';
@@ -22,31 +22,30 @@ export class CommunityService {
   ) { }
 
   async createCommunity(userId: number, dto: any) {
-
-
-    const user = await this.dataSource.query(
-      `
-    SELECT role_id
-    FROM user_sys
-    WHERE user_sys_id=$1
-    `,
-      [userId],
-    );
-
-    if (!user.length) {
-      throw new BadRequestException('User not found');
+    if (!dto?.name?.trim()) {
+      throw new BadRequestException('Community name required');
     }
-
-    if (![2, 3].includes(Number(user[0].role_id))) {
-      throw new ForbiddenException('Only students can create community');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const user = await this.dataSource.query(
+        `
+    SELECT role_id
+    FROM user_sys
+    WHERE user_sys_id=$1
+    `,
+        [userId],
+      );
 
+      if (!user.length) {
+        throw new BadRequestException('User not found');
+      }
+
+      if (![2, 3].includes(Number(user[0].role_id))) {
+        throw new ForbiddenException('Only students can create community');
+      }
       const isPrivate = dto.is_private;
 
       const community = this.repo.create({
@@ -73,6 +72,7 @@ export class CommunityService {
       });
 
       await queryRunner.manager.save(owner);
+
 
       if (dto.tags && Array.isArray(dto.tags)) {
 
@@ -118,22 +118,35 @@ export class CommunityService {
 
       await queryRunner.commitTransaction();
 
-      return savedCommunity;
+      return {
+        success: true,
+        data: { community_id: savedCommunity.community_id },
+        message: 'Community created successfully!',
+      };
 
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error creating community');
     } finally {
       await queryRunner.release();
     }
   }
 
   async listCommunity(userId: number, keyword?: string) {
+    try {
 
-    if (keyword && keyword.trim() !== '') {
+      let result;
+      if (keyword && keyword.trim() !== '') {
 
-      return await this.dataSource.query(
-        `
+        result = await this.dataSource.query(
+          `
       SELECT
         c.community_id,
         c.community_name,
@@ -179,12 +192,12 @@ export class CommunityService {
         AND c.community_name ILIKE '%' || $2 || '%'
       ORDER BY c.created_at DESC
       `,
-        [userId, keyword]
-      );
-    }
+          [userId, keyword.trim()]
+        );
+      } else {
 
-    return await this.dataSource.query(
-      `
+        return await this.dataSource.query(
+          `
     SELECT
       c.community_id,
       c.community_name,
@@ -236,15 +249,45 @@ export class CommunityService {
         AND c.status = 'active'
       ORDER BY c.created_at DESC
     `,
-      [userId],
-    );
+          [userId],
+        );
+      }
+      return {
+        success: true,
+        data: { communities: result },
+        message: 'Communities fetched successfully!',
+      };
+
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error fetching communities',
+      );
+    }
   }
 
 
   async getCommunity(id: number) {
-    return await this.repo.findOne({
-      where: { community_id: id, flag_valid: true },
-    });
+    try {
+      const community = await this.repo.findOne({
+        where: { community_id: id, flag_valid: true },
+      });
+      if (!community) {
+        throw new BadRequestException('Community not found');
+      }
+
+      return {
+        success: true,
+        data: community,
+        message: 'Community fetched successfully!',
+      };
+
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(
+        'Error fetching community',
+      );
+    }
   }
 
   async checkReadPermission(userId: number, communityId: number) {
@@ -262,13 +305,10 @@ export class CommunityService {
 
     const { status, is_private } = community[0];
 
-    // 🔥 ถ้า inactive → อ่านได้
     if (status === 'inactive') {
 
-      // public อ่านได้เสมอ
       if (!is_private) return true;
 
-      // private อ่านได้เฉพาะ member เดิม หรือ owner เดิม
       const member = await this.dataSource.query(`
       SELECT 1 FROM community_member
   WHERE community_id=$1
@@ -283,8 +323,6 @@ export class CommunityService {
 
       return true;
     }
-
-    // ====== ACTIVE LOGIC เดิม ======
 
     if (!is_private) return true;
 
@@ -308,46 +346,46 @@ export class CommunityService {
     userId: number,
     communityId: number,
   ) {
-
-    const community = await this.dataSource.query(
-      `
+    try {
+      const community = await this.dataSource.query(
+        `
     SELECT community_id, status, is_private
     FROM community
     WHERE community_id=$1
       AND flag_valid=true
     `,
-      [communityId],
-    );
+        [communityId],
+      );
 
-    if (!community.length) {
-      throw new BadRequestException('Community not found');
-    }
+      if (!community.length) {
+        throw new BadRequestException('Community not found');
+      }
 
-    const { status, is_private } = community[0];
+      const { status, is_private } = community[0];
 
-    if (status !== 'active') {
-      throw new BadRequestException('Community inactive');
-    }
+      if (status !== 'active') {
+        throw new BadRequestException('Community inactive');
+      }
 
-    if (is_private) {
-      const member = await this.dataSource.query(
-        `
+      if (is_private) {
+        const member = await this.dataSource.query(
+          `
       SELECT 1 FROM community_member
       WHERE community_id=$1
         AND user_sys_id=$2
         AND status='active'
         AND flag_valid=true
       `,
-        [communityId, userId],
-      );
+          [communityId, userId],
+        );
 
-      if (!member.length) {
-        throw new BadRequestException('Private community');
+        if (!member.length) {
+          throw new BadRequestException('Private community');
+        }
       }
-    }
 
-    return await this.dataSource.query(
-      `
+      const posts = await this.dataSource.query(
+        `
     SELECT
       p.post_commu_id,
       p.content,
@@ -389,36 +427,62 @@ export class CommunityService {
 
     ORDER BY p.created_at DESC
     `,
-      [communityId, userId],
-    );
+        [communityId, userId],
+      );
+      return {
+        success: true,
+        data: { posts },
+        message: 'Community feed fetched successfully!',
+      };
+    } catch (error) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error fetching community feed',
+      );
+    }
   }
-  
 
   async searchTag(keyword?: string) {
+    try {
 
-    const clean = keyword
-      ?.replace('#', '')
-      .trim() || '';
+      const clean = keyword
+        ?.replace('#', '')
+        .trim() || '';
 
-    if (clean === '') {
-      return await this.tagRepo.find({
-        where: { flag_valid: true },
-        order: { tag_name: 'ASC' },
-      });
+      const tags =
+        clean === ''
+          ? await this.tagRepo.find({
+            where: { flag_valid: true },
+            order: { tag_name: 'ASC' },
+          })
+          : await this.tagRepo.find({
+            where: {
+              tag_name: ILike(`%${clean}%`),
+              flag_valid: true,
+            },
+            order: { tag_name: 'ASC' },
+          });
+      return {
+        success: true,
+        data: { tags },
+        message: 'Tags fetched successfully!',
+      };
+
+    } catch (error) {
+      throw new InternalServerErrorException('Error searching tag');
     }
-
-    return await this.tagRepo.find({
-      where: {
-        tag_name: ILike(`%${clean}%`),
-        flag_valid: true,
-      },
-      order: { tag_name: 'ASC' },
-    });
   }
 
   async getCommunityDetail(userId: number, communityId: number) {
-    const result = await this.dataSource.query(
-      `
+    try {
+      const result = await this.dataSource.query(
+        `
     SELECT
       c.community_id,
       c.community_name,
@@ -493,17 +557,33 @@ export class CommunityService {
     WHERE c.community_id = $1
       AND c.flag_valid = true
     `,
-      [communityId, userId],
-    );
+        [communityId, userId],
+      );
 
-    if (!result.length) {
-      throw new BadRequestException('Community not found');
+      if (!result.length) {
+        throw new BadRequestException('Community not found');
+      }
+
+      return {
+        success: true,
+        data: {
+          ...result[0],
+          current_user_id: userId,
+        },
+        message: 'Community detail fetched successfully!',
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'Error fetching community detail',
+      );
     }
-
-    return {
-      ...result[0],
-      current_user_id: userId,
-    };
   }
 
   async updateCommunity(
@@ -515,10 +595,13 @@ export class CommunityService {
     if (!dto) {
       throw new BadRequestException('Body is required');
     }
-
-    // check owner
-    const owner = await this.dataSource.query(
-      `
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      // check owner
+      const owner = await this.dataSource.query(
+        `
     SELECT 1
     FROM community_member
     WHERE community_id=$1
@@ -527,117 +610,129 @@ export class CommunityService {
       AND status='active'
       AND flag_valid=true
     `,
-      [communityId, userId],
-    );
+        [communityId, userId],
+      );
 
-    if (!owner.length) {
-      throw new ForbiddenException('Only owner can update community');
-    }
+      if (!owner.length) {
+        throw new ForbiddenException('Only owner can update community');
+      }
 
-    const old = await this.dataSource.query(
-      `
+      const old = await this.dataSource.query(
+        `
     SELECT image_banner
     FROM community
     WHERE community_id=$1
     `,
-      [communityId],
-    );
+        [communityId],
+      );
 
-    if (!old.length) {
-      throw new BadRequestException('Community not found');
-    }
+      if (!old.length) {
+        throw new BadRequestException('Community not found');
+      }
 
-    const fields: string[] = [];
-    const values: any[] = [];
-    let index = 1;
+      const fields: string[] = [];
+      const values: any[] = [];
+      let index = 1;
 
-    if (dto.name !== undefined) {
-      fields.push(`community_name=$${index++}`);
-      values.push(dto.name);
-    }
+      if (dto.name !== undefined) {
+        fields.push(`community_name=$${index++}`);
+        values.push(dto.name);
+      }
 
-    if (dto.description !== undefined) {
-      fields.push(`description=$${index++}`);
-      values.push(dto.description);
-    }
+      if (dto.description !== undefined) {
+        fields.push(`description=$${index++}`);
+        values.push(dto.description);
+      }
 
-    const banner = dto.image_banner ?? old[0].image_banner;
-    fields.push(`image_banner=$${index++}`);
-    values.push(banner);
+      const banner = dto.image_banner ?? old[0].image_banner;
+      fields.push(`image_banner=$${index++}`);
+      values.push(banner);
 
-    if (fields.length === 0) {
-      throw new BadRequestException('Nothing to update');
-    }
+      if (fields.length === 0) {
+        throw new BadRequestException('Nothing to update');
+      }
 
-    values.push(communityId);
+      values.push(communityId);
 
-    await this.dataSource.query(
-      `
+      await this.dataSource.query(
+        `
     UPDATE community
     SET ${fields.join(', ')},
         updated_at=now()
     WHERE community_id=$${index}
     `,
-      values,
-    );
+        values,
+      );
 
 
-    if (dto.tags && Array.isArray(dto.tags)) {
+      if (dto.tags && Array.isArray(dto.tags)) {
 
-      await this.dataSource.query(`
+        await this.dataSource.query(`
     DELETE FROM community_tag_normalize
     WHERE community_id=$1
   `, [communityId]);
 
-      for (let rawTag of dto.tags) {
+        for (let rawTag of dto.tags) {
 
-        if (!rawTag) continue;
+          if (!rawTag) continue;
 
-        const tagName = rawTag
-          .toString()
-          .trim()
-          .toLowerCase()
-          .replace('#', '');
+          const tagName = rawTag
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replace('#', '');
 
-        let tag = await this.dataSource.query(
-          `SELECT community_tag_id FROM community_tag WHERE tag_name=$1`,
-          [tagName],
-        );
-
-        let tagId;
-
-        if (!tag.length) {
-          const insertTag = await this.dataSource.query(
-            `INSERT INTO community_tag (tag_name, flag_valid)
-         VALUES ($1, true)
-         RETURNING community_tag_id`,
+          let tag = await this.dataSource.query(
+            `SELECT community_tag_id FROM community_tag WHERE tag_name=$1`,
             [tagName],
           );
-          tagId = insertTag[0].community_tag_id;
-        } else {
-          tagId = tag[0].community_tag_id;
-        }
 
-        await this.dataSource.query(`
+          let tagId;
+
+          if (!tag.length) {
+            const insertTag = await this.dataSource.query(
+              `INSERT INTO community_tag (tag_name, flag_valid)
+         VALUES ($1, true)
+         RETURNING community_tag_id`,
+              [tagName],
+            );
+            tagId = insertTag[0].community_tag_id;
+          } else {
+            tagId = tag[0].community_tag_id;
+          }
+
+          await this.dataSource.query(`
       INSERT INTO community_tag_normalize
       (community_id, community_tag_id, flag_valid)
       VALUES ($1,$2,true)
     `, [communityId, tagId]);
+        }
       }
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Community updated successfully',
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-
-    return {
-      success: true,
-      message: 'Community updated successfully',
-    };
   }
 
 
-  async hardDeleteCommunity(userId: number, communityId: number) {
 
-    const owner = await this.dataSource.query(
-      `
+  async hardDeleteCommunity(userId: number, communityId: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+
+      const owner = await this.dataSource.query(
+        `
     SELECT 1 FROM community_member
     WHERE community_id=$1
       AND user_sys_id=$2
@@ -645,14 +740,14 @@ export class CommunityService {
       AND status='active'
       AND flag_valid=true
     `,
-      [communityId, userId],
-    );
+        [communityId, userId],
+      );
 
-    if (!owner.length) {
-      throw new ForbiddenException('Only owner can delete');
-    }
+      if (!owner.length) {
+        throw new ForbiddenException('Only owner can delete');
+      }
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_bookmark
     WHERE post_commu_id IN (
       SELECT post_commu_id
@@ -661,7 +756,7 @@ export class CommunityService {
     )
   `, [communityId]);
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_comment_path
     WHERE descendant_id IN (
       SELECT commu_comment_id
@@ -675,7 +770,7 @@ export class CommunityService {
   `, [communityId]);
 
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_comment
     WHERE post_commu_id IN (
       SELECT post_commu_id
@@ -684,7 +779,7 @@ export class CommunityService {
     )
   `, [communityId]);
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_attachment
     WHERE post_commu_id IN (
       SELECT post_commu_id
@@ -694,31 +789,37 @@ export class CommunityService {
   `, [communityId]);
 
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM post_in_community
     WHERE community_id=$1
   `, [communityId]);
 
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_member
     WHERE community_id=$1
   `, [communityId]);
 
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community_tag_normalize
     WHERE community_id=$1
   `, [communityId]);
 
 
-    await this.dataSource.query(`
+      await this.dataSource.query(`
     DELETE FROM community
     WHERE community_id=$1
   `, [communityId]);
 
-    return { success: true };
+      await queryRunner.commitTransaction();
+
+      return { success: true };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
-
-
 }

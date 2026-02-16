@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
@@ -10,51 +11,51 @@ export class CommunityMemberService {
   constructor(private dataSource: DataSource) { }
 
   async joinCommunity(userId: number, communityId: number) {
-
-    const community = await this.dataSource.query(
-      `
+    try {
+      const community = await this.dataSource.query(
+        `
     SELECT status, is_private
     FROM community
     WHERE community_id=$1
     AND flag_valid=true
     `,
-      [communityId],
-    );
+        [communityId],
+      );
 
-    if (!community.length) {
-      throw new BadRequestException('Community not found');
-    }
+      if (!community.length) {
+        throw new BadRequestException('Community not found');
+      }
 
-    if (community[0].status !== 'active') {
-      throw new ForbiddenException('Community is inactive');
-    }
+      if (community[0].status !== 'active') {
+        throw new ForbiddenException('Community is inactive');
+      }
 
-    const isPrivate = community[0].is_private;
-    const newStatus = isPrivate ? 'pending' : 'active';
+      const isPrivate = community[0].is_private;
+      const newStatus = isPrivate ? 'pending' : 'active';
 
 
-    const existing = await this.dataSource.query(
-      `
+      const existing = await this.dataSource.query(
+        `
     SELECT *
     FROM community_member
     WHERE community_id=$1
       AND user_sys_id=$2
     `,
-      [communityId, userId],
-    );
+        [communityId, userId],
+      );
+
+      let result;
+      if (existing.length > 0) {
 
 
-    if (existing.length > 0) {
+        if (existing[0].flag_valid === true &&
+          existing[0].status === 'active') {
+          throw new BadRequestException('Already joined');
+        }
 
 
-      if (existing[0].flag_valid === true &&
-        existing[0].status === 'active') {
-        throw new BadRequestException('Already joined');
-      }
-
-
-      return this.dataSource.query(
-        `
+        result = await this.dataSource.query(
+          `
       UPDATE community_member
       SET flag_valid=true,
           status=$3,
@@ -63,21 +64,41 @@ export class CommunityMemberService {
         AND user_sys_id=$2
       RETURNING *
       `,
-        [communityId, userId, newStatus],
-      );
-    }
+          [communityId, userId, newStatus],
+        );
+      } else {
 
 
-    return this.dataSource.query(
-      `
+        result = await this.dataSource.query(
+          `
     INSERT INTO community_member
     (community_id,user_sys_id,role,status,request_at,flag_valid)
     VALUES ($1,$2,'member',$3,now(),true)
     RETURNING *
     `,
-      [communityId, userId, newStatus],
-    );
+          [communityId, userId, newStatus],
+        );
+      }
+      return {
+        success: true,
+        data: result[0],
+        message:
+          newStatus === 'active'
+            ? 'Joined community successfully!'
+            : 'Join request sent successfully!',
+      };
+
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error joining community');
+    }
   }
+
 
 
 
@@ -102,9 +123,9 @@ export class CommunityMemberService {
     if (community[0].status !== 'active') {
       throw new ForbiddenException('Community is inactive');
     }
-
-    const owner = await this.dataSource.query(
-      `
+    try {
+      const owner = await this.dataSource.query(
+        `
       SELECT 1 FROM community_member
       WHERE community_id=$1
         AND user_sys_id=$2
@@ -112,37 +133,37 @@ export class CommunityMemberService {
         AND status='active'
         AND flag_valid=true
       `,
-      [communityId, ownerId],
-    );
+        [communityId, ownerId],
+      );
 
-    if (owner.length === 0) {
-      throw new ForbiddenException('Only owner can approve');
-    }
+      if (owner.length === 0) {
+        throw new ForbiddenException('Only owner can approve');
+      }
 
-    const target = await this.dataSource.query(
-      `
+      const target = await this.dataSource.query(
+        `
       SELECT status FROM community_member
       WHERE community_id=$1
         AND user_sys_id=$2
         AND flag_valid=true
       `,
-      [communityId, targetUserId],
-    );
+        [communityId, targetUserId],
+      );
 
-    if (target.length === 0) {
-      throw new BadRequestException('User not found in community');
-    }
+      if (target.length === 0) {
+        throw new BadRequestException('User not found in community');
+      }
 
-    if (target[0].status === 'active') {
-      throw new BadRequestException('User already approved');
-    }
+      if (target[0].status === 'active') {
+        throw new BadRequestException('User already approved');
+      }
 
-    if (target[0].status !== 'pending') {
-      throw new BadRequestException('Invalid member status');
-    }
+      if (target[0].status !== 'pending') {
+        throw new BadRequestException('Invalid member status');
+      }
 
-    const result = await this.dataSource.query(
-      `
+      const result = await this.dataSource.query(
+        `
       UPDATE community_member
       SET status='active',
           approve_at=now()
@@ -151,10 +172,27 @@ export class CommunityMemberService {
         AND status='pending'
       RETURNING *
       `,
-      [communityId, targetUserId],
-    );
+        [communityId, targetUserId],
+      );
+      if (!result.length) {
+        throw new BadRequestException('Invalid member status');
+      }
 
-    return result;
+      return {
+        success: true,
+        data: result[0],
+        message: 'Member approved successfully!',
+      };
+
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error approving member');
+    }
   }
 
   async leaveCommunity(userId: number, communityId: number) {
@@ -209,7 +247,11 @@ export class CommunityMemberService {
       );
 
       await queryRunner.commitTransaction();
-      return { message: 'Left community successfully' };
+      return {
+        success: true,
+        data: { community_id: communityId },
+        message: 'Left community successfully!',
+      };
 
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -220,8 +262,9 @@ export class CommunityMemberService {
   }
 
   async getMembers(communityId: number) {
-    return this.dataSource.query(
-      `
+    try {
+      const result = await this.dataSource.query(
+        `
       SELECT u.user_sys_id,
              u.first_name,
              u.last_name,
@@ -233,8 +276,17 @@ export class CommunityMemberService {
         AND cm.status='active'
         AND cm.flag_valid=true
       `,
-      [communityId],
-    );
+        [communityId],
+      );
+      return {
+        success: true,
+        data: { members: result },
+        message: 'Members fetched successfully!',
+      };
+
+    } catch {
+      throw new InternalServerErrorException('Error fetching members');
+    }
   }
   async getPendingMembers(ownerId: number, communityId: number) {
     const owner = await this.dataSource.query(
@@ -253,7 +305,8 @@ export class CommunityMemberService {
       throw new ForbiddenException('Only owner can view pending members');
     }
 
-    return this.dataSource.query(
+
+    const result = await this.dataSource.query(
       `
     SELECT u.user_sys_id,
          u.first_name,
@@ -274,7 +327,20 @@ export class CommunityMemberService {
     `,
       [communityId],
     );
+    return {
+      success: true,
+      data: { members: result },
+      message: 'Pending members fetched successfully!',
+    };
+
+  } catch(error) {
+    if (error instanceof ForbiddenException) throw error;
+    throw new InternalServerErrorException(
+      'Error fetching pending members',
+    );
   }
+
+
   async rejectMember(
     ownerId: number,
     communityId: number,
@@ -296,9 +362,9 @@ export class CommunityMemberService {
       throw new ForbiddenException('Community is inactive');
     }
 
-
-    const owner = await this.dataSource.query(
-      `
+    try {
+      const owner = await this.dataSource.query(
+        `
     SELECT 1 FROM community_member
     WHERE community_id=$1
       AND user_sys_id=$2
@@ -306,43 +372,53 @@ export class CommunityMemberService {
       AND status='active'
       AND flag_valid=true
     `,
-      [communityId, ownerId],
-    );
+        [communityId, ownerId],
+      );
 
-    if (owner.length === 0) {
-      throw new ForbiddenException('Only owner can reject');
-    }
+      if (owner.length === 0) {
+        throw new ForbiddenException('Only owner can reject');
+      }
 
-    const target = await this.dataSource.query(
-      `
+      const target = await this.dataSource.query(
+        `
     SELECT status FROM community_member
     WHERE community_id=$1
       AND user_sys_id=$2
       AND flag_valid=true
     `,
-      [communityId, targetUserId],
-    );
+        [communityId, targetUserId],
+      );
 
-    if (target.length === 0) {
-      throw new BadRequestException('User not found');
-    }
+      if (target.length === 0) {
+        throw new BadRequestException('User not found');
+      }
 
-    if (!['pending', 'active'].includes(target[0].status)) {
-      throw new BadRequestException('Invalid member status');
-    }
+      if (!['pending', 'active'].includes(target[0].status)) {
+        throw new BadRequestException('Invalid member status');
+      }
 
-    await this.dataSource.query(
-      `
+      await this.dataSource.query(
+        `
     UPDATE community_member
     SET flag_valid=false,
         status='inactive'
     WHERE community_id=$1
       AND user_sys_id=$2
     `,
-      [communityId, targetUserId],
-    );
+        [communityId, targetUserId],
+      );
 
-    return { message: 'Rejected successfully' };
+      return {
+        success: true,
+        data: { user_sys_id: targetUserId },
+        message: 'Member rejected successfully!',
+      };
+
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      throw new InternalServerErrorException('Error rejecting member');
+    }
   }
-
 }
+
+
