@@ -4,32 +4,40 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity('subject')
 export class Subject {
   @PrimaryGeneratedColumn('increment')
-  subject_id: number;
+  subject_id!: number;
 
   @Column({ name: 'learning_area_id' })
-  learning_area_id: number;
+  learning_area_id!: number;
 
   @Column({ name: 'subject_code' })
-  subject_code: string;
+  subject_code!: string;
 
   @Column({ name: 'name_th' })
-  name_th: string;
+  name_th!: string;
 
   @Column({ name: 'name_en', type: 'varchar', nullable: true })
-  name_en: string | null;
+  name_en?: string | null;
 
   @Column({ name: 'credit', type: 'decimal', precision: 3, scale: 1 })
-  credit: number;
+  credit!: number;
 
   @Column({ name: 'hour_per_week', type: 'decimal', precision: 3, scale: 1 })
-  hour_per_week: number;
+  hour_per_week!: number;
 
   @Column({ name: 'flag_valid', default: true })
-  flag_valid: boolean;
+  flag_valid!: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
+  created_at?: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP'
+  })
+  updated_at?: Date;
 }

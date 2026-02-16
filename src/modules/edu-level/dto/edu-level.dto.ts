@@ -125,11 +125,11 @@ export class SearchEduLevelDto {
 export class CreateEduLevelDto {
   @ApiProperty({ description: 'Level name', example: 'ป.1' })
   @IsString()
-  level_name: string;
+  level_name?: string;
 
   @ApiProperty({ description: 'Education type', example: 'ประถมศึกษา', enum: EduType })
   @IsString()
-  edu_type: string;
+  edu_type?: string;
 }
 
 /**
@@ -158,11 +158,11 @@ export class UpdateEduLevelDto {
 export class CreateEduLevelNormDto {
   @ApiProperty({ description: 'Edu Level ID', example: 1 })
   @IsInt()
-  edu_lev_id: number;
+  edu_lev_id?: number;
 
   @ApiProperty({ description: 'Program ID', example: 1 })
   @IsInt()
-  program_id: number;
+  program_id?: number;
 }
 
 /**
@@ -171,9 +171,9 @@ export class CreateEduLevelNormDto {
 export class DeleteEduLevelNormDto {
   @ApiProperty({ description: 'Edu Level ID', example: 1 })
   @IsInt()
-  edu_lev_id: number;
+  edu_lev_id?: number;
 
   @ApiProperty({ description: 'Program ID', example: 1 })
   @IsInt()
-  program_id: number;
+  program_id?: number;
 }

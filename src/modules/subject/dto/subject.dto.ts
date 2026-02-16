@@ -92,15 +92,15 @@ export class SearchSubjectDto {
 export class CreateSubjectDto {
   @ApiProperty({ description: 'Learning Area ID', example: 1 })
   @IsInt()
-  learning_area_id: number;
+  learning_area_id!: number;
 
   @ApiProperty({ description: 'Subject Code', example: 'CS101' })
   @IsString()
-  subject_code: string;
+  subject_code!: string;
 
   @ApiProperty({ description: 'Thai Name', example: 'วิทยาศาสตร์คอมพิวเตอร์' })
   @IsString()
-  name_th: string;
+  name_th!: string;
 
   @ApiPropertyOptional({ description: 'English Name', example: 'Computer Science' })
   @IsOptional()
@@ -109,11 +109,20 @@ export class CreateSubjectDto {
 
   @ApiProperty({ description: 'Credit', example: 3 })
   @IsNumber()
-  credit: number;
+  credit!: number;
 
   @ApiProperty({ description: 'Hours per week', example: 3 })
   @IsNumber()
-  hour_per_week: number;
+  hour_per_week!: number;
+
+  @ApiPropertyOptional({ description: 'Valid flag', example: true })
+  flag_valid?: boolean;
+
+  @ApiPropertyOptional({ description: 'Created at timestamp', example: '2024-01-01T00:00:00Z' })
+  created_at?: Date;
+
+  @ApiPropertyOptional({ description: 'Updated at timestamp', example: '2024-01-01T00:00:00Z' })
+  updated_at?: Date;
 }
 
 /**

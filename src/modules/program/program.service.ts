@@ -153,7 +153,8 @@ export class ProgramService {
 
     // Keyword search with ILIKE for case-insensitive partial match
     if (dto.keyword) {
-      query += ` AND (p.program_name ILIKE $${index++})`;
+      query += ` AND (p.program_name ILIKE $${index++} OR p.remark ILIKE $${index++})`;
+      values.push(`%${dto.keyword}%`);
       values.push(`%${dto.keyword}%`);
     }
 
@@ -179,7 +180,7 @@ export class ProgramService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (err) {
       console.error('Error fetching programs:', err);
       throw new InternalServerErrorException('Error fetching programs');
@@ -195,18 +196,25 @@ export class ProgramService {
     }
 
     try {
-      const newProgram = this.programRepo.create({
-        inst_id: dto.inst_id,
-        program_name: dto.program_name,
-        program_type: dto.program_type,
-        tree_type: dto.tree_type,
-        parent_id: dto.parent_id || null,
-        remark: dto.remark || null,
-        flag_valid: true,
-      });
+      const query = `
+        INSERT INTO program
+        (inst_id, program_name, program_type, tree_type, parent_id, remark, flag_valid, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *
+      `;
 
-      const savedProgram = await this.programRepo.save(newProgram);
-      return { message: 'Program created successfully!', data: savedProgram };
+      const values = [
+        dto.inst_id,
+        dto.program_name,
+        dto.program_type,
+        dto.tree_type,
+        dto.parent_id || null,
+        dto.remark || null,
+        true,
+      ];
+
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -230,28 +238,54 @@ export class ProgramService {
       throw new NotFoundException('Program not found');
     }
 
-    // Build update object dynamically
-    const updates: Partial<Program> = {};
+    // Build update fields dynamically
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let index = 1;
 
-    if (dto.inst_id !== undefined) updates.inst_id = dto.inst_id;
-    if (dto.program_name !== undefined) updates.program_name = dto.program_name;
-    if (dto.program_type !== undefined) updates.program_type = dto.program_type;
-    if (dto.parent_id !== undefined) updates.parent_id = dto.parent_id;
-    if (dto.remark !== undefined) updates.remark = dto.remark;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (dto.inst_id !== undefined) {
+      updateFields.push(`inst_id = $${index++}`);
+      values.push(dto.inst_id);
+    }
 
-    if (Object.keys(updates).length === 0) {
+    if (dto.program_name !== undefined) {
+      updateFields.push(`program_name = $${index++}`);
+      values.push(dto.program_name);
+    }
+
+    if (dto.program_type !== undefined) {
+      updateFields.push(`program_type = $${index++}`);
+      values.push(dto.program_type);
+    }
+
+    if (dto.parent_id !== undefined) {
+      updateFields.push(`parent_id = $${index++}`);
+      values.push(dto.parent_id);
+    }
+
+    if (dto.remark !== undefined) {
+      updateFields.push(`remark = $${index++}`);
+      values.push(dto.remark);
+    }
+
+    if (typeof dto.flag_valid === 'boolean') {
+      updateFields.push(`flag_valid = $${index++}`);
+      values.push(dto.flag_valid);
+    }
+
+    if (updateFields.length === 0) {
       throw new BadRequestException('No fields to update!');
     }
 
+    // Add updated_at
+    updateFields.push(`updated_at = NOW()`);
+    values.push(id);
+
     try {
-      await this.programRepo.update({ program_id: id }, updates);
+      const query = `UPDATE program SET ${updateFields.join(', ')} WHERE program_id = $${index} RETURNING *`;
+      const result = await this.dataSource.query(query, values);
 
-      const updatedProgram = await this.programRepo.findOne({
-        where: { program_id: id }
-      });
-
-      return { message: 'Program updated successfully!', data: updatedProgram };
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -277,7 +311,7 @@ export class ProgramService {
 
     try {
       await this.programRepo.delete({ program_id: id });
-      return { message: 'Program deleted successfully!', data: existingProgram };
+      return existingProgram;
 
     } catch (error) {
       console.error('Error deleting program:', error);
@@ -303,7 +337,7 @@ export class ProgramService {
       });
 
       const savedNorm = await this.userSysProgramNormRepo.save(newNorm);
-      return { message: 'Program user sys created successfully!', data: savedNorm };
+      return savedNorm;
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -351,7 +385,7 @@ export class ProgramService {
         throw new NotFoundException('User sys program normalize record not found');
       }
 
-      return { message: 'Program user sys updated successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -376,7 +410,7 @@ export class ProgramService {
         throw new NotFoundException('User sys program normalize record not found');
       }
 
-      return { message: 'Program user sys deleted successfully!', data: result[0] };
+      return result[0];
 
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -400,8 +434,9 @@ export class ProgramService {
         user_sys_id,
         flag_valid: true,
       });
-
-      return await this.userSysProgramNormRepo.save(newNorm);
+      
+      const savedNorm = await this.userSysProgramNormRepo.save(newNorm);
+      return savedNorm;
     } catch (error) {
       console.error('Error creating program user sys internally:', error);
       throw error;

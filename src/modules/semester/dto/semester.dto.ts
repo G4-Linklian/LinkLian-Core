@@ -75,23 +75,23 @@ export class SearchSemesterDto {
 export class CreateSemesterDto {
   @ApiProperty({ description: 'Institution ID', example: 1 })
   @IsInt()
-  inst_id: number;
+  inst_id!: number;
 
   @ApiProperty({ description: 'Semester name', example: '1/2567' })
   @IsString()
-  semester: string;
+  semester!: string;
 
   @ApiProperty({ description: 'Start date (YYYY-MM-DD)', example: '2024-05-01' })
   @IsDateString()
-  start_date: string;
+  start_date!: string;
 
   @ApiProperty({ description: 'End date (YYYY-MM-DD)', example: '2024-09-30' })
   @IsDateString()
-  end_date: string;
+  end_date!: string;
 
   @ApiProperty({ description: 'Valid flag', example: true })
   @IsBoolean()
-  flag_valid: boolean;
+  flag_valid!: boolean;
 
   @ApiPropertyOptional({ description: 'Status', example: 'pending', enum: SemesterStatus, default: 'pending' })
   @IsOptional()
@@ -140,15 +140,15 @@ export class UpdateSemesterDto {
 export class CreateSemesterSubjectDto {
   @ApiProperty({ description: 'Subject ID', example: 1 })
   @IsInt()
-  subject_id: number;
+  subject_id!: number;
 
   @ApiProperty({ description: 'Semester ID', example: 1 })
   @IsInt()
-  semester_id: number;
+  semester_id!: number;
 
   @ApiProperty({ description: 'Valid flag', example: true })
   @IsBoolean()
-  flag_valid: boolean;
+  flag_valid!: boolean;
 }
 
 /**
@@ -157,9 +157,9 @@ export class CreateSemesterSubjectDto {
 export class DeleteSemesterSubjectDto {
   @ApiProperty({ description: 'Subject ID', example: 1 })
   @IsInt()
-  subject_id: number;
+  subject_id!: number;
 
   @ApiProperty({ description: 'Semester ID', example: 1 })
   @IsInt()
-  semester_id: number;
+  semester_id!: number;
 }

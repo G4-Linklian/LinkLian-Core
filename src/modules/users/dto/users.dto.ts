@@ -79,6 +79,12 @@ export class SearchUserSysDto {
   @IsInt()
   learning_area_id?: number;
 
+  @ApiPropertyOptional({ description: 'Program ID (for role 3)', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  program_id?: number;
+
   @ApiPropertyOptional({ description: 'Keyword search for code, first_name, last_name, email', example: 'john' })
   @IsOptional()
   @IsString()
@@ -113,11 +119,11 @@ export class SearchUserSysDto {
 export class CreateUserSysDto {
   @ApiProperty({ description: 'Email', example: 'user@example.com' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ description: 'First Name', example: 'John' })
   @IsString()
-  first_name: string;
+  first_name!: string;
 
   @ApiPropertyOptional({ description: 'Middle Name', example: 'William' })
   @IsOptional()
@@ -126,7 +132,7 @@ export class CreateUserSysDto {
 
   @ApiProperty({ description: 'Last Name', example: 'Doe' })
   @IsString()
-  last_name: string;
+  last_name!: string;
 
   @ApiPropertyOptional({ description: 'Phone', example: '0812345678' })
   @IsOptional()
@@ -135,11 +141,11 @@ export class CreateUserSysDto {
 
   @ApiProperty({ description: 'Role ID', example: 1 })
   @IsInt()
-  role_id: number;
+  role_id!: number;
 
   @ApiProperty({ description: 'User Code', example: 'STU001' })
   @IsString()
-  code: string;
+  code!: string;
 
   @ApiPropertyOptional({ description: 'Education Level ID', example: 1 })
   @IsOptional()
@@ -148,7 +154,7 @@ export class CreateUserSysDto {
 
   @ApiProperty({ description: 'Institution ID', example: 1 })
   @IsInt()
-  inst_id: number;
+  inst_id!: number;
 
   @ApiPropertyOptional({ description: 'User Status', example: 'active', enum: UserStatus })
   @IsOptional()
@@ -239,4 +245,9 @@ export class UpdateUserSysDto {
   @IsOptional()
   @IsInt()
   learning_area_id?: number;
+
+  @ApiPropertyOptional({ description: 'Program ID', example: 1 })
+  @IsOptional()
+  @IsInt()
+  program_id?: number;
 }

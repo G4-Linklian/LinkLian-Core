@@ -27,10 +27,101 @@ export class InstitutionService {
     return result;
   }
 
+  async findDetailById(id: number) {
+    const hasInput = id;
+
+    if (!hasInput) {
+      throw new BadRequestException('No value input!');
+    }
+
+    try {
+      const result = await this.institutionRepo
+        .createQueryBuilder('i')
+        .select([
+          'i.inst_id as inst_id',
+          'i.inst_email as inst_email',
+          'i.inst_name_th as inst_name_th',
+          'i.inst_name_en as inst_name_en',
+          'i.inst_abbr_th as inst_abbr_th',
+          'i.inst_abbr_en as inst_abbr_en',
+          'i.inst_type as inst_type',
+          'i.inst_phone as inst_phone',
+          'i.website as website',
+          'i.address as address',
+          'i.subdistrict as subdistrict',
+          'i.district as district',
+          'i.province as province',
+          'i.postal_code as postal_code',
+          'i.logo_url as logo_url',
+          'i.docs_url as docs_url',
+          'i.approve_status as approve_status',
+          'COALESCE(student_count.count, 0) as student_count',
+          'COALESCE(teacher_count.count, 0) as teacher_count',
+          'open_semester.semester as open_semester'
+        ])
+        .leftJoin(
+          subQuery => {
+            return subQuery
+              .select('p.inst_id', 'inst_id')
+              .addSelect('COUNT(*)', 'count')
+              .from('user_sys', 'us')
+              .leftJoin('user_sys_program_normalize', 'usp', 'us.user_sys_id = usp.user_sys_id')
+              .leftJoin('program', 'p', 'p.program_id = usp.program_id')
+              .where('us.user_status = :active', { active: 'Active' })
+              .groupBy('p.inst_id');
+          },
+          'student_count',
+          'i.inst_id = student_count.inst_id',
+        )
+        .leftJoin(
+          subQuery => {
+            return subQuery
+              .select('la.inst_id', 'inst_id')
+              .addSelect('COUNT(*)', 'count')
+              .from('user_sys', 'us')
+              .leftJoin('user_sys_learning_area_normalize', 'usla', 'us.user_sys_id = usla.user_sys_id')
+              .leftJoin('learning_area', 'la', 'la.learning_area_id = usla.learning_area_id')
+              .where('us.user_status = :active', { active: 'Active' })
+              .groupBy('la.inst_id');
+          },
+          'teacher_count',
+          'i.inst_id = teacher_count.inst_id'
+        )
+        .leftJoin(
+          subQuery => {
+            return subQuery
+              .select('s.inst_id', 'inst_id')
+              .addSelect('s.semester', 'semester')
+              .from('semester', 's')
+              .where('s.status = :status', { status: 'open' });
+          },
+          'open_semester',
+          'i.inst_id = open_semester.inst_id'
+        )
+        .where('i.inst_id = :id', { id })
+        .getRawOne();
+
+      if (!result) {
+        throw new NotFoundException('Institution not found');
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error fetching institution details');
+    }
+  }
+
   async searchInstitution(dto: SearchInstitutionDto) {
     const hasInput = dto.inst_id || dto.inst_email || dto.inst_name_th || dto.inst_name_en ||
                      dto.inst_abbr_th || dto.inst_abbr_en || dto.inst_type || dto.approve_status ||
                      dto.from || typeof dto.flag_valid === 'boolean';
+
+    if (!hasInput) {
+      throw new BadRequestException('No value input!');
+    }
 
     const query = this.institutionRepo.createQueryBuilder('i')
       .select([
@@ -95,7 +186,7 @@ export class InstitutionService {
       await this.institutionRepo.save(newInstitution);
       return { message: "Institution created successfully!" };
 
-    } catch (error) {
+    } catch (error : any) {
       if (error.code === '23505') {
         throw new ConflictException('Email already exists!');
       }
@@ -126,7 +217,7 @@ export class InstitutionService {
     try {
       await this.institutionRepo.update({ inst_id: id }, fieldsToUpdate);
       return { message: "Institution updated successfully!" };
-    } catch (error) {
+    } catch (error : any) {
       console.error('Error updating institution:', error);
       throw new InternalServerErrorException('Error updating institution');
     }
@@ -144,7 +235,7 @@ export class InstitutionService {
     try {
       await this.institutionRepo.delete({ inst_id: id });
       return { message: "Institution deleted successfully!" };
-    } catch (error) {
+    } catch (error : any) {
       console.error('Error deleting institution:', error);
       throw new InternalServerErrorException('Error deleting institution');
     }

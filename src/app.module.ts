@@ -21,6 +21,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
 import { CommunityModule } from './modules/community/community.module';
 
 @Module({
@@ -61,7 +62,8 @@ import { CommunityModule } from './modules/community/community.module';
     UsersModule,
     ProfileModule,
     SocialFeedModule,
-    BookmarkModule,  // ✅ เพิ่ม BookmarkModule
+    BookmarkModule,
+    RegisSummaryModule,
     CommunityModule,
   ],
 

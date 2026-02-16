@@ -52,6 +52,11 @@ export class SearchSectionMasterDto {
   @IsBoolean()
   count_student?: boolean;
 
+  @ApiPropertyOptional({ description: 'Keyword search for section_name', example: 'Section' })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
   @ApiPropertyOptional({ description: 'Sort by field', example: 'section_name' })
   @IsOptional()
   @IsString()
@@ -73,6 +78,11 @@ export class SearchSectionMasterDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
 }
 
 /**
@@ -157,6 +167,11 @@ export class SearchSectionDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
 }
 
 /**
@@ -201,6 +216,11 @@ export class SearchScheduleDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   flag_valid?: boolean;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
 }
 
 /**
@@ -286,6 +306,11 @@ export class SearchSectionEducatorDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
 }
 
 /**
@@ -359,6 +384,39 @@ export class SearchEnrollmentDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
+
+  @ApiPropertyOptional({ description: 'Keyword search for first_name, last_name, or username', example: 'John' })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @ApiPropertyOptional({ description: 'Education Level ID', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  edu_level_id?: number;
+
+  @ApiPropertyOptional({ description: 'Program ID', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  program_id?: number;
+
+  @ApiPropertyOptional({ description: 'Education Level Detail ID', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  edu_lev_id?: number;
+
+  @ApiPropertyOptional({ description: 'User Status', example: 'Active' })
+  @IsOptional()
+  @IsString()
+  user_status?: string;
 }
 
 // ========== Create DTOs ==========
@@ -369,11 +427,11 @@ export class SearchEnrollmentDto {
 export class CreateSectionDto {
   @ApiProperty({ description: 'Subject ID', example: 1 })
   @IsInt()
-  subject_id: number;
+  subject_id!: number;
 
   @ApiProperty({ description: 'Semester ID', example: 1 })
   @IsInt()
-  semester_id: number;
+  semester_id!: number;
 
   @ApiPropertyOptional({ description: 'Section Name', example: 'Section A' })
   @IsOptional()
@@ -387,25 +445,25 @@ export class CreateSectionDto {
 export class CreateScheduleDto {
   @ApiProperty({ description: 'Section ID', example: 1 })
   @IsInt()
-  section_id: number;
+  section_id!: number;
 
   @ApiProperty({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
   @IsString()
-  day_of_week: string;
+  day_of_week!: string;
 
   @ApiProperty({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
   @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, { message: 'Invalid time format (HH:mm:ss)' })
   @IsString()
-  start_time: string;
+  start_time!: string;
 
   @ApiProperty({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
   @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, { message: 'Invalid time format (HH:mm:ss)' })
   @IsString()
-  end_time: string;
+  end_time!: string;
 
   @ApiProperty({ description: 'Room Location ID', example: 1 })
   @IsInt()
-  room_location_id: number;
+  room_location_id!: number;
 }
 
 /**
@@ -414,11 +472,11 @@ export class CreateScheduleDto {
 export class CreateSectionScheduleDto {
   @ApiProperty({ description: 'Subject ID', example: 1 })
   @IsInt()
-  subject_id: number;
+  subject_id!: number;
 
   @ApiProperty({ description: 'Semester ID', example: 1 })
   @IsInt()
-  semester_id: number;
+  semester_id!: number;
 
   @ApiPropertyOptional({ description: 'Section Name', example: 'Section A' })
   @IsOptional()
@@ -452,15 +510,15 @@ export class CreateSectionScheduleDto {
 export class CreateSectionEducatorDto {
   @ApiProperty({ description: 'Section ID', example: 1 })
   @IsInt()
-  section_id: number;
+  section_id!: number;
 
   @ApiProperty({ description: 'User Sys ID (educator)', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 
   @ApiProperty({ description: 'Position', example: 'main', enum: EducatorPosition })
   @IsString()
-  position: string;
+  position!: string;
 }
 
 /**
@@ -469,11 +527,11 @@ export class CreateSectionEducatorDto {
 export class CreateEnrollmentDto {
   @ApiProperty({ description: 'Section ID', example: 1 })
   @IsInt()
-  section_id: number;
+  section_id!: number;
 
   @ApiProperty({ description: 'User Sys ID (student)', example: 1 })
   @IsInt()
-  user_sys_id: number;
+  user_sys_id!: number;
 }
 
 // ========== Update DTOs ==========
@@ -509,7 +567,7 @@ export class UpdateSectionDto {
 export class UpdateSectionScheduleDto {
   @ApiProperty({ description: 'Section ID', example: 1 })
   @IsInt()
-  section_id: number;
+  section_id!: number;
 
   @ApiPropertyOptional({ description: 'Schedule ID', example: 1 })
   @IsOptional()
@@ -550,6 +608,11 @@ export class UpdateSectionScheduleDto {
   @IsOptional()
   @IsInt()
   room_location_id?: number;
+
+  @ApiPropertyOptional({ description: 'Hour per week', example: 3 })
+  @IsOptional()
+  @IsInt()
+  hour_per_week?: number;
 }
 
 /**
@@ -605,11 +668,13 @@ export class UpdateEnrollmentDto {
 export class DeleteSectionEducatorDto {
   @ApiPropertyOptional({ description: 'Section ID', example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   section_id?: number;
 
   @ApiPropertyOptional({ description: 'User Sys ID (educator)', example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   user_sys_id?: number;
 }
@@ -620,11 +685,13 @@ export class DeleteSectionEducatorDto {
 export class DeleteEnrollmentDto {
   @ApiPropertyOptional({ description: 'Section ID', example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   section_id?: number;
 
   @ApiPropertyOptional({ description: 'User Sys ID (student)', example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   user_sys_id?: number;
 }

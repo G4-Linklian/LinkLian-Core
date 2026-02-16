@@ -17,6 +17,16 @@ export class InstitutionController {
         return { success: true, data };
     }
 
+    @Get('detail/:id')
+    @ApiOperation({ summary: 'ดึงข้อมูลสถาบันพร้อมรายละเอียดตาม ID', description: 'ดึงข้อมูลสถาบันจาก ID ที่ระบุ' })
+    @ApiParam({ name: 'id', description: 'รหัสสถาบัน', type: Number })
+    @ApiResponse({ status: 200, description: 'สำเร็จ' })
+    @ApiResponse({ status: 404, description: 'ไม่พบสถาบัน' })
+    async getInstitutionDetailById(@Param('id') id: number) {
+        const data = await this.institutionService.findDetailById(id);
+        return { success: true, data };
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงข้อมูลสถาบันตาม ID', description: 'ดึงข้อมูลสถาบันจาก ID ที่ระบุ' })
     @ApiParam({ name: 'id', description: 'รหัสสถาบัน', type: Number })

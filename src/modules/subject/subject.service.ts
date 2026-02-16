@@ -125,7 +125,7 @@ export class SubjectService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return { data: result };
+      return result;
     } catch (error) {
       console.error('Error fetching subjects:', error);
       throw new InternalServerErrorException('Internal server error');
@@ -141,18 +141,25 @@ export class SubjectService {
     }
 
     try {
-      const newSubject = this.subjectRepo.create({
-        learning_area_id: dto.learning_area_id,
-        subject_code: dto.subject_code,
-        name_th: dto.name_th,
-        name_en: dto.name_en || null,
-        credit: dto.credit,
-        hour_per_week: dto.hour_per_week,
-        flag_valid: true,
-      });
+      const query = `
+        INSERT INTO subject 
+        (learning_area_id, subject_code, name_th, name_en, credit, hour_per_week, flag_valid, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *
+      `;
 
-      const savedSubject = await this.subjectRepo.save(newSubject);
-      return { message: 'Subject created successfully!', data: savedSubject };
+      const values = [
+        dto.learning_area_id,
+        dto.subject_code,
+        dto.name_th,
+        dto.name_en || null,
+        dto.credit,
+        dto.hour_per_week,
+        true,
+      ];
+
+      const result = await this.dataSource.query(query, values);
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -177,28 +184,58 @@ export class SubjectService {
     }
 
     // Build update object dynamically
-    const updates: Partial<Subject> = {};
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let index = 1;
 
-    if (dto.learning_area_id !== undefined) updates.learning_area_id = dto.learning_area_id;
-    if (dto.subject_code !== undefined) updates.subject_code = dto.subject_code;
-    if (dto.name_th !== undefined) updates.name_th = dto.name_th;
-    if (dto.name_en !== undefined) updates.name_en = dto.name_en;
-    if (dto.credit !== undefined) updates.credit = dto.credit;
-    if (dto.hour_per_week !== undefined) updates.hour_per_week = dto.hour_per_week;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (dto.learning_area_id !== undefined) {
+      updateFields.push(`learning_area_id = $${index++}`);
+      values.push(dto.learning_area_id);
+    }
 
-    if (Object.keys(updates).length === 0) {
+    if (dto.subject_code !== undefined) {
+      updateFields.push(`subject_code = $${index++}`);
+      values.push(dto.subject_code);
+    }
+
+    if (dto.name_th !== undefined) {
+      updateFields.push(`name_th = $${index++}`);
+      values.push(dto.name_th);
+    }
+
+    if (dto.name_en !== undefined) {
+      updateFields.push(`name_en = $${index++}`);
+      values.push(dto.name_en);
+    }
+
+    if (dto.credit !== undefined) {
+      updateFields.push(`credit = $${index++}`);
+      values.push(dto.credit);
+    }
+
+    if (dto.hour_per_week !== undefined) {
+      updateFields.push(`hour_per_week = $${index++}`);
+      values.push(dto.hour_per_week);
+    }
+
+    if (typeof dto.flag_valid === 'boolean') {
+      updateFields.push(`flag_valid = $${index++}`);
+      values.push(dto.flag_valid);
+    }
+
+    if (updateFields.length === 0) {
       throw new BadRequestException('No fields to update!');
     }
 
+    // Add updated_at
+    updateFields.push(`updated_at = NOW()`);
+    values.push(id);
+
     try {
-      await this.subjectRepo.update({ subject_id: id }, updates);
+      const query = `UPDATE subject SET ${updateFields.join(', ')} WHERE subject_id = $${index} RETURNING *`;
+      const result = await this.dataSource.query(query, values);
 
-      const updatedSubject = await this.subjectRepo.findOne({
-        where: { subject_id: id }
-      });
-
-      return { message: 'Subject updated successfully!', data: updatedSubject };
+      return result[0];
 
     } catch (error: any) {
       if (error.code === '23505') {
@@ -224,7 +261,7 @@ export class SubjectService {
 
     try {
       await this.subjectRepo.delete({ subject_id: id });
-      return { message: 'Subject deleted successfully!', data: existingSubject };
+      return existingSubject;
 
     } catch (error) {
       console.error('Error deleting subject:', error);

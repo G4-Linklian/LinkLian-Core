@@ -151,27 +151,4 @@ export class AuthController {
     return this.authService.forgotPassword(dto);
   }
 
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
-    summary: 'Register new user (student/teacher)',
-    description: '⚠️ No authorization required - Creates new user with initial password'
-  })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'User registered successfully',
-    schema: {
-      properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'User registered successfully. Initial password has been sent to your email.' },
-        user_id: { type: 'number', example: 1 },
-        email: { type: 'string', example: 'student@example.com' },
-        _dev_password: { type: 'string', example: 'LINKLIIANBs4Uds', description: 'Only in development' },
-      }
-    }
-  })
-  @ApiResponse({ status: 400, description: 'Bad request or email already registered' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
 }
