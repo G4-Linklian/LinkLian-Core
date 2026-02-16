@@ -91,7 +91,7 @@ export class PostController {
     return this.postService.updatePost(
       parsedUserId, 
       0, 
-      { title: body.title, content: body.content, attachments: body.attachments },
+      body,
       body.post_content_id
     );
   }
@@ -125,7 +125,7 @@ export class PostController {
   @ApiResponse({ status: 200, description: 'Post deleted successfully' })
   deletePostByBody(
     @Headers('x-user-id') userId: string,
-    @Body() body: { post_commu_id?: number; post_content_id?: number },
+    @Body() body: { post_id?: number; post_content_id?: number },
   ) {
     const parsedUserId = parseInt(userId, 10);
     if (isNaN(parsedUserId)) {
@@ -133,7 +133,7 @@ export class PostController {
     }
     return this.postService.deletePost(
       parsedUserId, 
-      body.post_commu_id || 0, 
+      body.post_id || 0, 
       body.post_content_id
     );
   }
