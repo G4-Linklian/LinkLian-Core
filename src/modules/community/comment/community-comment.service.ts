@@ -328,7 +328,12 @@ export class CommunityCommentService {
 
       if (!ids.length) {
         await queryRunner.commitTransaction();
-        return { success: true };
+
+        return {
+          success: true,
+          data: { deleted_ids: [] },
+          message: 'Comment deleted successfully!',
+        };
       }
 
       await queryRunner.query(`
@@ -343,7 +348,8 @@ export class CommunityCommentService {
 
       await queryRunner.commitTransaction();
       return {
-        success: true, data: { deleted_ids: ids },
+        success: true,
+        data: { deleted_ids: ids },
         message: 'Comment deleted successfully!',
       };
 

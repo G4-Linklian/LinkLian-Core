@@ -145,11 +145,9 @@ export class CommunityBookmarkService {
       `,
         [userId],
       );
-      const bookmarkData = {
-        bookmarks: result,
-      }; return {
+      return {
         success: true,
-        data: bookmarkData,
+        data: result,
         message: 'Bookmarks fetched successfully!',
       };
 

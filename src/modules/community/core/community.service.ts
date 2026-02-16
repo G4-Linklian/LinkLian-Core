@@ -196,7 +196,7 @@ export class CommunityService {
         );
       } else {
 
-        return await this.dataSource.query(
+        result = await this.dataSource.query(
           `
     SELECT
       c.community_id,
@@ -252,11 +252,11 @@ export class CommunityService {
           [userId],
         );
       }
-      return {
-        success: true,
-        data: { communities: result },
-        message: 'Communities fetched successfully!',
-      };
+     return {
+      success: true,
+      data: { communities: result },
+      message: 'Communities fetched successfully!',
+    };
 
     } catch (error) {
       throw new InternalServerErrorException(

@@ -27,36 +27,37 @@ export class CommunityPostController {
   constructor(private service: CommunityPostService) { }
 
   @Post()
-@ApiHeader({ name: 'x-user-id', required: true })
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      community_id: { type: 'number', example: 1 },
-      content: { type: 'string', example: 'https://youtube.com/abc' },
-      files: {
-        type: 'array',
-        items: {
-          type: 'string',
-          format: 'binary',
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        community_id: { type: 'number', example: 1 },
+        content: { type: 'string', example: 'https://youtube.com/abc' },
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
       },
     },
-  },
-})
-@UseInterceptors(FilesInterceptor('files'))
-create(
-  @Headers('x-user-id') userId: string,
-  @UploadedFiles() files: Express.Multer.File[],
-  @Body() dto: CreateCommunityPostDto,
-) {
-  return this.service.createPost(
-    Number(userId),
-    dto,
-    files,
-  );
-}
+  })
+
+  @UseInterceptors(FilesInterceptor('files'))
+  create(
+    @Headers('x-user-id') userId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: CreateCommunityPostDto,
+  ) {
+    return this.service.createPost(
+      Number(userId),
+      dto,
+      files,
+    );
+  }
 
 
   @Get('search')
@@ -64,17 +65,19 @@ create(
     @Headers('x-user-id') userId: string,
     @Query('community_id', ParseIntPipe) communityId: number,
     @Query('keyword') keyword: string,
-    @Query('limit') limit: number = 50,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
+    if (!keyword?.trim()) {
+      throw new BadRequestException('Keyword required');
+    }
+
     return this.service.searchPosts(
       Number(userId),
       communityId,
       keyword,
-      limit,
+      limit || 50,
     );
   }
-
-
 
   @Get(':communityId')
   getPosts(
@@ -92,48 +95,49 @@ create(
       sort || 'newest',
     );
   }
- @Put(':postId')
-@ApiHeader({ name: 'x-user-id', required: true })
-@UseInterceptors(FilesInterceptor('files'))
-async updatePost(
-  @Headers('x-user-id') userIdHeader: string,
-  @Param('postId', ParseIntPipe) postId: number,
-  @Body() dto: any,
-  @UploadedFiles() files: Express.Multer.File[],
-) {
-  const userId = parseInt(userIdHeader, 10);
 
-  if (isNaN(userId)) {
-    throw new BadRequestException('Invalid x-user-id');
+  @Put(':postId')
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @UseInterceptors(FilesInterceptor('files'))
+  async updatePost(
+    @Headers('x-user-id') userIdHeader: string,
+    @Param('postId', ParseIntPipe) postId: number,
+    @Body() dto: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const userId = parseInt(userIdHeader, 10);
+
+    if (isNaN(userId)) {
+      throw new BadRequestException('Invalid x-user-id');
+    }
+
+    return this.service.updatePost(
+      userId,
+      postId,
+      dto,
+      files,
+    );
   }
-
-  return this.service.updatePost(
-    userId,
-    postId,
-    dto,
-    files,
-  );
-}
 
 
   // HARD DELETE POST
   @Delete(':postId/hard')
-@ApiHeader({ name: 'x-user-id', required: true })
-async hardDeletePost(
-  @Headers('x-user-id') userIdHeader: string,
-  @Param('postId', ParseIntPipe) postId: number,
-) {
-  const userId = parseInt(userIdHeader, 10);
+  @ApiHeader({ name: 'x-user-id', required: true })
+  async hardDeletePost(
+    @Headers('x-user-id') userIdHeader: string,
+    @Param('postId', ParseIntPipe) postId: number,
+  ) {
+    const userId = parseInt(userIdHeader, 10);
 
-  if (isNaN(userId)) {
-    throw new BadRequestException('Invalid x-user-id');
+    if (isNaN(userId)) {
+      throw new BadRequestException('Invalid x-user-id');
+    }
+
+    return this.service.hardDeletePost(
+      userId,
+      postId,
+    );
   }
-
-  return this.service.hardDeletePost(
-    userId,
-    postId,
-  );
-}
 
   @Delete(':postId')
   @ApiHeader({ name: 'x-user-id', required: true })
@@ -154,14 +158,14 @@ async hardDeletePost(
 }
 
 
-  // @Delete(':postId')
-  // deletePost(
-  //   @Headers('x-user-id') userId: string,
-  //   @Param('postId') postId: string,
-  // ) {
-  //   return this.service.deletePost(
-  //     Number(userId),
-  //     Number(postId),
-  //   );
-  // }
+// @Delete(':postId')
+// deletePost(
+//   @Headers('x-user-id') userId: string,
+//   @Param('postId') postId: string,
+// ) {
+//   return this.service.deletePost(
+//     Number(userId),
+//     Number(postId),
+//   );
+// }
 

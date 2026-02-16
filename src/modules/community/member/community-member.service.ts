@@ -99,9 +99,6 @@ export class CommunityMemberService {
     }
   }
 
-
-
-
   async approveMember(
     ownerId: number,
     communityId: number,
@@ -174,13 +171,14 @@ export class CommunityMemberService {
       `,
         [communityId, targetUserId],
       );
+      console.log('APPROVE RESULT:', result);
       if (!result.length) {
         throw new BadRequestException('Invalid member status');
       }
 
       return {
         success: true,
-        data: result[0],
+        ddata: result[0][0],
         message: 'Member approved successfully!',
       };
 

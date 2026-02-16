@@ -483,7 +483,6 @@ COALESCE(
         'url', ca.file_url,
         'type', ca.file_type,
         'original_name', ca.original_name
-      )
           )
         )
         FROM community_attachment ca
