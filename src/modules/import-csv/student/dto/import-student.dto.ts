@@ -21,12 +21,6 @@ export class ImportStudentReqDto {
 }
 
 export class ImportStudentDto {
-    @ApiProperty({ description: 'รหัสนักเรียน', example: '12345' })
-    @IsNotEmpty({ message: 'รหัสนักเรียนห้ามว่าง' })
-    @Expose({ name: 'รหัสนักเรียน' })
-    @IsString()
-    studentId: string;
-
     @ApiProperty({ description: 'ชื่อนักเรียน', example: 'จีมิน' })
     @IsNotEmpty({ message: 'ชื่อจริงห้ามว่าง' })
     @Expose({ name: 'ชื่อจริง' })
@@ -66,6 +60,12 @@ export class ImportStudentDto {
 }
 
 export class ImportSchoolStudentDto extends ImportStudentDto {
+    @ApiProperty({ description: 'รหัสนักเรียน', example: '12345' })
+    @IsNotEmpty({ message: 'รหัสนักเรียนห้ามว่าง' })
+    @Expose({ name: 'รหัสนักเรียน' })
+    @IsString()
+    studentId: string;
+
     @ApiPropertyOptional({ description: 'ห้องเรียน', example: '1' })
     @IsNotEmpty({ message: 'ห้องเรียนห้ามว่าง' })
     @Expose({ name: 'ห้องเรียน' })
@@ -80,6 +80,12 @@ export class ImportSchoolStudentDto extends ImportStudentDto {
 }
 
 export class ImportUniStudentDto extends ImportStudentDto {
+    @ApiProperty({ description: 'รหัสนักศึกษา', example: '12345' })
+    @IsNotEmpty({ message: 'รหัสนักศึกษาห้ามว่าง' })
+    @Expose({ name: 'รหัสนักศึกษา' })
+    @IsString()
+    studentId: string;
+
     @ApiPropertyOptional({ description: 'คณะ', example: 'วิทยาศาสตร์' })
     @IsNotEmpty({ message: 'คณะห้ามว่าง' })
     @Expose({ name: 'คณะ' })
