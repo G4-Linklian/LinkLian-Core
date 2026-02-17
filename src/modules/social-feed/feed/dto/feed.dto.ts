@@ -53,6 +53,12 @@ export interface ScheduleInfo {
  * Interface for student class feed response
  */
 export interface StudentClassFeedResponse {
+  success: boolean;
+  message?: string;
+  data: StudentClassFeedItem[];
+}
+
+export interface StudentClassFeedItem {
   section_id: number;
   section_name: string;
   subject_code: string;
@@ -60,14 +66,20 @@ export interface StudentClassFeedResponse {
   subject_name_en: string;
   learning_area_name: string | null;
   semester: string;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }
-
 /**
  * Interface for teacher class feed response
  */
 export interface TeacherClassFeedResponse {
+  success: boolean;
+  message?: string;
+  data: TeacherClassFeedItem[];
+}
+
+export interface TeacherClassFeedItem {
   section_id: number;
   section_name: string;
   subject_code: string;
@@ -76,6 +88,7 @@ export interface TeacherClassFeedResponse {
   learning_area_name: string | null;
   semester: string;
   position: string | null;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }
