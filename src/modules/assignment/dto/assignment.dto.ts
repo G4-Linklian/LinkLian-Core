@@ -21,11 +21,13 @@ export class GetClassAssignmentsDto {
 
     @ApiPropertyOptional({ description: 'offset', example: 0 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   offset?: number;
 
     @ApiPropertyOptional({ description: 'limit', example: 10 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   limit?: number;
 }
