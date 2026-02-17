@@ -22,6 +22,12 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { LoggerModule } from './common/logger/logger.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthMiddleware } from './common/middleware/auth.middleware';
+import { NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessGuard } from './common/guard/access.guard';
 
 @Module({
   imports: [
@@ -63,10 +69,27 @@ import { RegisSummaryModule } from "./modules/summary/registration/regis.summary
     SocialFeedModule,
     BookmarkModule,
     RegisSummaryModule,
+    LoggerModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+    }),
   ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: AccessGuard,
+    },
+  ],
 
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthMiddleware)
+      .exclude('institution/login')
+      .forRoutes('*');
+  }
+}
