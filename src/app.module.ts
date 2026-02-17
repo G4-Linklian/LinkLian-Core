@@ -23,6 +23,7 @@ import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { CommunityModule } from './modules/community/community.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { RegisSummaryModule } from "./modules/summary/registration/regis.summary
     AssignmentModule,       // ✅ เพิ่ม AssignmentModule
     BookmarkModule,
     RegisSummaryModule,
+    CommunityModule,
   ],
 
   controllers: [AppController],
