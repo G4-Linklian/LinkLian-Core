@@ -17,7 +17,7 @@ import {
   generateJwtToken, 
   verifyJwtToken 
 } from '../../common/utils/auth.util';
-import { generateInitialPassword } from '../../common/utils/auth.utils';
+import { generateInitialPassword } from '../../common/utils/auth.util';
 import { sendOTPEmail, sendTempPasswordEmail, sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 import { 
