@@ -22,6 +22,7 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { CommunityModule } from './modules/community/community.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { RegisSummaryModule } from "./modules/summary/registration/regis.summary
     SocialFeedModule,
     BookmarkModule,
     RegisSummaryModule,
+    CommunityModule,
   ],
 
   controllers: [AppController],

@@ -95,12 +95,13 @@ export class FeedService {
     `;
 
     try {
-      return await this.dataSource.query(query, [
+      const result_feed = await this.dataSource.query(query, [
         dto.user_id, 
         dto.semester_id,
         dto.limit || 10,
         dto.offset || 0
       ]);
+      return result_feed;
     } catch (error) {
       console.error('Error fetching student class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
@@ -197,12 +198,13 @@ export class FeedService {
     `;
 
     try {
-      return await this.dataSource.query(query, [
+      const result_feed = await this.dataSource.query(query, [
         dto.user_id, 
         dto.semester_id,
         dto.limit || 10,
         dto.offset || 0
       ]);
+      return result_feed;
     } catch (error) {
       console.error('Error fetching teacher class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
