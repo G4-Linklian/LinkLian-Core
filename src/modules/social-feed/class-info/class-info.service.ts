@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ClassInfoService {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   /**
    * Get section educators with user info
@@ -57,7 +57,7 @@ export class ClassInfoService {
         LIMIT 1
       `;
       const roomResult = await this.dataSource.query(roomQuery, [sectionId]);
-      
+
       let roomLocation = '';
       if (roomResult.length > 0) {
         const room = roomResult[0];
@@ -126,12 +126,12 @@ export class ClassInfoService {
         ORDER BY is_main_teacher DESC, u.first_name ASC
       `;
       const educators = await this.dataSource.query(educatorsQuery, [sectionId]);
-
+      console.log(`[GetClassInfo] Educators query returned ${educators.length} educators`);
+      const final_result = { room_location: roomLocation, schedules, members, educators };
       return {
-        room_location: roomLocation,
-        schedules,
-        members,
-        educators,
+        success: true,
+        message: 'Class info fetched successfully',
+        data: final_result
       };
     } catch (error) {
       console.error('Error fetching class info:', error);

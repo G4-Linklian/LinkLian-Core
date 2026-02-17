@@ -5,13 +5,13 @@ import { GetClassFeedDto, StudentClassFeedResponse, TeacherClassFeedResponse } f
 
 @Injectable()
 export class FeedService {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   /**
    * Get student class feed with schedules
    * Returns all enrolled classes for a student in a semester
    */
-  async getStudentClassFeed(dto: GetClassFeedDto): Promise<StudentClassFeedResponse[]> {
+  async getStudentClassFeed(dto: GetClassFeedDto): Promise<StudentClassFeedResponse> {
     const query = `
       SELECT
         s.section_id,
@@ -102,12 +102,16 @@ export class FeedService {
 
     try {
       const result_feed = await this.dataSource.query(query, [
-        dto.user_id, 
+        dto.user_id,
         dto.semester_id,
         dto.limit || 10,
         dto.offset || 0
       ]);
-      return result_feed;
+      return {
+        success: true,
+        message: 'Student class feed retrieved successfully',
+        data: result_feed
+      };
     } catch (error) {
       console.error('Error fetching student class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
@@ -118,7 +122,7 @@ export class FeedService {
    * Get teacher class feed with schedules
    * Returns all sections assigned to a teacher/educator in a semester
    */
-  async getTeacherClassFeed(dto: GetClassFeedDto): Promise<TeacherClassFeedResponse[]> {
+  async getTeacherClassFeed(dto: GetClassFeedDto): Promise<TeacherClassFeedResponse> {
     const query = `
       SELECT
         s.section_id,
@@ -211,12 +215,16 @@ export class FeedService {
 
     try {
       const result_feed = await this.dataSource.query(query, [
-        dto.user_id, 
+        dto.user_id,
         dto.semester_id,
         dto.limit || 10,
         dto.offset || 0
       ]);
-      return result_feed;
+      return {
+        success: true,
+        message: 'Teacher class feed retrieved successfully',
+        data: result_feed
+      };
     } catch (error) {
       console.error('Error fetching teacher class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
