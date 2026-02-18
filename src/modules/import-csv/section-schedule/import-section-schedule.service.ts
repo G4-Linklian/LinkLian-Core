@@ -284,13 +284,14 @@ export class ImportSectionScheduleService {
             if (!buildingId) {
                 // สร้างตึกใหม่
                 const insertBuildingQuery = `
-                    INSERT INTO building (inst_id, building_name, flag_valid, created_at, updated_at)
-                    VALUES ($1, $2, true, NOW(), NOW())
+                    INSERT INTO building (inst_id, building_name, building_no, flag_valid)
+                    VALUES ($1, $2, $3, true)
                     RETURNING building_id
                 `;
                 const buildingResult = await queryRunner.manager.query(insertBuildingQuery, [
                     instId,
-                    dto.building
+                    dto.building,
+                    dto.buildingNo,
                 ]);
                 buildingId = buildingResult[0]?.building_id;
 

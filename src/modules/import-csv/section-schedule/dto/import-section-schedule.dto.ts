@@ -67,6 +67,12 @@ export class ImportSectionScheduleDto {
     @IsString({ message: 'ตึกต้องเป็นข้อความ' })
     building!: string;
 
+    @ApiProperty({ description: 'เลขตึก', example: '1' })
+    @IsNotEmpty({ message: 'เลขตึกห้ามว่าง' })
+    @Expose({ name: 'เลขตึก' })
+    @IsString({ message: 'เลขตึกต้องเป็นข้อความ' })
+    buildingNo!: string;
+
     @ApiProperty({ description: 'ห้องเรียน', example: 'R101' })
     @IsNotEmpty({ message: 'ห้องเรียนห้ามว่าง' })
     @Expose({ name: 'ห้องเรียน' })
