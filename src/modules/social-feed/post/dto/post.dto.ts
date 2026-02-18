@@ -90,6 +90,25 @@ export class CreatePostDto {
   @ValidateNested({ each: true })
   @Type(() => AttachmentDto)
   attachments?: AttachmentDto[];
+
+  // Assignment-specific fields
+  @ApiPropertyOptional({ description: 'Due date for the assignment', example: '2023-10-10T10:00:00Z' })
+  @IsOptional()
+  @IsString()
+  due_date?: string; // ISO date string
+
+  @ApiPropertyOptional({ description: 'Maximum score for the assignment', example: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  max_score?: number;
+
+  @ApiPropertyOptional({ description: 'Is this a group assignment?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  is_group?: boolean;
+
+  @ApiPropertyOptional({ description: 'Groups for the assignment', type: 'array' })
+  groups?: { group_name: string; member_ids: number[] }[]; // For pre-defined groups (optional)
 }
 
 /**
@@ -112,6 +131,22 @@ export class UpdatePostDto {
   @ValidateNested({ each: true })
   @Type(() => AttachmentDto)
   attachments?: AttachmentDto[];
+
+  // Assignment-specific fields
+  @ApiPropertyOptional({ description: 'Due date for the assignment', example: '2023-10-10T10:00:00Z' })
+  @IsOptional()
+  @IsString()
+  due_date?: string;
+
+  @ApiPropertyOptional({ description: 'Maximum score for the assignment', example: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  max_score?: number;
+
+  @ApiPropertyOptional({ description: 'Is this a group assignment?', default: false })
+  @IsOptional()
+  @IsBoolean()
+  is_group?: boolean;
 }
 
 /**

@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { Institution } from './entities/institution.entity';
 import { CreateInstitutionDto, SearchInstitutionDto, UpdateInstitutionDto, LoginInstitutionDto } from './dto/institution.dto';
-import { hashPassword, verifyPassword, generateJwtToken } from 'src/common/utils/auth.util';
-import { comparePassword } from 'src/common/utils/auth.utils';
+import { hashPassword, generateJwtToken } from 'src/common/utils/auth.util';
+import {verifyPassword } from 'src/common/utils/auth.util';
 
 @Injectable()
 export class InstitutionService {
@@ -255,7 +255,7 @@ export class InstitutionService {
         throw new UnauthorizedException('Institution not found');
       }
 
-      const isMatch = await comparePassword(dto.inst_password, institution.inst_password);
+      const isMatch = await verifyPassword(dto.inst_password, institution.inst_password);
 
       if (!isMatch) {
         throw new UnauthorizedException('Incorrect password');

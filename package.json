@@ -36,6 +36,7 @@
     "class-validator": "^0.14.3",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^7.0.12",
+    "open-graph-scraper": "^6.11.0",
     "pg": "^8.17.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -81,6 +82,7 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "preset": "ts-jest",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
@@ -88,6 +90,15 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!uuid)"
+    ]
   }
 }

@@ -19,6 +19,7 @@ import { SubjectModule } from './modules/subject/subject.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
+import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
@@ -28,6 +29,7 @@ import { ImportTeacherModule } from './modules/import-csv/teacher/import-teacher
 import { ImportProgramModule } from './modules/import-csv/program/import-program.module';
 import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schdule.module';
 import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
+import { CommunityModule } from './modules/community/community.module';
 
 @Module({
   imports: [
@@ -67,6 +69,7 @@ import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-e
     UsersModule,
     ProfileModule,
     SocialFeedModule,
+    AssignmentModule,       // ✅ เพิ่ม AssignmentModule
     BookmarkModule,
     RegisSummaryModule,
     ImportStudentModule,
@@ -75,6 +78,7 @@ import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-e
     ImportProgramModule,
     ImportSectionScheduleModule,
     ImportEnrollmentModule
+    CommunityModule,
   ],
 
   controllers: [AppController],
