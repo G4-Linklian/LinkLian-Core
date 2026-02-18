@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { AppLogger } from '../logger/app-logger.service';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {

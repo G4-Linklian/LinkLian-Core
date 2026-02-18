@@ -25,14 +25,13 @@ export class AccessGuard implements CanActivate {
     ]);
 
     if (!requiredAccess) {
-      return true; // route ไม่ได้กำหนดสิทธิ์
+      return true;
     }
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     const reqForm = request.req_form;
 
-    // 🔥 ถ้ามาจาก institution → bypass
     if (reqForm === 'institution') {
       this.logger.debug(
         'Institution bypass permission check',
@@ -42,7 +41,6 @@ export class AccessGuard implements CanActivate {
       return true;
     }
 
-    // 🔒 ถ้ามาจาก user → ต้องเช็ค access
     if (!user?.access) {
       throw new ForbiddenException('Access denied');
     }

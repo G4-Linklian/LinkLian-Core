@@ -90,6 +90,7 @@ export class AppModule implements NestModule {
     consumer
       .apply(AuthMiddleware)
       .exclude('institution/login')
+      .exclude('auth/*')
       .forRoutes('*');
   }
 }
