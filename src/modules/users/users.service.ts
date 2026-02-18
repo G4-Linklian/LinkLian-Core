@@ -6,7 +6,7 @@ import { UserSys } from './entities/user-sys.entity';
 import { SearchUserSysDto, CreateUserSysDto, UpdateUserSysDto } from './dto/users.dto';
 import { LearningAreaService } from '../learning-area/learning-area.service';
 import { ProgramService } from '../program/program.service';
-import { generateInitialPassword, hashPasswordWithSalt } from '../../common/utils/auth.utils';
+import { generateInitialPassword, hashPassword } from '../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 @Injectable()
@@ -210,7 +210,7 @@ export class UsersService {
 
     // Generate initial password and hash it
     const initialPassword = generateInitialPassword();
-    const hashedPassword = await hashPasswordWithSalt(initialPassword);
+    const hashedPassword = await hashPassword(initialPassword);
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
