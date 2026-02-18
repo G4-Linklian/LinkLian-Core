@@ -50,9 +50,14 @@ export class ImportEnrollmentController {
                     type: 'integer',
                     description: 'ID ของสถาบัน',
                     example: 1
+                },
+                sectionId: {
+                    type: 'integer',
+                    description: 'ID ของกลุ่มเรียน',
+                    example: 1
                 }
             },
-            required: ['file', 'instId']
+            required: ['file', 'instId', 'sectionId']
         },
     })
     @ApiResponse({ status: 200, description: 'Validation result with errors and valid data' })
@@ -66,6 +71,7 @@ export class ImportEnrollmentController {
 
         return this.importEnrollmentService.validateEnrollmentData(
             body.instId,
+            body.sectionId,
             file.buffer
         );
     }
@@ -87,12 +93,17 @@ export class ImportEnrollmentController {
                     description: 'ID ของสถาบัน',
                     example: 1
                 },
+                sectionId: {
+                    type: 'integer',
+                    description: 'ID ของกลุ่มเรียน',
+                    example: 1
+                },
                 validationToken: {
                     type: 'string',
                     description: 'Token ที่ได้จาก validate endpoint'
                 }
             },
-            required: ['file', 'instId', 'validationToken']
+            required: ['file', 'instId', 'sectionId', 'validationToken']
         },
     })
     @ApiResponse({ status: 200, description: 'Successfully saved enrollment data' })
@@ -109,6 +120,7 @@ export class ImportEnrollmentController {
 
         return this.importEnrollmentService.saveEnrollmentData(
             body.instId,
+            body.sectionId,
             file.buffer,
             validationToken
         );

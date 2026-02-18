@@ -119,20 +119,31 @@ export class ImportProgramService {
         const existingPrograms = await this.programRepo.find({ where: { inst_id: instId, flag_valid: true } });
         const existingCombinations = new Set<string>();
 
+        console.log(`[DEBUG] Total programs found for inst_id ${instId}: ${existingPrograms.length}`);
+        console.log(`[DEBUG] All program types in DB:`, existingPrograms.map(p => ({ id: p.program_id, name: p.program_name, type: p.program_type, parent_id: p.parent_id })));
+
         if (isSchool) {
-            const studyPlans = existingPrograms.filter(p => p.program_type === ProgramType.STUDY_PLAN);
-            existingPrograms.filter(p => p.program_type === ProgramType.CLASS).forEach(cls => {
-                const parent = studyPlans.find(sp => sp.program_id === cls.parent_id);
-                if (parent) existingCombinations.add(`${parent.program_name.toLowerCase()}|${cls.program_name.toLowerCase()}`);
+            const studyPlans = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.STUDY_PLAN.toLowerCase());
+            const classes = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.CLASS.toLowerCase());
+            console.log(`[DEBUG] Found ${studyPlans.length} study plans, ${classes.length} classes`);
+            
+            classes.forEach(cls => {
+                const parent = studyPlans.find(sp => sp.program_id === Number(cls.parent_id));
+                if (parent) {
+                    existingCombinations.add(`${parent.program_name.toLowerCase()}|${cls.program_name.toLowerCase()}`);
+                } else {
+                    console.log(`[DEBUG] Class "${cls.program_name}" has parent_id ${cls.parent_id} but no matching study plan found`);
+                }
             });
         } else {
-            const faculties = existingPrograms.filter(p => p.program_type === ProgramType.FACULTY);
-            const depts = existingPrograms.filter(p => p.program_type === ProgramType.DEPARTMENT);
-            existingPrograms.filter(p => p.program_type === ProgramType.MAJOR).forEach(major => {
-                const dept = depts.find(d => d.program_id === major.parent_id);
-                const faculty = dept ? faculties.find(f => f.program_id === dept.parent_id) : null;
+            const faculties = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.FACULTY.toLowerCase());
+            const depts = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.DEPARTMENT.toLowerCase());
+            existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.MAJOR.toLowerCase()).forEach(major => {
+                const dept = depts.find(d => d.program_id === Number(major.parent_id));
+                const faculty = dept ? faculties.find(f => f.program_id === Number(dept.parent_id)) : null;
                 if (faculty && dept) existingCombinations.add(`${faculty.program_name.toLowerCase()}|${dept.program_name.toLowerCase()}|${major.program_name.toLowerCase()}`);
             });
+            console.log(`[DEBUG] Found ${faculties.length} faculties, ${depts.length} departments and ${existingCombinations.size} existing combinations`);
         }
 
         const firstOccurrences = new Map<string, number>();
@@ -455,17 +466,17 @@ export class ImportProgramService {
                 // สร้าง Map สำหรับ existing study plans
                 const existingStudyPlans = new Map<string, number>(
                     existingPrograms
-                        .filter(p => p.program_type === ProgramType.STUDY_PLAN)
-                        .map(p => [p.program_name.toLowerCase(), p.program_id])
+                    .filter(p => p.program_type?.toLowerCase() === ProgramType.STUDY_PLAN.toLowerCase())
+                    .map(p => [p.program_name.toLowerCase(), p.program_id])
                 );
 
                 // สร้าง Set สำหรับ existing combinations
                 const existingCombinations = new Set<string>();
-                const studyPlans = existingPrograms.filter(p => p.program_type === ProgramType.STUDY_PLAN);
-                const classes = existingPrograms.filter(p => p.program_type === ProgramType.CLASS);
+                const studyPlans = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.STUDY_PLAN.toLowerCase());
+                const classes = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.CLASS.toLowerCase());
 
                 for (const cls of classes) {
-                    const parent = studyPlans.find(sp => sp.program_id === cls.parent_id);
+                    const parent = studyPlans.find(sp => sp.program_id === Number(cls.parent_id));
                     if (parent) {
                         existingCombinations.add(`${parent.program_name.toLowerCase()}|${cls.program_name.toLowerCase()}`);
                     }
@@ -490,16 +501,16 @@ export class ImportProgramService {
                 // University
                 const existingFaculties = new Map<string, number>(
                     existingPrograms
-                        .filter(p => p.program_type === ProgramType.FACULTY)
+                        .filter(p => p.program_type?.toLowerCase() === ProgramType.FACULTY.toLowerCase())
                         .map(p => [p.program_name.toLowerCase(), p.program_id])
                 );
 
                 const existingDepartments = new Map<string, number>();
-                const faculties = existingPrograms.filter(p => p.program_type === ProgramType.FACULTY);
-                const departments = existingPrograms.filter(p => p.program_type === ProgramType.DEPARTMENT);
+                const faculties = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.FACULTY.toLowerCase());
+                const departments = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.DEPARTMENT.toLowerCase());
 
                 for (const dept of departments) {
-                    const faculty = faculties.find(f => f.program_id === dept.parent_id);
+                    const faculty = faculties.find(f => f.program_id === Number(dept.parent_id));
                     if (faculty) {
                         const key = `${faculty.program_name.toLowerCase()}|${dept.program_name.toLowerCase()}`;
                         existingDepartments.set(key, dept.program_id);
@@ -508,12 +519,12 @@ export class ImportProgramService {
 
                 // สร้าง Set สำหรับ existing combinations
                 const existingCombinations = new Set<string>();
-                const majors = existingPrograms.filter(p => p.program_type === ProgramType.MAJOR);
+                const majors = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.MAJOR.toLowerCase());
 
                 for (const major of majors) {
-                    const dept = departments.find(d => d.program_id === major.parent_id);
+                    const dept = departments.find(d => d.program_id === Number(major.parent_id));
                     if (dept) {
-                        const faculty = faculties.find(f => f.program_id === dept.parent_id);
+                        const faculty = faculties.find(f => f.program_id === Number(dept.parent_id));
                         if (faculty) {
                             existingCombinations.add(`${faculty.program_name.toLowerCase()}|${dept.program_name.toLowerCase()}|${major.program_name.toLowerCase()}`);
                         }

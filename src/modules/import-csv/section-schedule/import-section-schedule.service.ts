@@ -40,7 +40,6 @@ const DAY_OF_WEEK_MAP: { [key: string]: DayOfWeek } = {
 
 // Interface สำหรับเก็บข้อมูลที่ pre-fetch
 interface PreFetchedData {
-    semesters: Map<string, number>;
     subjects: Map<string, number>;
     buildings: Map<string, number>;
     rooms: Map<string, number>;
@@ -73,12 +72,8 @@ export class ImportSectionScheduleService {
         private jwtService: JwtService
     ) {}
 
-    private async preFetchData(instId: number): Promise<PreFetchedData> {
-        const [semesters, subjects, buildings, rooms, teachers, existingSections] = await Promise.all([
-            // Semesters
-            this.semesterRepository.find({
-                where: { inst_id: instId, flag_valid: true }
-            }),
+    private async preFetchData(instId: number, semesterId: number): Promise<PreFetchedData> {
+        const [subjects, buildings, rooms, teachers, existingSections] = await Promise.all([
             // Subjects (ผ่าน learning_area)
             this.dataSource.query(
                 `SELECT s.subject_id, s.subject_code 
@@ -104,20 +99,18 @@ export class ImportSectionScheduleService {
                 where: { inst_id: instId, flag_valid: true },
                 select: ['user_sys_id', 'code']
             }),
-            // Existing sections (subject_id + semester_id + section_name)
+            // Existing sections for this semester (subject_code + section_name)
             this.dataSource.query(
-                `SELECT sec.section_id, sec.subject_id, sec.semester_id, sec.section_name, s.subject_code, sem.semester
+                `SELECT sec.section_id, sec.subject_id, sec.section_name, s.subject_code
                  FROM section sec
                  INNER JOIN subject s ON sec.subject_id = s.subject_id
                  INNER JOIN learning_area la ON s.learning_area_id = la.learning_area_id
-                 INNER JOIN semester sem ON sec.semester_id = sem.semester_id
-                 WHERE la.inst_id = $1 AND sec.flag_valid = true`,
-                [instId]
-            ) as Promise<{ section_id: number; subject_id: number; semester_id: number; section_name: string; subject_code: string; semester: string }[]>
+                 WHERE la.inst_id = $1 AND sec.semester_id = $2 AND sec.flag_valid = true`,
+                [instId, semesterId]
+            ) as Promise<{ section_id: number; subject_id: number; section_name: string; subject_code: string }[]>
         ]);
 
         const result = {
-            semesters: new Map(semesters.map(s => [s.semester?.toLowerCase() || '', s.semester_id])),
             subjects: new Map(subjects.map(s => [s.subject_code?.toLowerCase() || '', s.subject_id])),
             buildings: new Map(buildings.map(b => [b.building_name?.toLowerCase() || '', b.building_id])),
             rooms: new Map(rooms.map(r => [`${r.building_name?.toLowerCase()}|${r.room_number?.toLowerCase()}`, r.room_location_id])),
@@ -126,7 +119,7 @@ export class ImportSectionScheduleService {
                     .filter(t => t.code)
                     .map(t => [t.code!.toLowerCase(), t.user_sys_id] as [string, number])
             ),
-            existingSections: new Set(existingSections.map(s => `${s.subject_code?.toLowerCase()}|${s.semester?.toLowerCase()}|${s.section_name?.toLowerCase()}`))
+            existingSections: new Set(existingSections.map(s => `${s.subject_code?.toLowerCase()}|${s.section_name?.toLowerCase()}`))
         }
 
         return result;
@@ -156,8 +149,6 @@ export class ImportSectionScheduleService {
                 errorMessages.push(...rowErrors.map(e => Object.values(e.constraints || {}).join(', ')));
             }
 
-            // ตรวจสอบความมีอยู่ของข้อมูลหลัก
-            if (dto.semester && !preFetchedData.semesters.has(dto.semester.toLowerCase())) errorMessages.push(`ปีการศึกษา "${dto.semester}" ไม่มีในระบบ`);
             if (dto.subjectCode && !preFetchedData.subjects.has(dto.subjectCode.toLowerCase())) errorMessages.push(`รหัสวิชา "${dto.subjectCode}" ไม่มีในระบบ`);
             
             // ตรวจสอบตึก - ถ้าไม่มีจะสร้างใหม่
@@ -179,13 +170,17 @@ export class ImportSectionScheduleService {
             const dayOfWeek = this.mapDayOfWeek(dto.day);
             if (dto.day && dayOfWeek === null) errorMessages.push(`วัน "${dto.day}" ไม่ถูกต้อง`);
 
-            // ตรวจสอบ Duplicate (วิชา/ปีการศึกษา/กลุ่มเรียน)
-            const sectionKey = `${dto.subjectCode?.toLowerCase()}|${dto.semester?.toLowerCase()}|${dto.sectionName?.toLowerCase()}`;
+            // ตรวจสอบ Duplicate ในระบบ (วิชา/กลุ่มเรียน ใน semester เดียวกัน)
+            const sectionKey = `${dto.subjectCode?.toLowerCase()}|${dto.sectionName?.toLowerCase()}`;
             if (preFetchedData.existingSections.has(sectionKey)) {
-                warningMessages.push(`กลุ่มเรียน "${dto.sectionName}" วิชา "${dto.subjectCode}" ปี "${dto.semester}" มีอยู่แล้ว (จะข้ามการบันทึก)`);
+                warningMessages.push(`กลุ่มเรียน "${dto.sectionName}" วิชา "${dto.subjectCode}" มีอยู่แล้วใน semester นี้ (จะข้ามการบันทึก)`);
                 isDuplicate = true;
-            } else if (firstOccurrences.get(sectionKey) !== index) {
-                errorMessages.push(`กลุ่มเรียน "${dto.sectionName}" วิชา "${dto.subjectCode}" ปี "${dto.semester}" ซ้ำกันภายในไฟล์`);
+            }
+
+            // ตรวจสอบ Full Row Duplicate ในไฟล์
+            const rowKey = JSON.stringify(row);
+            if (firstOccurrences.get(rowKey) !== index) {
+                errorMessages.push(`ข้อมูลแถวนี้ซ้ำกันทั้งหมดกับแถวอื่นในไฟล์`);
             }
 
             results.push({
@@ -196,16 +191,24 @@ export class ImportSectionScheduleService {
         return results;
     }
 
-    async validateSectionScheduleData(instId: number, buffer: Buffer) {
+    async validateSectionScheduleData(instId: number, semesterId: number, buffer: Buffer) {
         const rawData = await parseExcelFile(buffer);
-        const preFetchedData = await this.preFetchData(instId);
 
-        // Map เก็บตำแหน่งแรกที่พบกลุ่มเรียนในไฟล์เพื่อเช็คซ้ำรอบเดียว
+        // ตรวจสอบ semester มีอยู่จริง
+        const semester = await this.semesterRepository.findOne({
+            where: { semester_id: semesterId, inst_id: instId, flag_valid: true }
+        });
+        if (!semester) {
+            throw new NotFoundException(`Semester ID ${semesterId} ไม่พบในระบบหรือไม่ตรงกับสถาบัน`);
+        }
+
+        const preFetchedData = await this.preFetchData(instId, semesterId);
+
         const firstOccurrences = new Map<string, number>();
         rawData.forEach((row, index) => {
-            const dto = plainToInstance(ImportSectionScheduleDto, row, { excludeExtraneousValues: true });
-            const sectionKey = `${dto.subjectCode?.toLowerCase()}|${dto.semester?.toLowerCase()}|${dto.sectionName?.toLowerCase()}`;
-            if (!firstOccurrences.has(sectionKey)) firstOccurrences.set(sectionKey, index);
+            // ใช้ข้อมูลทั้งแถวเป็น key เพื่อเช็ค full row duplicate
+            const rowKey = JSON.stringify(row);
+            if (!firstOccurrences.has(rowKey)) firstOccurrences.set(rowKey, index);
         });
 
         // Parallel Batch
@@ -224,7 +227,7 @@ export class ImportSectionScheduleService {
         const warningCount = validatedData.filter(v => v.warnings.length > 0).length;
 
         const validationToken = (errorCount === 0 && validCount > 0)
-            ? createValidationToken(this.jwtService, { instId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'section-schedule' })
+            ? createValidationToken(this.jwtService, { instId, semesterId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'section-schedule' })
             : null;
 
         const result = {
@@ -250,7 +253,8 @@ export class ImportSectionScheduleService {
         batch: any[],
         queryRunner: any,
         preFetchedData: PreFetchedData,
-        instId: number
+        instId: number,
+        semesterId: number
     ): Promise<{
         savedCount: number;
         skippedCount: number;
@@ -262,7 +266,7 @@ export class ImportSectionScheduleService {
             const dto = plainToInstance(ImportSectionScheduleDto, row, { excludeExtraneousValues: true });
 
             // เช็ค duplicate
-            const sectionKey = `${dto.subjectCode?.toLowerCase()}|${dto.semester?.toLowerCase()}|${dto.sectionName?.toLowerCase()}`;
+            const sectionKey = `${dto.subjectCode?.toLowerCase()}|${dto.sectionName?.toLowerCase()}`;
             if (preFetchedData.existingSections.has(sectionKey)) {
                 console.log(`[INFO] Skipping duplicate section: ${dto.sectionName} - ${dto.subjectCode}`);
                 skippedCount++;
@@ -273,12 +277,6 @@ export class ImportSectionScheduleService {
             const subjectId = preFetchedData.subjects.get(dto.subjectCode.toLowerCase());
             if (!subjectId) {
                 throw new NotFoundException(`รหัสวิชา "${dto.subjectCode}" ไม่พบในระบบ`);
-            }
-
-            // หา semester_id
-            const semesterId = preFetchedData.semesters.get(dto.semester.toLowerCase());
-            if (!semesterId) {
-                throw new NotFoundException(`ปีการศึกษา "${dto.semester}" ไม่พบในระบบ`);
             }
 
             // หาหรือสร้าง building
@@ -418,14 +416,14 @@ export class ImportSectionScheduleService {
         return { savedCount, skippedCount };
     }
 
-    async saveSectionScheduleData(instId: number, buffer: Buffer, validationToken?: string) {
+    async saveSectionScheduleData(instId: number, semesterId: number, buffer: Buffer, validationToken?: string) {
         if (!validationToken) {
             throw new BadRequestException('กรุณา validate ข้อมูลก่อนบันทึก (ต้องระบุ validationToken)');
         }
 
         const rawData = await parseExcelFile(buffer);
 
-        console.log(`[DEBUG] Saving section schedules for inst_id: ${instId}`);
+        console.log(`[DEBUG] Saving section schedules for inst_id: ${instId}, semester_id: ${semesterId}`);
 
         const payload = verifyValidationToken(
             this.jwtService,
@@ -456,7 +454,7 @@ export class ImportSectionScheduleService {
             }
 
             // Pre-fetch ข้อมูลทั้งหมด
-            const preFetchedData = await this.preFetchData(instId);
+            const preFetchedData = await this.preFetchData(instId, semesterId);
 
             const batches = chunkArray(rawData, IMPORT_BATCH_SIZE);
             console.log(`[INFO] Saving ${rawData.length} records in ${batches.length} batches`);
@@ -467,7 +465,8 @@ export class ImportSectionScheduleService {
                     batches[i],
                     queryRunner,
                     preFetchedData,
-                    instId
+                    instId,
+                    semesterId
                 );
                 totalSavedCount += savedCount;
                 totalSkippedCount += skippedCount;

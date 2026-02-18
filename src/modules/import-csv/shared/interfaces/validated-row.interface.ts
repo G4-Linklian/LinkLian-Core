@@ -32,6 +32,8 @@ export interface SaveResponse {
 
 export interface ImportValidationPayload {
     instId: number;
+    semesterId?: number; // ใช้สำหรับ section-schedule
+    sectionId?: number; // ใช้สำหรับ enrollment
     dataHash: string;
     validCount: number;
     duplicateCount: number;

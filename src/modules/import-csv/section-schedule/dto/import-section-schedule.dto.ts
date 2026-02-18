@@ -9,19 +9,14 @@ export class ImportSectionReqDto {
     @IsInt()
     instId: number;
 
-    @ApiProperty({ example: 1, description: 'ประเภทสถาบัน' })
+    @ApiProperty({ example: 1, description: 'ID ของ semester' })
     @IsNotEmpty()
-    @IsString()
-    instType: string;
+    @Type(() => Number) 
+    @IsInt()
+    semesterId: number;
 }
 
 export class ImportSectionScheduleDto {
-    @ApiProperty({ description: 'ปีการศึกษา', example: '2/2568' })
-    @IsNotEmpty({ message: 'ปีการศึกษาห้ามว่าง' })
-    @Expose({ name: 'ปีการศึกษา' })
-    @IsString({ message: 'ปีการศึกษาต้องเป็นข้อความ' })
-    semester!: string;
-
     @ApiProperty({ description: 'รหัสวิชา', example: 'MATH101' })
     @IsNotEmpty({ message: 'รหัสวิชาห้ามว่าง' })
     @Expose({ name: 'รหัสวิชา' })
