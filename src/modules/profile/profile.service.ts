@@ -20,7 +20,6 @@ export class ProfileService {
         u.code,
         u.email,
         u.first_name,
-        u.middle_name,
         u.last_name,
         u.phone,
         u.profile_pic,

@@ -4,19 +4,54 @@ import * as jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 
 /**
- * Hash password with bcrypt
+ * Hash password with bcrypt + custom salt from env
+ * Flow: password + SALTNUMBER → bcrypt.hash()
  */
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
-  return bcrypt.hash(password, saltRounds);
+  const customSalt = process.env.SALTNUMBER || '';
+  const saltedPassword = password + customSalt; // เพิ่ม custom salt ก่อน hash
+  const bcryptRounds = 10; // bcrypt rounds (ไม่ใช่ custom salt)
+  
+  console.log('═══════════════════════════════════════════════');
+  console.log('🔐 [AUTH UTIL] hashPassword');
+  console.log('═══════════════════════════════════════════════');
+  console.log('🔐 Input password length:', password.length);
+  console.log('🔐 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
+  console.log('🔐 Salted password length:', saltedPassword.length);
+  console.log('🔐 Bcrypt rounds:', bcryptRounds);
+  
+  const hash = await bcrypt.hash(saltedPassword, bcryptRounds);
+  
+  console.log('🔐 Hash generated:', hash.substring(0, 29) + '...');
+  console.log('🔐 Hash length:', hash.length);
+  console.log('✅ Password hashed with custom salt successfully');
+  console.log('═══════════════════════════════════════════════');
+  
+  return hash;
 }
 
 /**
  * Verify password against hashed password
+ * Flow: password + SALTNUMBER → bcrypt.compare()
  */
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  const saltRounds = process.env.SALTNUMBER ? process.env.SALTNUMBER : "10";
-  return bcrypt.compare(password+saltRounds, hashedPassword);
+  const customSalt = process.env.SALTNUMBER || '';
+  const saltedPassword = password + customSalt; // ✅ เพิ่ม custom salt ก่อน compare
+  
+  console.log('═══════════════════════════════════════════════');
+  console.log('🔍 [AUTH UTIL] verifyPassword');
+  console.log('═══════════════════════════════════════════════');
+  console.log('🔍 Input password length:', password.length);
+  console.log('🔍 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
+  console.log('🔍 Salted password length:', saltedPassword.length);
+  console.log('🔍 Stored hash:', hashedPassword.substring(0, 29) + '...');
+  
+  const isValid = await bcrypt.compare(saltedPassword, hashedPassword);
+  
+  console.log('🔍 Verification result:', isValid ? '✅ MATCH' : '❌ NO MATCH');
+  console.log('═══════════════════════════════════════════════');
+  
+  return isValid;
 }
 
 /**
@@ -34,4 +69,22 @@ export function generateJwtToken(payload: object, expiresIn: string | number = '
 export function verifyJwtToken(token: string): any {
   const secret = process.env.JWT_SECRET || 'your-secret-key';
   return jwt.verify(token, secret);
+}
+
+/**
+ * Generate initial password
+ */
+export function generateInitialPassword(): string {
+  const prefix = 'LINKLIAN';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let randomPart = '';
+  
+  for (let i = 0; i < 8; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  const password = prefix + randomPart;
+  console.log('🔑 [AUTH UTILS] Generated initial password:', password);
+  
+  return password;
 }

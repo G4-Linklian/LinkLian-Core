@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InstitutionModule } from './modules/institution/institution.module';
@@ -19,9 +19,17 @@ import { SubjectModule } from './modules/subject/subject.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
+import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { ImportStudentModule } from './modules/import-csv/student/import-student.module';
+import { ImportSubjectModule } from './modules/import-csv/subject/import-subject.module';
+import { ImportTeacherModule } from './modules/import-csv/teacher/import-teacher.module';
+import { ImportProgramModule } from './modules/import-csv/program/import-program.module';
+import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schdule.module';
+import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
+import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
@@ -67,8 +75,16 @@ import { AccessGuard } from './common/guard/access.guard';
     UsersModule,
     ProfileModule,
     SocialFeedModule,
+    AssignmentModule,
     BookmarkModule,
     RegisSummaryModule,
+    ImportStudentModule,
+    ImportSubjectModule,
+    ImportTeacherModule,
+    ImportProgramModule,
+    ImportSectionScheduleModule,
+    ImportEnrollmentModule,
+    CommunityModule,
     LoggerModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
