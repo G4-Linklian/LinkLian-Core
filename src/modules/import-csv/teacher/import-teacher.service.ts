@@ -7,7 +7,7 @@ import { parseExcelFile } from '../shared/utils/excel.util';
 import { ImportTeacherDto } from './dto/import-teacher.dto';
 import { UserSys } from '../../users/entities/user-sys.entity';
 import { LearningArea } from '../../learning-area/entities/learning-area.entity';
-import { generateInitialPassword, hashPasswordWithSalt } from '../../../common/utils/auth.utils';
+import { generateInitialPassword, hashPassword } from '../../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../../common/utils/mailer.utils';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -194,7 +194,7 @@ export class ImportTeacherService {
 
             // Generate password
             const initialPassword = generateInitialPassword();
-            const hashedPassword = await hashPasswordWithSalt(initialPassword);
+            const hashedPassword = await hashPassword(initialPassword);
             passwordMap.set(teacherDto.teacherEmail || '', initialPassword);
 
             // Map status
