@@ -17,6 +17,7 @@ export enum ProgramType {
   DEPARTMENT = 'department',
   FACULTY = 'faculty',
   MAJOR = 'major',
+  STUDY_PLAN = 'study_plan',
   CLASS = 'class',
 }
 

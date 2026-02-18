@@ -87,7 +87,7 @@ export class ProgramService {
               ON c.parent_id = pt.program_id
           )
           SELECT COUNT(*)
-          FROM edu_level_program_normalize elpn
+          FROM program elpn
           WHERE elpn.program_id IN (
             SELECT program_id
             FROM program_tree
@@ -147,7 +147,7 @@ export class ProgramService {
     }
 
     if (dto.parent_ids) {
-      query += ` AND p.parent_id = $${index++}`;
+      query += ` AND p.parent_id = ANY($${index++})`;
       values.push(dto.parent_ids);
     }
 
