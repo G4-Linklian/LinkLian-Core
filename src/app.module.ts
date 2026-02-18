@@ -69,7 +69,7 @@ import { CommunityModule } from './modules/community/community.module';
     UsersModule,
     ProfileModule,
     SocialFeedModule,
-    AssignmentModule,       // ✅ เพิ่ม AssignmentModule
+    AssignmentModule,
     BookmarkModule,
     RegisSummaryModule,
     ImportStudentModule,
@@ -77,7 +77,7 @@ import { CommunityModule } from './modules/community/community.module';
     ImportTeacherModule,
     ImportProgramModule,
     ImportSectionScheduleModule,
-    ImportEnrollmentModule
+    ImportEnrollmentModule,
     CommunityModule,
   ],
 

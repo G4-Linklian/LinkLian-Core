@@ -8,7 +8,7 @@ import { ImportSchoolStudentDto, ImportUniStudentDto, ImportStudentDto } from '.
 import { UserSys } from '../../users/entities/user-sys.entity';
 import { EduLevel } from '../../edu-level/entities/edu-level.entity';
 import { Program, ProgramType } from '../../program/entities/program.entity';
-import { generateInitialPassword, hashPasswordWithSalt } from '../../../common/utils/auth.utils';
+import { generateInitialPassword, hashPassword } from '../../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../../common/utils/mailer.utils';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -288,7 +288,7 @@ export class ImportStudentService {
             }
 
             const initialPassword = generateInitialPassword();
-            const hashedPassword = await hashPasswordWithSalt(initialPassword);
+            const hashedPassword = await hashPassword(initialPassword);
             passwordMap.set(studentDto.studentEmail || '', initialPassword);
 
             const rawStatus = studentDto.studentStatus?.trim().toLowerCase() || 'active';
