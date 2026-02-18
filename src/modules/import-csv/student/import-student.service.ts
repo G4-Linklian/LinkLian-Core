@@ -115,14 +115,14 @@ export class ImportStudentService {
             }
 
             // Check EduLevel - Program
-            if (classroom && eduLevel) {
-                const eduLevelProgram = await this.dataSource.getRepository('EduLevelProgramNormalize').findOne({
-                    where: { edu_lev_id: eduLevel.edu_lev_id, program_id: classroom.program_id, flag_valid: true }
-                });
-                if (!eduLevelProgram) {
-                    errorMessages.push(`ระดับชั้น "${studentDto.eduLevel}" ไม่สอดคล้องกับห้องเรียน "${classroomName}"`);
-                }
-            }
+            // if (classroom && eduLevel) {
+            //     const eduLevelProgram = await this.dataSource.getRepository('EduLevelProgramNormalize').findOne({
+            //         where: { edu_lev_id: eduLevel.edu_lev_id, program_id: classroom.program_id, flag_valid: true }
+            //     });
+            //     if (!eduLevelProgram) {
+            //         errorMessages.push(`ระดับชั้น "${studentDto.eduLevel}" ไม่สอดคล้องกับห้องเรียน "${classroomName}"`);
+            //     }
+            // }
 
             // Duplicate Check Email
             if (studentDto.studentEmail) {
