@@ -38,7 +38,7 @@ export class ImportSectionScheduleDto {
     @ApiProperty({ description: 'เวลาเริ่มเรียน', example: '08:00' })
     @IsNotEmpty({ message: 'เวลาเริ่มเรียนห้ามว่าง' })
     @Expose({ name: 'เวลาเริ่มเรียน' })
-    @IsMilitaryTime() // เช็คว่าเป็น "09:00"
+    @IsMilitaryTime() 
     @Transform(({ value }) => {
         if (typeof value !== 'string') return value;
         if (value.length === 4 && value.includes(':')) {
@@ -46,7 +46,7 @@ export class ImportSectionScheduleDto {
         }
         return value;
     })
-    startTime!: string; // ค่าที่จะส่งไป DB จะเป็น "09:00:00"
+    startTime!: string;
 
     @ApiProperty({ description: 'เวลาสิ้นสุด', example: '08:00' })
     @IsNotEmpty({ message: 'เวลาสิ้นสุดห้ามว่าง' })
@@ -67,10 +67,10 @@ export class ImportSectionScheduleDto {
     @IsString({ message: 'ตึกต้องเป็นข้อความ' })
     building!: string;
 
-    @ApiProperty({ description: 'เลขตึก', example: '1' })
+    @ApiProperty({ description: 'หมายเลขตึก', example: '1' })
     @IsNotEmpty({ message: 'เลขตึกห้ามว่าง' })
-    @Expose({ name: 'เลขตึก' })
-    @IsString({ message: 'เลขตึกต้องเป็นข้อความ' })
+    @Expose({ name: 'หมายเลขตึก' })
+    @IsString({ message: 'หมายเลขตึกต้องเป็นข้อความ' })
     buildingNo!: string;
 
     @ApiProperty({ description: 'ห้องเรียน', example: 'R101' })

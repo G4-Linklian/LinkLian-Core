@@ -51,12 +51,10 @@ export class ImportProgramService {
 
             const combinationKey = `${dto.programName?.toLowerCase()}|${dto.className?.toLowerCase()}`;
             
-            // เช็คซ้ำในระบบ
             if (existingCombinations.has(combinationKey)) {
                 warningMessages.push(`แผนการเรียน "${dto.programName}" + ห้อง "${dto.className}" มีอยู่ในระบบแล้ว (จะข้ามการบันทึก)`);
                 isDuplicate = true;
             } 
-            // เช็คซ้ำในไฟล์
             else if (firstOccurrences.get(combinationKey) !== index) {
                 errorMessages.push(`ข้อมูลแผนการเรียนและห้องเรียนซ้ำกันภายในไฟล์`);
             }
@@ -90,19 +88,20 @@ export class ImportProgramService {
 
             const combinationKey = `${dto.faculty?.toLowerCase()}|${dto.department?.toLowerCase()}|${dto.major?.toLowerCase()}`;
             
-            // เช็คซ้ำในระบบ
             if (existingCombinations.has(combinationKey)) {
                 warningMessages.push(`คณะ "${dto.faculty}" + ภาค "${dto.department}" + สาขา "${dto.major}" มีอยู่ในระบบแล้ว (จะข้ามการบันทึก)`);
                 isDuplicate = true;
             } 
-            // เช็คซ้ำในไฟล์
             else if (firstOccurrences.get(combinationKey) !== index) {
                 errorMessages.push(`ข้อมูลคณะ ภาค และสาขาซ้ำกันภายในไฟล์`);
             }
 
             results.push({
-                row: rowNumber, data: row, isValid: errorMessages.length === 0,
-                errors: errorMessages, warnings: warningMessages, isDuplicate
+                row: rowNumber, 
+                data: row, 
+                isValid: errorMessages.length === 0,
+                errors: errorMessages, 
+                warnings: warningMessages, isDuplicate
             });
         }
         return results;
@@ -115,7 +114,6 @@ export class ImportProgramService {
 
         if (!isSchool && !isUniversity) throw new BadRequestException(`ประเภทสถาบัน "${instType}" ไม่รองรับ`);
 
-        // Pre-fetch
         const existingPrograms = await this.programRepo.find({ where: { inst_id: instId, flag_valid: true } });
         const existingCombinations = new Set<string>();
 
@@ -170,10 +168,11 @@ export class ImportProgramService {
 
         validatedData.sort((a, b) => a.row - b.row);
 
-        const validCount = validatedData.filter(v => v.isValid).length;
-        const errorCount = validatedData.filter(v => !v.isValid).length;
+        const validCount = validatedData.filter(v => v.isValid && !v.isDuplicate).length;
         const duplicateCount = validatedData.filter(v => v.isDuplicate).length;
+        const errorCount = validatedData.filter(v => !v.isValid && !v.isDuplicate).length;
         const warningCount = validatedData.filter(v => v.warnings.length > 0).length;
+        const willSaveCount = Math.max(0, validCount);
 
         const validationToken = (errorCount === 0 && validCount > 0)
             ? createValidationToken(this.jwtService, { instId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'program' })
@@ -187,7 +186,7 @@ export class ImportProgramService {
                 errorCount,
                 duplicateCount,
                 warningCount,
-                willSaveCount: validCount - duplicateCount
+                willSaveCount
             },
         }
 
@@ -213,10 +212,8 @@ export class ImportProgramService {
             const studyPlanName = dto.programName?.trim();
             const className = dto.className?.trim();
 
-            // เช็ค combination ซ้ำ
             const combinationKey = `${studyPlanName?.toLowerCase()}|${className?.toLowerCase()}`;
             if (existingCombinations.has(combinationKey)) {
-                console.log(`[INFO] Skipping duplicate: ${studyPlanName} + ${className}`);
                 skippedCount++;
                 continue;
             }
@@ -224,7 +221,6 @@ export class ImportProgramService {
             let studyPlanId = existingStudyPlans.get(studyPlanName.toLowerCase());
 
             if (!studyPlanId) {
-                // ใช้ ON CONFLICT DO NOTHING เพื่อป้องกัน duplicate key error
                 const insertStudyPlanQuery = `
                     INSERT INTO program (inst_id, program_name, program_type, tree_type, parent_id, flag_valid, created_at, updated_at)
                     VALUES ($1, $2, $3, $4, NULL, true, NOW(), NOW())
@@ -252,9 +248,7 @@ export class ImportProgramService {
                     if (!studyPlanId) {
                         throw new Error(`Failed to create or find study plan: ${studyPlanName}`);
                     }
-                    console.log(`[INFO] Using existing study plan: "${studyPlanName}" (id: ${studyPlanId})`);
                 } else {
-                    console.log(`[INFO] Created new study plan: "${studyPlanName}" (id: ${studyPlanId})`);
                     savedCount++;
                 }
 
@@ -278,7 +272,6 @@ export class ImportProgramService {
             if (classResult[0]?.program_id) {
                 savedCount++;
             } else {
-                console.log(`[INFO] Class "${className}" under "${studyPlanName}" already exists, skipping`);
                 skippedCount++;
             }
 
@@ -305,10 +298,8 @@ export class ImportProgramService {
             const departmentName = dto.department?.trim();
             const majorName = dto.major?.trim();
 
-            // เช็ค combination ซ้ำ
             const combinationKey = `${facultyName?.toLowerCase()}|${departmentName?.toLowerCase()}|${majorName?.toLowerCase()}`;
             if (existingCombinations.has(combinationKey)) {
-                console.log(`[INFO] Skipping duplicate: ${facultyName} + ${departmentName} + ${majorName}`);
                 skippedCount++;
                 continue;
             }
@@ -343,9 +334,7 @@ export class ImportProgramService {
                     if (!facultyId) {
                         throw new Error(`Failed to create or find faculty: ${facultyName}`);
                     }
-                    console.log(`[INFO] Using existing faculty: "${facultyName}" (id: ${facultyId})`);
                 } else {
-                    console.log(`[INFO] Created new faculty: "${facultyName}" (id: ${facultyId})`);
                     savedCount++;
                 }
 
@@ -384,9 +373,7 @@ export class ImportProgramService {
                     if (!departmentId) {
                         throw new Error(`Failed to create or find department: ${departmentName}`);
                     }
-                    console.log(`[INFO] Using existing department: "${departmentName}" (id: ${departmentId})`);
                 } else {
-                    console.log(`[INFO] Created new department: "${departmentName}" (id: ${departmentId})`);
                     savedCount++;
                 }
 
@@ -407,15 +394,11 @@ export class ImportProgramService {
                 TreeType.LEAF
             ]);
 
-            // ถ้า insert สำเร็จ (ไม่ซ้ำ)
             if (majorResult[0]?.program_id) {
                 savedCount++;
             } else {
-                console.log(`[INFO] Major "${majorName}" under "${departmentName}" already exists, skipping`);
                 skippedCount++;
             }
-
-            // เพิ่ม combination เข้า Set
             existingCombinations.add(combinationKey);
         }
 
@@ -429,7 +412,6 @@ export class ImportProgramService {
 
         const rawData = await parseExcelFile(buffer);
 
-        // Validate instType
         const isSchool = instType === 'school';
         const isUniversity = instType === 'university' || instType === 'uni';
 
@@ -457,20 +439,17 @@ export class ImportProgramService {
         let totalSkippedCount = 0;
 
         try {
-            // ดึง existing programs
             const existingPrograms = await this.programRepo.find({
                 where: { inst_id: instId, flag_valid: true }
             });
 
             if (isSchool) {
-                // สร้าง Map สำหรับ existing study plans
                 const existingStudyPlans = new Map<string, number>(
                     existingPrograms
                     .filter(p => p.program_type?.toLowerCase() === ProgramType.STUDY_PLAN.toLowerCase())
                     .map(p => [p.program_name.toLowerCase(), p.program_id])
                 );
 
-                // สร้าง Set สำหรับ existing combinations
                 const existingCombinations = new Set<string>();
                 const studyPlans = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.STUDY_PLAN.toLowerCase());
                 const classes = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.CLASS.toLowerCase());
@@ -486,7 +465,6 @@ export class ImportProgramService {
                 console.log(`[INFO] Saving ${rawData.length} records in ${batches.length} batches`);
 
                 for (let i = 0; i < batches.length; i++) {
-                    console.log(`[INFO] Processing batch ${i + 1}/${batches.length}`);
                     const { savedCount, skippedCount } = await this.saveSchoolBatch(
                         batches[i],
                         queryRunner,
@@ -498,7 +476,6 @@ export class ImportProgramService {
                     totalSkippedCount += skippedCount;
                 }
             } else {
-                // University
                 const existingFaculties = new Map<string, number>(
                     existingPrograms
                         .filter(p => p.program_type?.toLowerCase() === ProgramType.FACULTY.toLowerCase())
@@ -517,7 +494,6 @@ export class ImportProgramService {
                     }
                 }
 
-                // สร้าง Set สำหรับ existing combinations
                 const existingCombinations = new Set<string>();
                 const majors = existingPrograms.filter(p => p.program_type?.toLowerCase() === ProgramType.MAJOR.toLowerCase());
 

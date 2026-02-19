@@ -23,7 +23,6 @@ import {
     USER_STATUS_MAP
 } from '../shared';
 
-// Helper type for student DTO
 type StudentDtoType = ImportSchoolStudentDto | ImportUniStudentDto;
 type StudentDtoClass = typeof ImportSchoolStudentDto | typeof ImportUniStudentDto;
 
@@ -49,7 +48,7 @@ export class ImportStudentService {
         if (instType === 'school') {
             return (dto as ImportSchoolStudentDto).studyPlan;
         } else {
-            return (dto as ImportUniStudentDto).major;
+            return (dto as ImportUniStudentDto).department;
         }
     }
 
@@ -82,7 +81,6 @@ export class ImportStudentService {
             const warningMessages: string[] = [];
             let isDuplicate = false;
 
-            // DTO Validation
             const rowErrors = await validate(studentDto);
             if (rowErrors.length > 0) {
                 errorMessages.push(...rowErrors.map(e => Object.values(e.constraints || {}).join(', ')));
@@ -93,17 +91,16 @@ export class ImportStudentService {
                 errorMessages.push(`ระดับชั้นที่ระบุไม่ถูกต้อง: ${studentDto.eduLevel}`);
             }
 
-            // Classroom & Program 
             const classroomName = this.getClassroomName(studentDto, instType);
             const parentProgramName = this.getParentProgramName(studentDto, instType);
-            const possibleClassrooms = programs.filter(p => p.program_name === classroomName && p.program_type === ProgramType.CLASS && p.flag_valid);
-
+            const possibleClassrooms = programs.filter(p => p.program_name === classroomName && (p.program_type === ProgramType.CLASS || p.program_type === ProgramType.MAJOR) && p.flag_valid);
+            
             let classroom: Program | undefined;
             if (possibleClassrooms.length > 0 && parentProgramName) {
                 classroom = possibleClassrooms.find(c => programs.some(p => 
                     Number(p.program_id) === Number(c.parent_id) && 
                     p.program_name.trim() === parentProgramName.trim() &&
-                    p.program_type === (isSchool ? ProgramType.STUDY_PLAN : ProgramType.MAJOR) &&
+                    p.program_type === (isSchool ? ProgramType.STUDY_PLAN : ProgramType.DEPARTMENT) &&
                     p.flag_valid
                 ));
             }
@@ -111,7 +108,7 @@ export class ImportStudentService {
             if (possibleClassrooms.length === 0) {
                 errorMessages.push(`ห้องเรียนที่ระบุไม่ถูกต้อง: ${classroomName}`);
             } else if (!classroom) {
-                errorMessages.push(`ห้องเรียน "${classroomName}" ไม่สอดคล้องกับ${isSchool ? 'แผนการเรียน' : 'สาขา'} "${parentProgramName}"`);
+                errorMessages.push(`ห้องเรียน "${classroomName}" ไม่สอดคล้องกับ${isSchool ? 'แผนการเรียน' : 'ภาค'} "${parentProgramName}"`);
             }
 
             // Check EduLevel - Program
@@ -124,7 +121,6 @@ export class ImportStudentService {
             //     }
             // }
 
-            // Duplicate Check Email
             if (studentDto.studentEmail) {
                 const emailLower = studentDto.studentEmail.toLowerCase();
                 if (existingEmails.has(emailLower)) {
@@ -135,7 +131,6 @@ export class ImportStudentService {
                 }
             }
 
-            // Duplicate Check Student Code
             if (studentDto.studentId) {
                 if (existingCodes.has(studentDto.studentId)) {
                     warningMessages.push(`รหัสนักเรียน ${studentDto.studentId} มีอยู่ในระบบแล้ว (จะข้ามการบันทึก)`);
@@ -161,7 +156,6 @@ export class ImportStudentService {
         const rawData = await parseExcelFile(buffer);
         const DtoClass = this.getDtoClass(instType);
 
-        // Pre-fetch ข้อมูลระบบ
         const [eduLevels, programs, existingUsers] = await Promise.all([
             this.eduLevelRepo.find(),
             this.programRepo.find({ where: { inst_id: instId } }),
@@ -193,10 +187,12 @@ export class ImportStudentService {
 
         validatedData.sort((a, b) => a.row - b.row);
 
-        const validCount = validatedData.filter(v => v.isValid).length;
-        const errorCount = validatedData.filter(v => !v.isValid).length;
+
+        const validCount = validatedData.filter(v => v.isValid && !v.isDuplicate).length;
         const duplicateCount = validatedData.filter(v => v.isDuplicate).length;
+        const errorCount = validatedData.filter(v => !v.isValid && !v.isDuplicate).length;
         const warningCount = validatedData.filter(v => v.warnings.length > 0).length;
+        const willSaveCount = Math.max(0, validCount);
 
         const validationToken = (errorCount === 0 && validCount > 0)
             ? createValidationToken(this.jwtService, { instId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'student' })
@@ -210,7 +206,7 @@ export class ImportStudentService {
                 errorCount,
                 duplicateCount,  
                 warningCount,    
-                willSaveCount: validCount - duplicateCount 
+                willSaveCount
             }
         }
 
@@ -241,9 +237,8 @@ export class ImportStudentService {
 
         for (const row of batch) {
             const studentDto = plainToInstance(DtoClass as any, row, { excludeExtraneousValues: true }) as unknown as StudentDtoType;
-
-            // ข้าม duplicate
             const emailLower = studentDto.studentEmail?.toLowerCase();
+
             if ((emailLower && existingEmails.has(emailLower)) || 
                 (studentDto.studentId && existingCodes.has(studentDto.studentId))) {
                 console.log(`[INFO] Skipping duplicate: ${studentDto.studentEmail || studentDto.studentId}`);
@@ -256,13 +251,11 @@ export class ImportStudentService {
                 throw new NotFoundException(`ระดับชั้น ${studentDto.eduLevel} ไม่พบในระบบ`);
             }
 
-            // หา classroom name และ parent program name ตาม instType
             const classroomName = this.getClassroomName(studentDto, instType);
             const parentProgramName = this.getParentProgramName(studentDto, instType);
-
             const possibleClassrooms = programs.filter(
                 p => p.program_name === classroomName &&
-                    p.program_type === ProgramType.CLASS &&
+                    (p.program_type === ProgramType.CLASS || p.program_type === ProgramType.MAJOR) &&
                     p.flag_valid === true
             );
 
@@ -273,7 +266,7 @@ export class ImportStudentService {
                     const parent = programs.find(
                         p => Number(p.program_id) === Number(c.parent_id) &&
                             p.program_name.trim() === parentProgramName.trim() &&
-                            (p.program_type === (isSchool ? ProgramType.STUDY_PLAN : ProgramType.MAJOR)) &&
+                            (p.program_type === (isSchool ? ProgramType.STUDY_PLAN : ProgramType.DEPARTMENT)) &&
                             p.flag_valid === true
                     );
                     return !!parent;
@@ -281,7 +274,7 @@ export class ImportStudentService {
             }
 
             if (!classroom) {
-                const parentLabel = isSchool ? 'แผนการเรียน' : 'สาขา';
+                const parentLabel = isSchool ? 'แผนการเรียน' : 'ภาค';
                 throw new NotFoundException(
                     `ห้องเรียน "${classroomName}" ไม่พบใน${parentLabel} "${parentProgramName}"`
                 );
@@ -290,7 +283,6 @@ export class ImportStudentService {
             const initialPassword = generateInitialPassword();
             const hashedPassword = await hashPassword(initialPassword);
             passwordMap.set(studentDto.studentEmail || '', initialPassword);
-
             const rawStatus = studentDto.studentStatus?.trim().toLowerCase() || 'active';
             const mappedStatus = statusMap[rawStatus] || 'Active';
 
@@ -339,7 +331,6 @@ export class ImportStudentService {
             throw new BadRequestException('กรุณา validate ข้อมูลก่อนบันทึก (ต้องระบุ validationToken)');
         }
 
-        // Validate instType
         const isSchool = instType === 'school';
         const isUniversity = instType === 'university' || instType === 'uni';
         if (!isSchool && !isUniversity) {
@@ -367,7 +358,6 @@ export class ImportStudentService {
         let totalSkippedCount = 0;
         const allPasswordMap = new Map<string, string>();
 
-        // กำหนด roleId ตาม instType
         const roleId = isSchool ? 2 : 3;
 
         try {
@@ -380,7 +370,6 @@ export class ImportStudentService {
                 })
             ]);
 
-            // สร้าง Set สำหรับเช็ค duplicate
             const existingEmails = new Set<string>(
                 existingUsers.map(u => u.email?.toLowerCase()).filter((email): email is string => !!email)
             );
@@ -410,9 +399,11 @@ export class ImportStudentService {
                 passwordMap.forEach((v, k) => allPasswordMap.set(k, v));
             }
 
+            console.log(`[INFO] Finished saving batches. Total saved: ${totalSavedCount}, total skipped: ${totalSkippedCount}`);
+
+
             await queryRunner.commitTransaction();
 
-            // ส่ง email แบบ batch parallel
             const emailBatches = chunkArray(Array.from(allPasswordMap.entries()), 10);
             for (const emailBatch of emailBatches) {
                 await Promise.all(

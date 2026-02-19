@@ -23,7 +23,7 @@ import {
 
 interface PreFetchedData {
     students: Map<string, number>; 
-    existingEnrollments: Set<number>; // student_id ที่ลงทะเบียนใน section นี้แล้ว
+    existingEnrollments: Set<number>; 
 }
 
 @Injectable()
@@ -43,13 +43,11 @@ export class ImportEnrollmentService {
 
     private async preFetchData(instId: number, sectionId: number): Promise<PreFetchedData> {
         const [students, existingEnrollments] = await Promise.all([
-            // Students (role_id 2 = school student, 3 = university student)
             this.userRepository.find({
                 where: { inst_id: instId, flag_valid: true },
                 select: ['user_sys_id', 'code', 'role_id']
             }),
 
-            // Existing enrollments for this section
             this.dataSource.query(
                 `SELECT e.student_id
                  FROM enrollment e
@@ -58,7 +56,6 @@ export class ImportEnrollmentService {
             ) as Promise<{ student_id: number }[]>
         ]);
 
-        // Filter เฉพาะ students role_id 2 หรือ 3
         const studentUsers = students.filter(s => s.role_id === 2 || s.role_id === 3);
 
         const result = {
@@ -101,20 +98,21 @@ export class ImportEnrollmentService {
             const studentId = preFetchedData.students.get(studentCodeKey);
 
             if (studentId) {
-                // เช็คซ้ำในระบบ
                 if (preFetchedData.existingEnrollments.has(studentId)) {
                     warningMessages.push(`นักเรียน "${dto.studentCode}" ลงทะเบียนในกลุ่มเรียนนี้แล้ว (จะข้ามการบันทึก)`);
                     isDuplicate = true;
                 } 
-                // เช็คซ้ำในไฟล์
                 else if (firstOccurrences.get(studentCodeKey) !== index) {
                     errorMessages.push(`นักเรียน "${dto.studentCode}" ซ้ำกันภายในไฟล์`);
                 }
             }
 
             results.push({
-                row: rowNumber, data: { 'รหัสนักเรียน': dto.studentCode }, isValid: errorMessages.length === 0,
-                errors: errorMessages, warnings: warningMessages, isDuplicate
+                row: rowNumber, 
+                data: { 'รหัสนักเรียน': dto.studentCode }, 
+                isValid: errorMessages.length === 0,
+                errors: errorMessages, 
+                warnings: warningMessages, isDuplicate
             });
         }
         return results;
@@ -123,7 +121,6 @@ export class ImportEnrollmentService {
     async validateEnrollmentData(instId: number, sectionId: number, buffer: Buffer) {
         const rawData = await parseExcelFile(buffer);
 
-        // ตรวจสอบ section มีอยู่จริงและตรงกับ inst_id
         const section = await this.dataSource.query(
             `SELECT sec.section_id
              FROM section sec
@@ -155,10 +152,11 @@ export class ImportEnrollmentService {
 
         validatedData.sort((a, b) => a.row - b.row);
 
-        const validCount = validatedData.filter(v => v.isValid).length;
-        const errorCount = validatedData.filter(v => !v.isValid).length;
+        const validCount = validatedData.filter(v => v.isValid && !v.isDuplicate).length;
         const duplicateCount = validatedData.filter(v => v.isDuplicate).length;
+        const errorCount = validatedData.filter(v => !v.isValid && !v.isDuplicate).length;
         const warningCount = validatedData.filter(v => v.warnings.length > 0).length;
+        const willSaveCount = Math.max(0, validCount);
 
         const validationToken = (errorCount === 0 && validCount > 0)
             ? createValidationToken(this.jwtService, { instId, sectionId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'enrollment' })
@@ -172,7 +170,7 @@ export class ImportEnrollmentService {
                 errorCount,
                 duplicateCount,
                 warningCount,
-                willSaveCount: validCount - duplicateCount
+                willSaveCount
             }
         }
 
@@ -198,31 +196,25 @@ export class ImportEnrollmentService {
         for (const row of batch) {
             const dto = plainToInstance(ImportEnrollmentDto, row, { excludeExtraneousValues: true });
 
-            // หา student_id
             const studentId = preFetchedData.students.get(dto.studentCode.toLowerCase());
             if (!studentId) {
                 throw new NotFoundException(`รหัสนักเรียน "${dto.studentCode}" ไม่พบในระบบ`);
             }
 
-            // เช็ค duplicate
             if (preFetchedData.existingEnrollments.has(studentId)) {
-                console.log(`[INFO] Skipping duplicate enrollment: ${dto.studentCode}`);
                 skippedCount++;
                 continue;
             }
 
-            // Insert enrollment
             const insertEnrollmentQuery = `
                 INSERT INTO enrollment (section_id, student_id, flag_valid, enrolled_at)
                 VALUES ($1, $2, true, NOW())
             `;
             await queryRunner.manager.query(insertEnrollmentQuery, [sectionId, studentId]);
 
-            // เพิ่มเข้า Set เพื่อป้องกัน duplicate ในไฟล์เดียวกัน
             preFetchedData.existingEnrollments.add(studentId);
 
             savedCount++;
-            console.log(`[INFO] Enrolled student "${dto.studentCode}" to section ${sectionId}`);
         }
 
         return { savedCount, skippedCount };
@@ -255,7 +247,6 @@ export class ImportEnrollmentService {
         let totalSkippedCount = 0;
 
         try {
-            // ตรวจสอบสถาบัน
             const inst = await queryRunner.manager.findOne('Institution', {
                 where: { inst_id: instId }
             }) as any;
@@ -263,14 +254,11 @@ export class ImportEnrollmentService {
                 throw new NotFoundException(`สถาบันที่มี id ${instId} ไม่พบในระบบ`);
             }
 
-            // Pre-fetch ข้อมูลทั้งหมด
             const preFetchedData = await this.preFetchData(instId, sectionId);
 
             const batches = chunkArray(rawData, IMPORT_BATCH_SIZE);
-            console.log(`[INFO] Saving ${rawData.length} records in ${batches.length} batches`);
 
             for (let i = 0; i < batches.length; i++) {
-                console.log(`[INFO] Processing batch ${i + 1}/${batches.length}`);
                 const { savedCount, skippedCount } = await this.saveBatch(
                     batches[i],
                     queryRunner,
