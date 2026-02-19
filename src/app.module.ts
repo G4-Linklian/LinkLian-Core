@@ -30,6 +30,12 @@ import { ImportProgramModule } from './modules/import-csv/program/import-program
 import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schdule.module';
 import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
 import { CommunityModule } from './modules/community/community.module';
+import { LoggerModule } from './common/logger/logger.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthMiddleware } from './common/middleware/auth.middleware';
+import { NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessGuard } from './common/guard/access.guard';
 
 @Module({
   imports: [
@@ -79,10 +85,28 @@ import { CommunityModule } from './modules/community/community.module';
     ImportSectionScheduleModule,
     ImportEnrollmentModule,
     CommunityModule,
+    LoggerModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+    }),
   ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: AccessGuard,
+    },
+  ],
 
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthMiddleware)
+      .exclude('institution/login')
+      .exclude('auth/*')
+      .forRoutes('*');
+  }
+}

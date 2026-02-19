@@ -2,6 +2,9 @@
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
+import { AppLogger } from 'src/common/logger/app-logger.service';
+
+const logger = new AppLogger();
 
 /**
  * Hash password with bcrypt + custom salt from env
@@ -9,23 +12,15 @@ import { SignOptions } from 'jsonwebtoken';
  */
 export async function hashPassword(password: string): Promise<string> {
   const customSalt = process.env.SALTNUMBER || '';
-  const saltedPassword = password + customSalt; // เพิ่ม custom salt ก่อน hash
-  const bcryptRounds = 10; // bcrypt rounds (ไม่ใช่ custom salt)
-  
-  console.log('═══════════════════════════════════════════════');
-  console.log('🔐 [AUTH UTIL] hashPassword');
-  console.log('═══════════════════════════════════════════════');
-  console.log('🔐 Input password length:', password.length);
-  console.log('🔐 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
-  console.log('🔐 Salted password length:', saltedPassword.length);
-  console.log('🔐 Bcrypt rounds:', bcryptRounds);
+  const saltedPassword = password + customSalt; 
+  const bcryptRounds = 10;
+
+
+  logger.debug('Hashing password with custom salt...', 'AUTH UTIL');
   
   const hash = await bcrypt.hash(saltedPassword, bcryptRounds);
   
-  console.log('🔐 Hash generated:', hash.substring(0, 29) + '...');
-  console.log('🔐 Hash length:', hash.length);
-  console.log('✅ Password hashed with custom salt successfully');
-  console.log('═══════════════════════════════════════════════');
+  logger.debug('Password hashed with custom salt successfully', 'AUTH UTIL');
   
   return hash;
 }
@@ -36,20 +31,15 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
   const customSalt = process.env.SALTNUMBER || '';
-  const saltedPassword = password + customSalt; // ✅ เพิ่ม custom salt ก่อน compare
+  const saltedPassword = password + customSalt;
   
-  console.log('═══════════════════════════════════════════════');
-  console.log('🔍 [AUTH UTIL] verifyPassword');
-  console.log('═══════════════════════════════════════════════');
-  console.log('🔍 Input password length:', password.length);
-  console.log('🔍 Custom salt from env:', customSalt ? `"${customSalt}"` : '(empty)');
-  console.log('🔍 Salted password length:', saltedPassword.length);
-  console.log('🔍 Stored hash:', hashedPassword.substring(0, 29) + '...');
+  logger.debug('Verifying password with custom salt...', 'AUTH UTIL');
   
   const isValid = await bcrypt.compare(saltedPassword, hashedPassword);
   
-  console.log('🔍 Verification result:', isValid ? '✅ MATCH' : '❌ NO MATCH');
-  console.log('═══════════════════════════════════════════════');
+  logger.debug(`Verification result `, 'AUTH UTIL', {
+    isValid: isValid ? '✅ MATCH' : '❌ NO MATCH',
+  });
   
   return isValid;
 }
@@ -84,7 +74,7 @@ export function generateInitialPassword(): string {
   }
   
   const password = prefix + randomPart;
-  console.log('🔑 [AUTH UTILS] Generated initial password:', password);
+  logger.debug('Generated initial password:', 'AUTH UTILS', { password });
   
   return password;
 }

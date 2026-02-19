@@ -13,7 +13,7 @@ async function bootstrap() {
 
 
   // Enable validation pipe
-  app.useGlobalPipes(new ValidationPipe({ 
+  app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true,
     forbidNonWhitelisted: false,
@@ -34,7 +34,14 @@ async function bootstrap() {
     //.setVersion('1.0.0')
     .addServer('http://localhost:5400', 'Local')
     .addServer('https://uat-api.linklian.org', 'Staging')
-    .addBearerAuth()
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
