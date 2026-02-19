@@ -44,7 +44,6 @@ export class SemesterService {
    */
   async search(dto: SearchSemesterDto) {
     // Validate that at least one search parameter is provided
-    console.log('Search DTO:', dto);
     const hasInput = dto.semester_id || dto.inst_id ||
                      dto.semester || dto.start_date ||
                      dto.end_date || dto.status ||
