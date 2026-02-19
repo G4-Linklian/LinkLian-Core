@@ -50,19 +50,16 @@ export class ImportTeacherService {
             const warningMessages: string[] = [];
             let isDuplicate = false;
 
-            // ตรวจสอบ Format
             const rowErrors = await validate(dto);
             if (rowErrors.length > 0) {
                 errorMessages.push(...rowErrors.map(e => Object.values(e.constraints || {}).join(', ')));
             }
 
-            // ตรวจสอบกลุ่มการเรียนรู้
             const la = learningAreas.find(l => l.learning_area_name.toLowerCase() === dto.learningArea?.toLowerCase());
             if (!la && dto.learningArea) {
                 errorMessages.push(`กลุ่มการเรียนรู้ "${dto.learningArea}" ไม่มีในระบบ`);
             }
 
-            // ตรวจสอบ Email (ทั้งใน DB และในไฟล์)
             if (dto.teacherEmail) {
                 const emailLower = dto.teacherEmail.toLowerCase();
                 if (existingEmails.has(emailLower)) {
@@ -73,7 +70,6 @@ export class ImportTeacherService {
                 }
             }
 
-            // ตรวจสอบรหัสบุคลากร (ทั้งใน DB และในไฟล์)
             if (dto.teacherId) {
                 if (existingCodes.has(dto.teacherId)) {
                     warningMessages.push(`รหัสบุคลากร ${dto.teacherId} มีอยู่ในระบบแล้ว (จะข้ามการบันทึก)`);
@@ -126,10 +122,11 @@ export class ImportTeacherService {
 
         validatedData.sort((a, b) => a.row - b.row);
 
-        const validCount = validatedData.filter(v => v.isValid).length;
-        const errorCount = validatedData.filter(v => !v.isValid).length;
+        const validCount = validatedData.filter(v => v.isValid && !v.isDuplicate).length;
         const duplicateCount = validatedData.filter(v => v.isDuplicate).length;
+        const errorCount = validatedData.filter(v => !v.isValid && !v.isDuplicate).length;
         const warningCount = validatedData.filter(v => v.warnings.length > 0).length;
+        const willSaveCount = Math.max(0, validCount);
 
         const validationToken = (errorCount === 0 && validCount > 0) 
             ? createValidationToken(this.jwtService, { instId, dataHash: calculateDataHash(rawData), validCount, duplicateCount, type: 'teacher' })
@@ -143,7 +140,7 @@ export class ImportTeacherService {
                 errorCount,
                 duplicateCount,
                 warningCount,
-                willSaveCount: validCount - duplicateCount
+                willSaveCount
             }
         }
 
@@ -175,16 +172,13 @@ export class ImportTeacherService {
         for (const row of batch) {
             const teacherDto = plainToInstance(ImportTeacherDto, row);
 
-            // ข้าม duplicate
             const emailLower = teacherDto.teacherEmail?.toLowerCase();
             if ((emailLower && existingEmails.has(emailLower)) ||
                 (teacherDto.teacherId && existingCodes.has(teacherDto.teacherId))) {
-                console.log(`[INFO] Skipping duplicate: ${teacherDto.teacherEmail || teacherDto.teacherId}`);
                 skippedCount++;
                 continue;
             }
 
-            // หา learning area
             const learningArea = learningAreas.find(
                 la => la.learning_area_name.toLowerCase() === teacherDto.learningArea?.toLowerCase()
             );
@@ -192,12 +186,10 @@ export class ImportTeacherService {
                 throw new NotFoundException(`กลุ่มการเรียนรู้ "${teacherDto.learningArea}" ไม่พบในระบบ`);
             }
 
-            // Generate password
             const initialPassword = generateInitialPassword();
             const hashedPassword = await hashPassword(initialPassword);
             passwordMap.set(teacherDto.teacherEmail || '', initialPassword);
 
-            // Map status
             const rawStatus = teacherDto.teacherStatus?.trim().toLowerCase() || 'active';
             const mappedStatus = statusMap[rawStatus] || 'Active';
 
@@ -234,9 +226,6 @@ export class ImportTeacherService {
                 learningArea.learning_area_id
             ]);
 
-            console.log(`[INFO] Created teacher "${teacherDto.teacherName}" with learning area "${learningArea.learning_area_name}"`);
-
-            // เพิ่มเข้า Set เพื่อป้องกัน duplicate ในไฟล์เดียวกัน
             if (emailLower) existingEmails.add(emailLower);
             if (teacherDto.teacherId) existingCodes.add(teacherDto.teacherId);
 
@@ -253,14 +242,11 @@ export class ImportTeacherService {
 
         const rawData = await parseExcelFile(buffer);
 
-        // Validate instType
         const isSchool = instType === 'school';
         const isUniversity = instType === 'university' || instType === 'uni';
         if (!isSchool && !isUniversity) {
             throw new BadRequestException(`ประเภทสถาบัน "${instType}" ไม่รองรับ`);
         }
-
-        console.log(`[DEBUG] Saving teachers for inst_id: ${instId}, inst_type: ${instType}`);
 
         const payload = verifyValidationToken(
             this.jwtService,
@@ -270,8 +256,6 @@ export class ImportTeacherService {
             rawData
         );
 
-        console.log(`[INFO] Valid token - proceeding to save ${payload.validCount} records (${payload.duplicateCount || 0} duplicates will be skipped)`);
-
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -280,11 +264,9 @@ export class ImportTeacherService {
         let totalSkippedCount = 0;
         const allPasswordMap = new Map<string, string>();
 
-        // กำหนด roleId ตาม instType
         const roleId = isSchool ? 4 : 5;
 
         try {
-            // Pre-fetch data
             const [learningAreas, existingUsers] = await Promise.all([
                 this.learningAreaRepo.find({
                     where: { inst_id: instId, flag_valid: true }
@@ -295,7 +277,6 @@ export class ImportTeacherService {
                 })
             ]);
 
-            // สร้าง Set สำหรับเช็ค duplicate
             const existingEmails = new Set<string>(
                 existingUsers.map(u => u.email?.toLowerCase()).filter((email): email is string => !!email)
             );
@@ -304,10 +285,8 @@ export class ImportTeacherService {
             );
 
             const batches = chunkArray(rawData, IMPORT_BATCH_SIZE);
-            console.log(`[INFO] Saving ${rawData.length} records in ${batches.length} batches`);
 
             for (let i = 0; i < batches.length; i++) {
-                console.log(`[INFO] Processing batch ${i + 1}/${batches.length}`);
                 const { savedCount, skippedCount, passwordMap} = await this.saveBatch(
                     batches[i],
                     queryRunner,

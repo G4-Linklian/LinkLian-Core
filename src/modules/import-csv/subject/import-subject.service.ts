@@ -40,7 +40,6 @@ export class ImportSubjectService {
             const warningMessages: string[] = [];
             let isDuplicate = false;
 
-            // DTO validation
             const subjectDto = plainToInstance(ImportSubjectDto, row, { excludeExtraneousValues: true });
             const rowErrors = await validate(subjectDto);
 
@@ -48,22 +47,18 @@ export class ImportSubjectService {
                 errorMessages.push(...rowErrors.map(e => Object.values(e.constraints || {}).join(', ')));
             }
 
-            // ตรวจสอบรหัสวิชา
             if (subjectDto.subjectCode) {
                 const codeLower = subjectDto.subjectCode.toLowerCase().trim();
 
-                // เช็คซ้ำในระบบ 
                 if (existingSubjectCodes.has(codeLower)) {
                     warningMessages.push(`รหัสวิชา "${subjectDto.subjectCode}" มีอยู่ในระบบแล้ว (จะข้ามการบันทึก)`);
                     isDuplicate = true;
                 } 
-                // เช็คซ้ำในไฟล์
                 else if (firstOccurrences.get(codeLower) !== index) {
                     errorMessages.push(`รหัสวิชา "${subjectDto.subjectCode}" ซ้ำกันภายในไฟล์`);
                 }
             }
 
-            // ตรวจสอบค่า credit และ hourPerWeek 
             if (row['หน่วยกิต'] !== undefined && row['หน่วยกิต'] !== null && row['หน่วยกิต'] !== '') {
                 const credit = parseFloat(row['หน่วยกิต'].toString());
                 if (isNaN(credit)) {
@@ -85,7 +80,7 @@ export class ImportSubjectService {
             results.push({
                 row: rowNumber,
                 data: row,
-                isValid: errorMessages.length === 0,
+                isValid: errorMessages.length === 0 && warningMessages.length === 0 && !isDuplicate,
                 errors: errorMessages,
                 warnings: warningMessages,
                 isDuplicate
@@ -98,7 +93,6 @@ export class ImportSubjectService {
     async validateSubjectData(instId: number, buffer: Buffer) {
         const rawData = await parseExcelFile(buffer);
 
-        // Pre-fetch ข้อมูลระบบ
         const existingSubjects = await this.dataSource.query(
             `SELECT s.subject_code 
              FROM subject s
@@ -130,10 +124,11 @@ export class ImportSubjectService {
 
         validatedData.sort((a, b) => a.row - b.row);
 
-        const validCount = validatedData.filter(item => item.isValid).length;
-        const errorCount = validatedData.filter(item => !item.isValid).length;
+        const validCount = validatedData.filter(item => item.isValid && !item.isDuplicate).length;
         const duplicateCount = validatedData.filter(item => item.isDuplicate).length;
+        const errorCount = validatedData.filter(item => !item.isValid && !item.isDuplicate).length;
         const warningCount = validatedData.filter(item => item.warnings.length > 0).length;
+        const willSaveCount = Math.max(0, validCount);
 
         let validationToken: string | null = null;
         if (errorCount === 0 && validCount > 0) {
@@ -154,7 +149,7 @@ export class ImportSubjectService {
                 errorCount,
                 duplicateCount,
                 warningCount,
-                willSaveCount: validCount - duplicateCount
+                willSaveCount
             }
         }
 
@@ -183,15 +178,12 @@ export class ImportSubjectService {
         for (const row of batch) {
             const subjectDto = plainToInstance(ImportSubjectDto, row, { excludeExtraneousValues: true });
 
-            // ข้าม duplicate
             const codeLower = subjectDto.subjectCode?.toLowerCase();
             if (codeLower && existingSubjectCodes.has(codeLower)) {
-                console.log(`[INFO] Skipping duplicate subject: ${subjectDto.subjectCode}`);
                 skippedCount++;
                 continue;
             }
 
-            // หา learning_area_id หรือสร้างใหม่
             let learningAreaId = learningAreaMap.get(subjectDto.learningArea.toLowerCase());
 
             if (!learningAreaId) {
@@ -210,10 +202,8 @@ export class ImportSubjectService {
                 }
                 learningAreaMap.set(subjectDto.learningArea.toLowerCase(), learningAreaId);
                 newLearningAreas.push(subjectDto.learningArea);
-                console.log(`[INFO] Created new learning area: "${subjectDto.learningArea}" (id: ${learningAreaId}) for inst_id: ${instId}`);
             }
 
-            // บันทึก subject
             const insertSubjectQuery = `
                 INSERT INTO subject 
                 (subject_code, name_th, name_en, learning_area_id, credit, hour_per_week, flag_valid, created_at, updated_at)
@@ -232,7 +222,6 @@ export class ImportSubjectService {
 
             await queryRunner.manager.query(insertSubjectQuery, values);
 
-            // เพิ่มเข้า Set เพื่อป้องกัน duplicate ในไฟล์เดียวกัน
             if (codeLower) existingSubjectCodes.add(codeLower);
 
             savedSubjectCount++;
@@ -248,8 +237,6 @@ export class ImportSubjectService {
 
         const rawData = await parseExcelFile(buffer);
 
-        console.log(`[DEBUG] Saving subjects for inst_id: ${instId} (from header)`);
-
         const payload = verifyValidationToken(
             this.jwtService,
             validationToken,
@@ -257,8 +244,6 @@ export class ImportSubjectService {
             instId,
             rawData
         );
-
-        console.log(`[INFO] Valid token - proceeding to save ${payload.validCount} records (${payload.duplicateCount || 0} duplicates will be skipped)`);
 
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -298,10 +283,8 @@ export class ImportSubjectService {
             );
 
             const batches = chunkArray(rawData, IMPORT_BATCH_SIZE);
-            console.log(`[INFO] Saving ${rawData.length} records in ${batches.length} batches for inst_id: ${instId}`);
 
             for (let i = 0; i < batches.length; i++) {
-                console.log(`[INFO] Processing batch ${i + 1}/${batches.length}`);
                 const { savedSubjectCount, skippedCount, newLearningAreas } = await this.saveBatch(
                     batches[i],
                     queryRunner,
