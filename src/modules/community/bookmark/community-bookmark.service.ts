@@ -131,6 +131,8 @@ export class CommunityBookmarkService {
         `
       SELECT
         p.post_commu_id,
+        p.community_id,
+        p.user_sys_id,
         p.content,
         p.created_at,
         u.first_name,

@@ -7,7 +7,7 @@ import { CreatePostDto, UpdatePostDto, GetPostsInClassDto, SearchPostDto } from 
 @ApiTags('Social Feed - Post')
 @Controller('social-feed/post')
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(private readonly postService: PostService) { }
 
   /**
    * Search posts by keyword
@@ -89,8 +89,8 @@ export class PostController {
       throw new BadRequestException('Invalid user ID');
     }
     return this.postService.updatePost(
-      parsedUserId, 
-      0, 
+      parsedUserId,
+      0,
       body,
       body.post_content_id
     );
@@ -132,9 +132,13 @@ export class PostController {
       throw new BadRequestException('Invalid user ID');
     }
     return this.postService.deletePost(
-      parsedUserId, 
-      body.post_id || 0, 
+      parsedUserId,
+      body.post_id || 0,
       body.post_content_id
     );
+  }
+  @Get(':postId')
+  getPostById(@Param('postId') postId: number) {
+    return this.postService.getPostById(Number(postId));
   }
 }

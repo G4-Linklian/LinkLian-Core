@@ -172,6 +172,7 @@ export class CommunityPostService {
       `
     SELECT
       cp.post_commu_id,
+      cp.user_sys_id,
       cp.content,
       cp.created_at,
       u.first_name,

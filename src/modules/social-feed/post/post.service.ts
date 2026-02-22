@@ -1101,4 +1101,122 @@ a.is_group,
       throw new InternalServerErrorException('Error searching posts');
     }
   }
+
+  async getPostById(postId: number) {
+    const query = `
+    SELECT
+      pic.post_id,
+      pic.section_id,
+      pc.post_content_id,
+      pc.title,
+      pc.content,
+      pc.post_type,
+      pc.is_anonymous,
+      pc.created_at,
+
+      u.user_sys_id        AS _user_sys_id,
+      u.email              AS _email,
+      u.profile_pic        AS _profile_pic,
+      TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS _display_name,
+      r.role_name          AS _role_name,
+
+      a.due_date,
+      a.max_score,
+      a.is_group,
+
+      COALESCE(
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'file_url', pa.file_url,
+            'file_type', pa.file_type,
+            'original_name', pa.original_name
+          )
+        ) FILTER (
+          WHERE pa.attachment_id IS NOT NULL
+            AND pa.flag_valid = true
+        ),
+        '[]'
+      ) AS attachments
+
+    FROM post_in_class pic
+    JOIN post_content pc
+      ON pic.post_content_id = pc.post_content_id
+    JOIN user_sys u
+      ON pc.user_sys_id = u.user_sys_id
+    JOIN role r
+      ON u.role_id = r.role_id
+    LEFT JOIN post_attachment pa
+      ON pc.post_content_id = pa.post_content_id
+    LEFT JOIN assignment a
+      ON a.post_id = pic.post_id
+     AND a.flag_valid = true
+
+    WHERE pic.post_id = $1
+      AND pic.flag_valid = true
+      AND pc.flag_valid = true
+
+    GROUP BY
+      pic.post_id,
+      pic.section_id,
+      pc.post_content_id,
+      u.user_sys_id,
+      r.role_name,
+      a.due_date,
+      a.max_score,
+      a.is_group
+  `;
+
+    const result = await this.dataSource.query(query, [postId]);
+
+    if (!result.length) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const row = result[0];
+
+    const isAnonymous = row.is_anonymous;
+    const userSysId = Number(row._user_sys_id);
+    const sectionId = row.section_id;
+
+    const displayName = isAnonymous
+      ? generateAnonymousName(userSysId, sectionId)
+      : row._display_name;
+
+    const post = {
+      post_id: row.post_id,
+      post_content_id: row.post_content_id,
+      title: row.title,
+      content: row.content,
+      post_type: row.post_type,
+      is_anonymous: isAnonymous,
+      created_at: row.created_at,
+      due_date: row.due_date || null,
+      max_score: row.max_score ? Number(row.max_score) : null,
+      is_group: row.is_group ?? null,
+
+      user: isAnonymous
+        ? {
+          user_sys_id: userSysId,
+          email: null,
+          profile_pic: null,
+          display_name: displayName,
+          role_name: null,
+        }
+        : {
+          user_sys_id: userSysId,
+          email: row._email,
+          profile_pic: row._profile_pic,
+          display_name: row._display_name,
+          role_name: row._role_name,
+        },
+
+      attachments: row.attachments || [],
+    };
+
+    return {
+      success: true,
+      message: 'Post retrieved successfully',
+      data: post,
+    };
+  }
 }
