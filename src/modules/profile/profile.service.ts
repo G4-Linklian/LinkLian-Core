@@ -5,7 +5,7 @@ import { UpdateProfileDto, EducationInfo, ProfileResponse } from './dto/profile.
 
 @Injectable()
 export class ProfileService {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   /**
    * Get user profile with education info based on role and edu_type
@@ -266,18 +266,21 @@ export class ProfileService {
         s.section_name,
         subj.subject_code,
         subj.name_th AS subject_name,
-        ss.room_location_id
+        b.building_name,
+    rl.room_number
       FROM section_schedule ss
       LEFT JOIN section s ON s.section_id = ss.section_id
       LEFT JOIN section_educator se ON se.section_id = s.section_id
       LEFT JOIN subject subj ON subj.subject_id = s.subject_id
+      LEFT JOIN room_location rl ON rl.room_location_id = ss.room_location_id
+      LEFT JOIN building b ON b.building_id = rl.building_id
       WHERE se.educator_id = $1 AND se.flag_valid = true AND ss.flag_valid = true
       ORDER BY ss.day_of_week ASC, ss.start_time ASC
     `;
 
     try {
       const schedules = await this.dataSource.query(query, [educatorId]);
-      
+
       return {
         success: true,
         message: 'Teaching schedules retrieved successfully',
@@ -286,12 +289,15 @@ export class ProfileService {
           dayOfWeek: schedule.day_of_week,
           startTime: schedule.start_time,
           endTime: schedule.end_time,
-          className: schedule.section_name,
+          className: schedule.section_name ?? '-',
           subjectName: schedule.subject_name,
           subjectCode: schedule.subject_code,
-          building: schedule.room_location_id || '-',
+          building: schedule.building_name && schedule.room_number
+            ? `${schedule.building_name} ห้อง ${schedule.room_number}`
+            : schedule.building_name ?? '-',
         })),
       };
+
     } catch (error) {
       console.error('Error fetching teaching schedule:', error);
       throw new InternalServerErrorException('Failed to fetch teaching schedule');

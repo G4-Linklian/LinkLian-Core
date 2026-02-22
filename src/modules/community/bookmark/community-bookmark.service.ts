@@ -126,6 +126,7 @@ export class CommunityBookmarkService {
   // GET MY BOOKMARK POSTS
   async getMyBookmarks(userId: number) {
     try {
+      console.log(1)
       const result = await this.dataSource.query(
         `
       SELECT
@@ -134,7 +135,22 @@ export class CommunityBookmarkService {
         p.created_at,
         u.first_name,
         u.last_name,
-        u.profile_pic
+        u.profile_pic,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'url', ca.file_url,
+                'type', ca.file_type,
+                'original_name', ca.original_name
+              )
+            )
+            FROM community_attachment ca
+            WHERE ca.post_commu_id = p.post_commu_id
+              AND ca.flag_valid = true
+          ),
+          '[]'
+        ) AS attachments
       FROM community_bookmark cb
       JOIN post_in_community p
         ON p.post_commu_id=cb.post_commu_id
@@ -145,11 +161,13 @@ export class CommunityBookmarkService {
       `,
         [userId],
       );
+      console.log(2)
       return {
         success: true,
         data: result,
         message: 'Bookmarks fetched successfully!',
       };
+      console.log(3)
 
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
