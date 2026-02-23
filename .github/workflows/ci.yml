@@ -28,20 +28,25 @@ jobs:
 
       - name: Analyze
         uses: github/codeql-action/analyze@v3
+
   secret-scan:
     name: Secret Scan (gitleaks)
+    needs: [sast]
     runs-on: ubuntu-latest
   
     steps:
       - uses: actions/checkout@v4
   
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --source . --verbose --redact
+      - name: Run Gitleaks (Free CLI)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/repo \
+            zricethezav/gitleaks:latest \
+            detect --source=/repo --verbose --redact --exit-code 1
 
   ci:
     name: Unit tests
+    needs: [secret-scan]
     runs-on: ubuntu-latest
 
     steps:
