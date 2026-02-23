@@ -37,18 +37,18 @@ export class AuthMiddleware implements NestMiddleware {
                 secret: process.env.JWT_SECRET,
             });
 
-            let form : string;
+            let from : string;
 
             if (payload.username) {
-                form = 'user';
+                from = 'user';
             } else if (payload.institution) {
-                form = 'institution';
+                from = 'institution';
             } else {
-                form = 'unknown';
+                from = 'unknown';
             }
 
             req['user'] = payload;
-            req['req_form'] = form;
+            req['req_from'] = from;
 
             this.logger.debug(
                 'Token validated',
@@ -57,7 +57,7 @@ export class AuthMiddleware implements NestMiddleware {
                     userId: payload?.sub,
                     url: req.originalUrl,
                     durationMs: Date.now() - startTime,
-                    form: form,
+                    from: from,
                 },
             );
 
