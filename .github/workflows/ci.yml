@@ -29,6 +29,7 @@ jobs:
       - name: Analyze
         uses: github/codeql-action/analyze@v3
   secret-scan:
+    name: Secret Scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +44,8 @@ jobs:
         run: |
           gitleaks detect --source . --verbose --redact
 
-  test:
+  ci:
+    name: Unit tests
     runs-on: ubuntu-latest
 
     steps:
@@ -67,3 +69,22 @@ jobs:
         run: npm run test:ci
         env:
           NODE_ENV: test
+  
+  container-scan:
+    name: Docker Build + Trivy Scan
+    runs-on: ubuntu-latest
+    needs: [ci]
+  
+    steps:
+      - uses: actions/checkout@v4
+  
+      - name: Run Container Scan
+        run: |
+          docker build -t linklian-core:local -f Dockerfile .
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image \
+            --exit-code 1 \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            linklian-core:local
