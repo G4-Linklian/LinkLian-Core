@@ -126,7 +126,6 @@ export class CommunityBookmarkService {
   // GET MY BOOKMARK POSTS
   async getMyBookmarks(userId: number) {
     try {
-      console.log(1)
       const result = await this.dataSource.query(
         `
       SELECT
@@ -163,13 +162,11 @@ export class CommunityBookmarkService {
       `,
         [userId],
       );
-      console.log(2)
       return {
         success: true,
         data: result,
         message: 'Bookmarks fetched successfully!',
       };
-      console.log(3)
 
     } catch (error) {
       console.error('Error fetching bookmarks:', error);

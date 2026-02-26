@@ -267,7 +267,7 @@ export class ProfileService {
         subj.subject_code,
         subj.name_th AS subject_name,
         b.building_name,
-    rl.room_number
+        rl.room_number
       FROM section_schedule ss
       LEFT JOIN section s ON s.section_id = ss.section_id
       LEFT JOIN section_educator se ON se.section_id = s.section_id

@@ -11,6 +11,6 @@ export class CreateCommunityPostDto {
 
   @ApiProperty({ example: 'โพสต์พร้อมไฟล์แนบ' })
   @IsString()
-  @Length(1, 1000)
+  @Length(1, 5000)
   content: string;
 }
