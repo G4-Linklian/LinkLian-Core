@@ -88,20 +88,40 @@ export class CommunityPostController {
     );
   }
 
-  @Put(':postId')
-  @ApiHeader({ name: 'x-user-id', required: true })
-  @UseInterceptors(FilesInterceptor('files'))
-  async updatePost(
-    @Headers('x-user-id') userIdHeader: string,
-    @Param('postId', ParseIntPipe) postId: number,
-    @Body() dto: any,
-    @UploadedFiles() files: Express.Multer.File[],
-  ) {
-    const userId = parseInt(userIdHeader, 10);
+  // @Put(':postId')
+  // @ApiHeader({ name: 'x-user-id', required: true })
+  // @UseInterceptors(FilesInterceptor('files'))
+  // async updatePost(
+  //   @Headers('x-user-id') userIdHeader: string,
+  //   @Param('postId', ParseIntPipe) postId: number,
+  //   @Body() dto: any,
+  //   @UploadedFiles() files: Express.Multer.File[],
+  // ) {
+  //   const userId = parseInt(userIdHeader, 10);
 
-    if (isNaN(userId)) {
-      throw new BadRequestException('Invalid x-user-id');
-    }
+  //   if (isNaN(userId)) {
+  //     throw new BadRequestException('Invalid x-user-id');
+  //   }
+
+  //   return this.service.updatePost(
+  //     userId,
+  //     postId,
+  //     dto,
+  //     files,
+  //   );
+  // }
+  @Put(':postId')
+@ApiHeader({ name: 'x-user-id', required: true })
+@ApiConsumes('multipart/form-data')
+@UseInterceptors(FilesInterceptor('files'))
+async updatePost(
+  @Headers('x-user-id') userIdHeader: string,
+  @Param('postId', ParseIntPipe) postId: number,
+  @Body() dto: any,
+  @UploadedFiles() files: Express.Multer.File[],
+) {
+
+  const userId = parseInt(userIdHeader, 10);
 
     return this.service.updatePost(userId, postId, dto, files);
   }

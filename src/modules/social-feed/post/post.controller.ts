@@ -30,7 +30,7 @@ import {
 @ApiTags('Social Feed - Post')
 @Controller('social-feed/post')
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(private readonly postService: PostService) { }
 
   /**
    * Search posts by keyword
@@ -186,7 +186,11 @@ export class PostController {
     return this.postService.deletePost(
       parsedUserId,
       body.post_id || 0,
-      body.post_content_id,
+      body.post_content_id
     );
+  }
+  @Get(':postId')
+  getPostById(@Param('postId') postId: number) {
+    return this.postService.getPostById(Number(postId));
   }
 }
