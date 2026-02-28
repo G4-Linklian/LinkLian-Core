@@ -1,9 +1,5 @@
 // post-comment-path.entity.ts
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 /**
  * Closure table for hierarchical comments (parent-child relationships)

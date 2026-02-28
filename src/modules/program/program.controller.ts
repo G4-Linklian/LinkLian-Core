@@ -1,5 +1,15 @@
 // program.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ProgramService } from './program.service';
 import {
@@ -8,7 +18,7 @@ import {
   UpdateProgramDto,
   CreateProgramUserSysDto,
   UpdateProgramUserSysDto,
-  DeleteProgramUserSysDto
+  DeleteProgramUserSysDto,
 } from './dto/program.dto';
 
 @ApiTags('Program')
@@ -52,7 +62,7 @@ export class ProgramController {
   @ApiResponse({ status: 409, description: 'Duplicate program' })
   async create(@Body() dto: CreateProgramDto) {
     const data = await this.programService.create(dto);
-    return { success: true, message: "Created program successfully", data };
+    return { success: true, message: 'Created program successfully', data };
   }
 
   /**
@@ -63,9 +73,12 @@ export class ProgramController {
   @ApiResponse({ status: 200, description: 'Program updated successfully' })
   @ApiResponse({ status: 404, description: 'Program not found' })
   @ApiResponse({ status: 409, description: 'Duplicate program' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProgramDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProgramDto,
+  ) {
     const data = await this.programService.update(id, dto);
-    return { success: true, message: "Updated program successfully", data };
+    return { success: true, message: 'Updated program successfully', data };
   }
 
   /**
@@ -77,7 +90,7 @@ export class ProgramController {
   @ApiResponse({ status: 404, description: 'Program not found' })
   async delete(@Param('id', ParseIntPipe) id: number) {
     const data = await this.programService.delete(id);
-    return { success: true, message: "Deleted program successfully", data };
+    return { success: true, message: 'Deleted program successfully', data };
   }
 
   // ========== User Sys Program Normalize Endpoints ==========
@@ -92,7 +105,11 @@ export class ProgramController {
   @ApiResponse({ status: 409, description: 'Record already exists' })
   async createUserSysNormalize(@Body() dto: CreateProgramUserSysDto) {
     const data = await this.programService.createUserSysNormalize(dto);
-    return { success: true, message: "Created user sys program normalize record successfully", data };
+    return {
+      success: true,
+      message: 'Created user sys program normalize record successfully',
+      data,
+    };
   }
 
   /**
@@ -104,7 +121,11 @@ export class ProgramController {
   @ApiResponse({ status: 404, description: 'Record not found' })
   async updateUserSysNormalize(@Body() dto: UpdateProgramUserSysDto) {
     const data = await this.programService.updateUserSysNormalize(dto);
-    return { success: true, message: "Updated user sys program normalize record successfully", data };
+    return {
+      success: true,
+      message: 'Updated user sys program normalize record successfully',
+      data,
+    };
   }
 
   /**
@@ -116,6 +137,10 @@ export class ProgramController {
   @ApiResponse({ status: 404, description: 'Record not found' })
   async deleteUserSysNormalize(@Body() dto: DeleteProgramUserSysDto) {
     const data = await this.programService.deleteUserSysNormalize(dto);
-    return { success: true, message: "Deleted user sys program normalize record successfully", data };
+    return {
+      success: true,
+      message: 'Deleted user sys program normalize record successfully',
+      data,
+    };
   }
 }

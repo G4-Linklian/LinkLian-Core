@@ -1,9 +1,21 @@
 // subject.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Subject } from './entities/subject.entity';
-import { SearchSubjectDto, CreateSubjectDto, UpdateSubjectDto } from './dto/subject.dto';
+import {
+  SearchSubjectDto,
+  CreateSubjectDto,
+  UpdateSubjectDto,
+} from './dto/subject.dto';
+import { subjectFields } from 'src/common/interface/subject.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class SubjectService {
@@ -11,6 +23,7 @@ export class SubjectService {
     @InjectRepository(Subject)
     private subjectRepo: Repository<Subject>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -18,14 +31,14 @@ export class SubjectService {
    */
   async findById(id: number) {
     const subject = await this.subjectRepo.findOne({
-      where: { subject_id: id }
+      where: { subject_id: id },
     });
 
     if (!subject) {
       throw new NotFoundException('Subject not found');
     }
 
-    return subject;
+    return { success: true, data: subject };
   }
 
   /**
@@ -34,11 +47,17 @@ export class SubjectService {
    */
   async search(dto: SearchSubjectDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.subject_id || dto.learning_area_id ||
-                     dto.subject_code || dto.name_th ||
-                     dto.name_en || dto.credit ||
-                     dto.hour_per_week || dto.inst_id ||
-                     dto.keyword || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.subject_id ||
+      dto.learning_area_id ||
+      dto.subject_code ||
+      dto.name_th ||
+      dto.name_en ||
+      dto.credit ||
+      dto.hour_per_week ||
+      dto.inst_id ||
+      dto.keyword ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -124,10 +143,13 @@ export class SubjectService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
+      const result: subjectFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error fetching subjects:', 'GetSubject', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -136,7 +158,13 @@ export class SubjectService {
    * Create a new subject
    */
   async create(dto: CreateSubjectDto) {
-    if (!dto.learning_area_id || !dto.subject_code || !dto.name_th || !dto.credit || !dto.hour_per_week) {
+    if (
+      !dto.learning_area_id ||
+      !dto.subject_code ||
+      !dto.name_th ||
+      !dto.credit ||
+      !dto.hour_per_week
+    ) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -158,14 +186,27 @@ export class SubjectService {
         true,
       ];
 
-      const result = await this.dataSource.query(query, values);
-      return result[0];
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This subject already exists in the system');
+      const result: subjectFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return {
+        success: true,
+        data: result[0],
+        message: 'Subject created successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        throw new ConflictException(
+          'This subject already exists in the system',
+        );
       }
-      console.error('Error creating subject:', error);
+      this.logger.error('Error creating subject:', 'CreateSubject', error);
       throw new InternalServerErrorException('Error creating subject');
     }
   }
@@ -176,7 +217,7 @@ export class SubjectService {
   async update(id: number, dto: UpdateSubjectDto) {
     // Check if subject exists
     const existingSubject = await this.subjectRepo.findOne({
-      where: { subject_id: id }
+      where: { subject_id: id },
     });
 
     if (!existingSubject) {
@@ -233,15 +274,28 @@ export class SubjectService {
 
     try {
       const query = `UPDATE subject SET ${updateFields.join(', ')} WHERE subject_id = $${index} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      const result: subjectFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
 
-      return result[0];
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This subject already exists in the system');
+      return {
+        success: true,
+        data: result[0],
+        message: 'Subject updated successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        throw new ConflictException(
+          'This subject already exists in the system',
+        );
       }
-      console.error('Error updating subject:', error);
+      this.logger.error('Error updating subject:', 'UpdateSubject', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -252,7 +306,7 @@ export class SubjectService {
   async delete(id: number) {
     // Check if subject exists
     const existingSubject = await this.subjectRepo.findOne({
-      where: { subject_id: id }
+      where: { subject_id: id },
     });
 
     if (!existingSubject) {
@@ -261,10 +315,13 @@ export class SubjectService {
 
     try {
       await this.subjectRepo.delete({ subject_id: id });
-      return existingSubject;
-
-    } catch (error) {
-      console.error('Error deleting subject:', error);
+      return {
+        success: true,
+        data: existingSubject,
+        message: 'Subject deleted successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error deleting subject:', 'DeleteSubject', error);
       throw new InternalServerErrorException('Error deleting subject');
     }
   }

@@ -7,9 +7,7 @@ import { PostComment } from './entities/post-comment.entity';
 import { PostCommentPath } from './entities/post-comment-path.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([PostComment, PostCommentPath]),
-  ],
+  imports: [TypeOrmModule.forFeature([PostComment, PostCommentPath])],
   controllers: [PostCommentController],
   providers: [PostCommentService],
   exports: [PostCommentService],

@@ -8,52 +8,76 @@ import { Type, Transform } from 'class-transformer';
  */
 export class SearchBuildingDto {
   @ApiPropertyOptional({ description: 'Building ID', example: 1 })
-  @IsOptional() 
-  @Type(() => Number) 
-  @IsInt() 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   building_id?: number;
 
   @ApiPropertyOptional({ description: 'Institution ID', example: 1 })
-  @IsOptional() 
-  @Type(() => Number) 
-  @IsInt() 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   inst_id?: number;
 
   @ApiPropertyOptional({ description: 'Building number', example: 'A1' })
-  @IsOptional() @IsString() building_no?: string;
+  @IsOptional()
+  @IsString()
+  building_no?: string;
 
-  @ApiPropertyOptional({ description: 'Building name', example: 'Main Building' })
-  @IsOptional() @IsString() building_name?: string;
+  @ApiPropertyOptional({
+    description: 'Building name',
+    example: 'Main Building',
+  })
+  @IsOptional()
+  @IsString()
+  building_name?: string;
 
   @ApiPropertyOptional({ description: 'Remark', example: 'Near parking lot' })
-  @IsOptional() @IsString() remark?: string;
+  @IsOptional()
+  @IsString()
+  remark?: string;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
-  @IsOptional() 
+  @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean() 
+  @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'building_name' })
-  @IsOptional() @IsString() sort_by?: string;
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'building_name',
+  })
+  @IsOptional()
+  @IsString()
+  sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
-  @IsOptional() @IsString() sort_order?: 'ASC' | 'DESC';
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
+  @IsOptional()
+  @IsString()
+  sort_order?: 'ASC' | 'DESC';
 
   @ApiPropertyOptional({ description: 'Limit', example: 10 })
-  @IsOptional() 
-  @Type(() => Number) 
-  @IsInt() 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   limit?: number;
 
   @ApiPropertyOptional({ description: 'Offset', example: 0 })
-  @IsOptional() 
-  @Type(() => Number) 
-  @IsInt() 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   offset?: number;
 
-  @ApiPropertyOptional({ description: 'Keyword search for building_no, building_name, remark', example: 'Main' })
-  @IsOptional() @IsString()
+  @ApiPropertyOptional({
+    description: 'Keyword search for building_no, building_name, remark',
+    example: 'Main',
+  })
+  @IsOptional()
+  @IsString()
   keyword?: string;
 }
 
@@ -62,16 +86,21 @@ export class SearchBuildingDto {
  */
 export class CreateBuildingDto {
   @ApiProperty({ description: 'Institution ID', example: 1 })
-  @IsInt() inst_id!: number;
+  @IsInt()
+  inst_id!: number;
 
   @ApiProperty({ description: 'Building number', example: 'A1' })
-  @IsString() building_no!: string;
+  @IsString()
+  building_no!: string;
 
   @ApiProperty({ description: 'Building name', example: 'Main Building' })
-  @IsString() building_name!: string;
+  @IsString()
+  building_name!: string;
 
   @ApiPropertyOptional({ description: 'Remark', example: 'Near parking lot' })
-  @IsOptional() @IsString() remark?: string;
+  @IsOptional()
+  @IsString()
+  remark?: string;
 }
 
 /**
@@ -79,20 +108,38 @@ export class CreateBuildingDto {
  */
 export class UpdateBuildingDto {
   @ApiPropertyOptional({ description: 'Institution ID', example: 1 })
-  @IsOptional() @IsInt() inst_id?: number;
+  @IsOptional()
+  @IsInt()
+  inst_id?: number;
 
   @ApiPropertyOptional({ description: 'Building number', example: 'A1' })
-  @IsOptional() @IsString() building_no?: string;
+  @IsOptional()
+  @IsString()
+  building_no?: string;
 
-  @ApiPropertyOptional({ description: 'Building name', example: 'Main Building' })
-  @IsOptional() @IsString() building_name?: string;
+  @ApiPropertyOptional({
+    description: 'Building name',
+    example: 'Main Building',
+  })
+  @IsOptional()
+  @IsString()
+  building_name?: string;
 
   @ApiPropertyOptional({ description: 'Remark', example: 'Near parking lot' })
-  @IsOptional() @IsString() remark?: string;
+  @IsOptional()
+  @IsString()
+  remark?: string;
 
-  @ApiPropertyOptional({ description: 'Room format', example: 'A-{floor}{room}' })
-  @IsOptional() @IsString() room_format?: string;
+  @ApiPropertyOptional({
+    description: 'Room format',
+    example: 'A-{floor}{room}',
+  })
+  @IsOptional()
+  @IsString()
+  room_format?: string;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
-  @IsOptional() @IsBoolean() flag_valid?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  flag_valid?: boolean;
 }

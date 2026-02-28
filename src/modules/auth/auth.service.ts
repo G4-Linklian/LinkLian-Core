@@ -4,7 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   OnModuleInit,
-  OnModuleDestroy
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,10 +15,13 @@ import {
   hashPassword,
   verifyPassword,
   generateJwtToken,
-  verifyJwtToken
+  verifyJwtToken,
 } from '../../common/utils/auth.util';
 import { generateInitialPassword } from '../../common/utils/auth.util';
-import { sendOTPEmail, sendTempPasswordEmail, sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
+import {
+  sendOTPEmail,
+  sendTempPasswordEmail,
+} from '../../common/utils/mailer.utils';
 
 import {
   LoginDto,
@@ -26,17 +29,17 @@ import {
   ResendOTPDto,
   ResetPasswordDto,
   ForgotPasswordDto,
-  RegisterDto
 } from './dto/auth.dto';
 
 import {
   IOTPSession,
   ILoginResponse,
   IVerifyResponse,
-  ITokenPayload
+  ITokenPayload,
 } from './interfaces/auth.interface';
 
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { RoleQueryResult } from './interfaces/auth.interface';
 
 // User group to role mapping (ต้องใช้ role_id แทน role_name)
 const USER_GROUP_ROLE_MAP: Record<string, number[]> = {
@@ -91,7 +94,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (cleaned > 0) {
-      this.logger.log(`Cleaned up ${cleaned} expired OTP sessions`, 'AuthService');
+      this.logger.log(
+        `Cleaned up ${cleaned} expired OTP sessions`,
+        'AuthService',
+      );
     }
   }
 
@@ -101,7 +107,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   private createOTPSession(
     user: UserSys,
-    rememberMe: boolean = false
+    rememberMe: boolean = false,
   ): { sessionId: string; otp: string; expiresAt: number } {
     const otp = this.generateOTP();
     const sessionId = randomUUID();
@@ -161,24 +167,36 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async generateUserToken(user: UserSys, rememberMe: boolean = false): Promise<string> {
-    const expiresIn = rememberMe ? this.TOKEN_LONG_EXPIRY : this.TOKEN_SHORT_EXPIRY;
+  private async generateUserToken(
+    user: UserSys,
+    rememberMe: boolean = false,
+  ): Promise<string> {
+    const expiresIn = rememberMe
+      ? this.TOKEN_LONG_EXPIRY
+      : this.TOKEN_SHORT_EXPIRY;
 
     // ดึง role_name และ access จาก database
     let roleName = '';
-    let access = {};
-    if (user.role_id) {
+    const roleID = Number(user.role_id);
+    let access: Record<string, unknown> = {};
+
+    if (roleID) {
       try {
-        const roleResult = await this.userRepo.query(
+        const roleResult: RoleQueryResult[] = await this.userRepo.query(
           'SELECT role_name, access FROM role WHERE role_id = $1',
-          [user.role_id]
+          [roleID],
         );
+
         if (roleResult.length > 0) {
           roleName = roleResult[0].role_name;
-          access = roleResult[0].access || {};
+          access = roleResult[0].access ?? {};
         }
-      } catch (error) {
-        console.error('Failed to fetch role_name and access:', error);
+      } catch (error: unknown) {
+        this.logger.error(
+          'Failed to fetch role_name and access:',
+          'GenerateUserToken',
+          error,
+        );
       }
     }
 
@@ -188,19 +206,25 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       role_id: user.role_id?.toString() || '',
       inst_id: user.inst_id?.toString() || '',
       role_name: roleName,
-      access: access,
+      access,
       otp_verified: true,
     };
 
     return generateJwtToken(payload, expiresIn);
   }
 
-  private hasValidToken(authorization: string | undefined, userId: number): boolean {
+  private hasValidToken(
+    authorization: string | undefined,
+    userId: number,
+  ): boolean {
     const decoded = this.verifyOptionalToken(authorization);
     return decoded !== null && decoded.user_id === userId.toString();
   }
 
-  private validateUserGroup(userGroup: string | undefined, roleId: number): void {
+  private validateUserGroup(
+    userGroup: string | undefined,
+    roleId: number,
+  ): void {
     if (!userGroup) return;
 
     const allowedRoleIds = USER_GROUP_ROLE_MAP[userGroup];
@@ -215,7 +239,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
   private async findUserByEmail(email: string): Promise<UserSys> {
     this.logger.debug('Finding user by email', 'findUserByEmail', {
-      email: email
+      email,
     });
 
     const user = await this.userRepo.findOne({
@@ -224,7 +248,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     if (!user) {
       this.logger.warn('User not found in database', 'findUserByEmail', {
-        'email': email
+        email,
       });
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -232,45 +256,53 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       user_sys_id: user.user_sys_id,
       email: user.email,
       role_id: user.role_id,
-      has_password: !!user.password
+      has_password: !!user.password,
     });
 
     return user;
   }
 
-  private async verifyUserPassword(user: UserSys, password: string): Promise<void> {
+  private async verifyUserPassword(
+    user: UserSys,
+    password: string,
+  ): Promise<void> {
     this.logger.debug('Password verification', 'verifyUserPassword', {
       user_email: String(user.email),
       password_length: password.length,
-      stored_password_prefix: String(user.password).substring(0, 10) + '...'
+      stored_password_prefix: `${String(user.password).substring(0, 10)}...`,
     });
 
     const isValid = await verifyPassword(password, String(user.password));
     this.logger.debug('Password verification result', 'verifyUserPassword', {
       user_email: String(user.email),
-      is_valid: isValid
+      is_valid: isValid,
     });
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
   }
 
-  private async createLoginResponse(user: UserSys, token: string): Promise<IVerifyResponse> {
+  private async createLoginResponse(
+    user: UserSys,
+    token: string,
+  ): Promise<IVerifyResponse> {
     // ดึง role_name จาก database
     let roleName = '';
+
     if (user.role_id) {
       try {
-        const roleResult = await this.userRepo.query(
+        const roleResult: RoleQueryResult[] = await this.userRepo.query(
           'SELECT role_name FROM role WHERE role_id = $1',
-          [user.role_id]
+          [user.role_id],
         );
+
         if (roleResult.length > 0) {
           roleName = roleResult[0].role_name;
         }
-      } catch (error : any) {
+      } catch (error: unknown) {
         this.logger.error('Failed to fetch role_name', 'createLoginResponse', {
-          error: error.message,
-          user_id: user.user_sys_id
+          error: error instanceof Error ? error.message : 'Unknown error',
+          user_id: user.user_sys_id,
         });
       }
     }
@@ -288,13 +320,12 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   private createOTPResponse(
     sessionId: string,
     expiresAt: number,
-    otp?: string
+    otp?: string,
   ): ILoginResponse {
-
     this.logger.debug('Creating OTP response', 'createOTPResponse', {
       sessionId,
       expiresAt: new Date(expiresAt).toISOString(),
-      include_dev_otp: !!otp
+      include_dev_otp: !!otp,
     });
 
     return {
@@ -306,8 +337,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-
-  async login(dto: LoginDto, authorization?: string): Promise<ILoginResponse | IVerifyResponse> {
+  async login(
+    dto: LoginDto,
+    authorization?: string,
+  ): Promise<ILoginResponse | IVerifyResponse> {
     const { username, password, user_group, remember_me = false } = dto;
 
     const user = await this.findUserByEmail(username);
@@ -315,9 +348,13 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     await this.verifyUserPassword(user, password);
 
     if (user.flag_valid === false) {
-      this.logger.log('flag_valid is false - require password reset', 'Auth Login', {
-        user_id: user.user_sys_id
-      });
+      this.logger.log(
+        'flag_valid is false - require password reset',
+        'Auth Login',
+        {
+          user_id: user.user_sys_id,
+        },
+      );
       return {
         success: true,
         message: 'Please reset your password',
@@ -330,17 +367,20 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     if (this.hasValidToken(authorization, user.user_sys_id)) {
       const token = await this.generateUserToken(user, remember_me);
       this.logger.log('Valid token found - skip OTP', 'Auth Login', {
-        user_id: user.user_sys_id
+        user_id: user.user_sys_id,
       });
       return this.createLoginResponse(user, token);
     }
 
     // Generate and send OTP
-    const { sessionId, otp, expiresAt } = this.createOTPSession(user, remember_me);
+    const { sessionId, otp, expiresAt } = this.createOTPSession(
+      user,
+      remember_me,
+    );
 
     this.logger.log(`OTP`, 'Auth Login', {
       email: user.email,
-      otp: otp,
+      otp,
       user_id: user.user_sys_id,
       otp_session_id: sessionId,
       otp_expires_at: new Date(expiresAt).toISOString(),
@@ -350,14 +390,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     try {
       this.logger.debug('Attempting to send OTP email...', 'Auth Login', {
         email: user.email,
-        otp_session_id: sessionId
+        otp_session_id: sessionId,
       });
       await sendOTPEmail(String(user.email), otp);
-    } catch (error : any) {
+    } catch (error: unknown) {
       this.logger.error('Failed to send OTP email', 'Auth Login', {
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         email: user.email,
-        otp_session_id: sessionId
+        otp_session_id: sessionId,
       });
     }
 
@@ -403,11 +443,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     this.deleteOTPSession(otp_session_id);
 
-    const { sessionId, otp, expiresAt } = this.createOTPSession(user, oldSession.rememberMe);
+    const { sessionId, otp, expiresAt } = this.createOTPSession(
+      user,
+      oldSession.rememberMe,
+    );
 
     this.logger.log(`New OTP`, 'Auth Resend OTP', {
       email: oldSession.email,
-      otp: otp,
+      otp,
       user_id: user.user_sys_id,
       otp_session_id: sessionId,
       otp_expires_at: new Date(expiresAt).toISOString(),
@@ -416,18 +459,18 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     try {
       this.logger.debug('Attempting to send OTP email...', 'Auth Resend OTP', {
         email: user.email,
-        otp_session_id: sessionId
+        otp_session_id: sessionId,
       });
       await sendOTPEmail(String(user.email), otp);
       this.logger.log('OTP email sent successfully', 'Auth Resend OTP', {
         email: user.email,
-        otp_session_id: sessionId
+        otp_session_id: sessionId,
       });
-    } catch (error : any) {
+    } catch (error: unknown) {
       this.logger.error('Failed to send OTP email', 'Auth Resend OTP', {
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         email: user.email,
-        otp_session_id: sessionId
+        otp_session_id: sessionId,
       });
     }
 
@@ -458,7 +501,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
           otp_verified: true,
         },
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      this.logger.error('Token verification failed', 'Auth Verify Token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
@@ -467,12 +513,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const { email, password, new_password, confirm_password } = dto;
 
     if (new_password !== confirm_password) {
-      throw new BadRequestException('New password and confirm password do not match');
+      throw new BadRequestException(
+        'New password and confirm password do not match',
+      );
     }
 
     if (new_password.length < this.MIN_PASSWORD_LENGTH) {
       throw new BadRequestException(
-        `New password must be at least ${this.MIN_PASSWORD_LENGTH} characters`
+        `New password must be at least ${this.MIN_PASSWORD_LENGTH} characters`,
       );
     }
 
@@ -504,7 +552,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     return {
       success: true,
-      message: 'Password reset successful. Please login with your new password.',
+      message:
+        'Password reset successful. Please login with your new password.',
     };
   }
 
@@ -525,7 +574,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     // Update password + set flag_valid = false (ต้อง reset password ก่อนใช้งาน)
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
-      flag_valid: false, 
+      flag_valid: false,
       updated_at: new Date(),
     });
 
@@ -536,17 +585,29 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     // ส่งอีเมล Temporary Password
     try {
-      this.logger.log('Attempting to send temp password email...', 'Auth Forgot Password');
+      this.logger.log(
+        'Attempting to send temp password email...',
+        'Auth Forgot Password',
+      );
       await sendTempPasswordEmail(email, tempPassword);
-      this.logger.log('Temp password email sent successfully', 'Auth Forgot Password');
-    } catch (error : any) {
-      this.logger.error('Failed to send temp password email', error, 'Auth Forgot Password');
+      this.logger.log(
+        'Temp password email sent successfully',
+        'Auth Forgot Password',
+      );
+    } catch (error: any) {
+      this.logger.error(
+        'Failed to send temp password email',
+        error,
+        'Auth Forgot Password',
+      );
     }
 
     return {
       success: true,
       message: 'Temporary password has been sent to your email',
-      ...(process.env.NODE_ENV === 'development' && { _dev_password: tempPassword }),
+      ...(process.env.NODE_ENV === 'development' && {
+        _dev_password: tempPassword,
+      }),
     };
   }
 }

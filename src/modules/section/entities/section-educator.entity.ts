@@ -12,7 +12,6 @@ export enum EducatorPosition {
 
 @Entity('section_educator')
 export class SectionEducator {
-
   @PrimaryColumn({ name: 'section_id' })
   section_id!: number;
 

@@ -1,18 +1,25 @@
-import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsEmail, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsBoolean,
+  IsOptional,
+  IsEmail,
+  IsNumber,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
-  @ApiProperty({ 
-    description: 'Username (email)', 
-    example: 'tanyatorn.kong@gmail.com' 
+  @ApiProperty({
+    description: 'Username (email)',
+    example: 'tanyatorn.kong@gmail.com',
   })
   @IsString()
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({ 
-    description: 'Password', 
-    example: 'password123' 
+  @ApiProperty({
+    description: 'Password',
+    example: 'password123',
   })
   @IsString()
   @IsNotEmpty()
@@ -21,7 +28,7 @@ export class LoginDto {
   @ApiProperty({
     description: 'User group (student/teacher)',
     example: 'teacher',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
@@ -31,7 +38,7 @@ export class LoginDto {
     description: 'Remember me (30 days)',
     example: true,
     required: false,
-    default: false
+    default: false,
   })
   @IsBoolean()
   @IsOptional()
@@ -39,9 +46,9 @@ export class LoginDto {
 }
 
 export class VerifyTokenDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'JWT Token',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsString()
   @IsNotEmpty()
@@ -49,17 +56,17 @@ export class VerifyTokenDto {
 }
 
 export class VerifyOTPDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'OTP Code (6 digits)',
-    example: '123456'
+    example: '123456',
   })
   @IsString()
   @IsNotEmpty()
   otp: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'OTP Session ID',
-    example: 'uuid-session-id'
+    example: 'uuid-session-id',
   })
   @IsString()
   @IsNotEmpty()
@@ -68,7 +75,7 @@ export class VerifyOTPDto {
   @ApiProperty({
     description: 'Remember me',
     required: false,
-    default: false
+    default: false,
   })
   @IsBoolean()
   @IsOptional()
@@ -76,9 +83,9 @@ export class VerifyOTPDto {
 }
 
 export class ResendOTPDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'OTP Session ID',
-    example: 'uuid-session-id'
+    example: 'uuid-session-id',
   })
   @IsString()
   @IsNotEmpty()

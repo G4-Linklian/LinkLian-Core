@@ -1,5 +1,11 @@
 // users.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsEmail, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsEmail,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import { UserStatus } from '../entities/user-sys.entity';
@@ -68,12 +74,19 @@ export class SearchUserSysDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'User Status', example: 'active', enum: UserStatus })
+  @ApiPropertyOptional({
+    description: 'User Status',
+    example: 'active',
+    enum: UserStatus,
+  })
   @IsOptional()
   @IsString()
   user_status?: string;
 
-  @ApiPropertyOptional({ description: 'Learning Area ID (for role 4,5)', example: 1 })
+  @ApiPropertyOptional({
+    description: 'Learning Area ID (for role 4,5)',
+    example: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -85,7 +98,10 @@ export class SearchUserSysDto {
   @IsInt()
   program_id?: number;
 
-  @ApiPropertyOptional({ description: 'Keyword search for code, first_name, last_name, email', example: 'john' })
+  @ApiPropertyOptional({
+    description: 'Keyword search for code, first_name, last_name, email',
+    example: 'john',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
@@ -95,7 +111,11 @@ export class SearchUserSysDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -156,17 +176,27 @@ export class CreateUserSysDto {
   @IsInt()
   inst_id!: number;
 
-  @ApiPropertyOptional({ description: 'User Status', example: 'active', enum: UserStatus })
+  @ApiPropertyOptional({
+    description: 'User Status',
+    example: 'active',
+    enum: UserStatus,
+  })
   @IsOptional()
   @IsString()
   user_status?: string;
 
-  @ApiPropertyOptional({ description: 'Profile Picture URL', example: 'https://example.com/pic.jpg' })
+  @ApiPropertyOptional({
+    description: 'Profile Picture URL',
+    example: 'https://example.com/pic.jpg',
+  })
   @IsOptional()
   @IsString()
   profile_pic?: string;
 
-  @ApiPropertyOptional({ description: 'Learning Area ID (for teacher/educator)', example: 1 })
+  @ApiPropertyOptional({
+    description: 'Learning Area ID (for teacher/educator)',
+    example: 1,
+  })
   @IsOptional()
   @IsInt()
   learning_area_id?: number;
@@ -231,12 +261,19 @@ export class UpdateUserSysDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'User Status', example: 'active', enum: UserStatus })
+  @ApiPropertyOptional({
+    description: 'User Status',
+    example: 'active',
+    enum: UserStatus,
+  })
   @IsOptional()
   @IsString()
   user_status?: string;
 
-  @ApiPropertyOptional({ description: 'Profile Picture URL', example: 'https://example.com/pic.jpg' })
+  @ApiPropertyOptional({
+    description: 'Profile Picture URL',
+    example: 'https://example.com/pic.jpg',
+  })
   @IsOptional()
   @IsString()
   profile_pic?: string;

@@ -1,20 +1,20 @@
 // file-storage.dto.ts
-import { IsString, IsArray, IsNotEmpty, ArrayNotEmpty } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * DTO for delete files request
  */
 export class DeleteFilesDto {
-  @ApiProperty({ 
-    description: 'Array of file names/paths to delete', 
+  @ApiProperty({
+    description: 'Array of file names/paths to delete',
     example: ['folder/uuid-filename.jpg', 'folder/uuid-filename2.pdf'],
-    type: [String]
+    type: [String],
   })
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  fileNames: string[];
+  fileNames!: string[];
 }
 
 /**

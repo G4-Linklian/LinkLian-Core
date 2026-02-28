@@ -1,55 +1,71 @@
 import { Injectable, LoggerService } from '@nestjs/common';
+import * as winston from 'winston';
 
 type LogLevel = 'log' | 'error' | 'warn' | 'debug' | 'verbose';
 
 @Injectable()
 export class AppLogger implements LoggerService {
-  private formatDate(): string {
-    const now = new Date();
-    return now.toISOString().replace('T', ' ').split('.')[0];
+  private logger: winston.Logger;
+
+  constructor() {
+    this.logger = winston.createLogger({
+      level: 'debug',
+      levels: {
+        error: 0,
+        warn: 1,
+        log: 2,
+        verbose: 3,
+        debug: 4,
+      },
+      format: winston.format.combine(
+        winston.format.timestamp({
+          format: 'YYYY-MM-DD HH:mm:ss',
+        }),
+        winston.format.printf(({ timestamp, level, message, from, detail }) => {
+          let output = `${timestamp} ${level} [${from || 'System'}] ${message}`;
+
+          if (detail) {
+            output += ` ${JSON.stringify(detail, null, 2)}`;
+          }
+
+          return output;
+        }),
+      ),
+      transports: [new winston.transports.Console()],
+    });
   }
 
-  private print(
+  private write(
     level: LogLevel,
-    from: string,
-    title: string,
+    message: string,
+    from = 'System',
     detail?: any,
   ) {
-    const timestamp = this.formatDate();
-
-    const header = `${timestamp} ${level} [${from}] ${title}`;
-
-    if (detail) {
-      console.log(
-        `${header} ${JSON.stringify(detail, null, 2)}`,
-      );
-    } else {
-      console.log(header);
-    }
+    this.logger.log({
+      level,
+      message,
+      from,
+      detail,
+    });
   }
 
   log(message: string, from = 'System', detail?: any) {
-    console.log('\n');
-    this.print('log', from, message, detail);
+    this.write('log', message, from, detail);
   }
 
   error(message: string, from = 'System', detail?: any) {
-    console.log('\n');
-    this.print('error', from, message, detail);
+    this.write('error', message, from, detail);
   }
 
   warn(message: string, from = 'System', detail?: any) {
-    console.log('\n');
-    this.print('warn', from, message, detail);
+    this.write('warn', message, from, detail);
   }
 
   debug(message: string, from = 'System', detail?: any) {
-    console.log('\n');
-    this.print('debug', from, message, detail);
+    this.write('debug', message, from, detail);
   }
 
   verbose(message: string, from = 'System', detail?: any) {
-    console.log('\n');
-    this.print('verbose', from, message, detail);
+    this.write('verbose', message, from, detail);
   }
 }

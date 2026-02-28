@@ -1,13 +1,28 @@
 // users.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { UserSys } from './entities/user-sys.entity';
-import { SearchUserSysDto, CreateUserSysDto, UpdateUserSysDto } from './dto/users.dto';
+import {
+  SearchUserSysDto,
+  CreateUserSysDto,
+  UpdateUserSysDto,
+} from './dto/users.dto';
 import { LearningAreaService } from '../learning-area/learning-area.service';
 import { ProgramService } from '../program/program.service';
-import { generateInitialPassword, hashPassword } from '../../common/utils/auth.util';
+import {
+  generateInitialPassword,
+  hashPassword,
+} from '../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
+import { UserSysFields } from 'src/common/interface/user.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +32,7 @@ export class UsersService {
     private dataSource: DataSource,
     private learningAreaService: LearningAreaService,
     private programService: ProgramService,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -24,7 +40,7 @@ export class UsersService {
    */
   async findById(id: number) {
     const user = await this.userSysRepo.findOne({
-      where: { user_sys_id: id }
+      where: { user_sys_id: id },
     });
 
     if (!user) {
@@ -32,8 +48,8 @@ export class UsersService {
     }
 
     // Exclude password from response
-    const { password, ...result } = user;
-    return result;
+    const { password: _password, ...result } = user;
+    return { success: true, data: result };
   }
 
   /**
@@ -43,13 +59,20 @@ export class UsersService {
    */
   async search(dto: SearchUserSysDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.user_sys_id || dto.email ||
-                     dto.first_name || dto.middle_name ||
-                     dto.last_name || dto.phone ||
-                     dto.role_id || dto.code ||
-                     dto.edu_lev_id || dto.inst_id ||
-                     dto.keyword || dto.user_status ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.user_sys_id ||
+      dto.email ||
+      dto.first_name ||
+      dto.middle_name ||
+      dto.last_name ||
+      dto.phone ||
+      dto.role_id ||
+      dto.code ||
+      dto.edu_lev_id ||
+      dto.inst_id ||
+      dto.keyword ||
+      dto.user_status ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -178,14 +201,17 @@ export class UsersService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
+      const result: UserSysFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
       // Remove password from results
-      return  result.map((user: any) => {
-        const { password, ...rest } = user;
-        return rest;
+      return result.map((user: any) => {
+        const { password: _password, ...rest } = user;
+        return rest as UserSysFields;
       });
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    } catch (error: unknown) {
+      this.logger.error('Error fetching users:', 'SearchUser', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -195,13 +221,22 @@ export class UsersService {
    * Also creates learning_area or program normalize record based on input
    */
   async create(dto: CreateUserSysDto) {
-    if (!dto.email || !dto.first_name || !dto.last_name || !dto.role_id || !dto.code || !dto.inst_id) {
-      throw new BadRequestException('Missing required fields: email, first_name, last_name, role_id, code, inst_id');
+    if (
+      !dto.email ||
+      !dto.first_name ||
+      !dto.last_name ||
+      !dto.role_id ||
+      !dto.code ||
+      !dto.inst_id
+    ) {
+      throw new BadRequestException(
+        'Missing required fields: email, first_name, last_name, role_id, code, inst_id',
+      );
     }
 
     // Check if email already exists
     const existingUser = await this.userSysRepo.findOne({
-      where: { email: dto.email }
+      where: { email: dto.email },
     });
 
     if (existingUser) {
@@ -209,8 +244,8 @@ export class UsersService {
     }
 
     // Generate initial password and hash it
-    const initialPassword = generateInitialPassword();
-    const hashedPassword = await hashPassword(initialPassword);
+    const initialPassword: string = generateInitialPassword();
+    const hashedPassword: string = await hashPassword(initialPassword);
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -241,7 +276,10 @@ export class UsersService {
         true,
       ];
 
-      const result = await queryRunner.query(insertQuery, values);
+      const result: UserSysFields[] = await queryRunner.query(
+        insertQuery,
+        values,
+      );
 
       if (result.length === 0) {
         throw new InternalServerErrorException('Failed to create user');
@@ -253,31 +291,43 @@ export class UsersService {
       if (dto.learning_area_id) {
         await queryRunner.query(
           `INSERT INTO user_sys_learning_area_normalize (user_sys_id, learning_area_id, flag_valid) VALUES ($1, $2, $3)`,
-          [newUser.user_sys_id, dto.learning_area_id, true]
+          [newUser.user_sys_id, dto.learning_area_id, true],
         );
       } else if (dto.program_id) {
         await queryRunner.query(
           `INSERT INTO user_sys_program_normalize (user_sys_id, program_id, flag_valid) VALUES ($1, $2, $3)`,
-          [newUser.user_sys_id, dto.program_id, true]
+          [newUser.user_sys_id, dto.program_id, true],
         );
       }
 
       await queryRunner.commitTransaction();
 
       // Send initial password email (async, don't wait)
-      sendInitialPasswordEmail(dto.email, initialPassword).catch(err => {
-        console.error('Error sending initial password email:', err);
+      sendInitialPasswordEmail(dto.email, initialPassword).catch((err) => {
+        this.logger.error(
+          'Error sending initial password email:',
+          'CreateUser',
+          err,
+        );
       });
 
-      return newUser.user_sys_id;
-
-    } catch (error: any) {
+      return {
+        success: true,
+        data: newUser.user_sys_id,
+        message: 'User created successfully',
+      };
+    } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
 
-      if (error.code === '23505') {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
         throw new ConflictException('This email or code is already in use');
       }
-      console.error('Error creating user:', error);
+      this.logger.error('Error creating user:', 'CreateUser', error);
       throw new InternalServerErrorException('Server Error');
     } finally {
       await queryRunner.release();
@@ -290,7 +340,7 @@ export class UsersService {
   async update(id: number, dto: UpdateUserSysDto) {
     // Check if user exists
     const existingUser = await this.userSysRepo.findOne({
-      where: { user_sys_id: id }
+      where: { user_sys_id: id },
     });
 
     if (!existingUser) {
@@ -363,12 +413,16 @@ export class UsersService {
     }
 
     // Check if there are any fields to update (including learning_area_id which updates normalize table)
-    if (updateFields.length === 0 && dto.learning_area_id === undefined && dto.program_id === undefined) {
+    if (
+      updateFields.length === 0 &&
+      dto.learning_area_id === undefined &&
+      dto.program_id === undefined
+    ) {
       throw new BadRequestException('No fields to update!');
     }
 
     try {
-      let userData: any;
+      let userData: UserSysFields;
 
       // Update user_sys table if there are fields to update
       if (updateFields.length > 0) {
@@ -380,12 +434,12 @@ export class UsersService {
         const result = await this.dataSource.query(query, values);
 
         // Remove password from response
-        const { password, ...rest } = result[0];
-        userData = rest;
+        const { password: _password, ...rest } = result[0];
+        userData = rest as UserSysFields;
       } else {
         // If no user fields to update, just get existing user data
-        const { password, ...rest } = existingUser;
-        userData = rest;
+        const { password: _password, ...rest } = existingUser;
+        userData = rest as UserSysFields;
       }
 
       // Update learning_area_normalize if learning_area_id is provided
@@ -404,13 +458,20 @@ export class UsersService {
         });
       }
 
-      return userData;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      return {
+        success: true,
+        data: userData,
+        message: 'User updated successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as any).code === '23505'
+      ) {
         throw new ConflictException('This email or code is already in use');
       }
-      console.error('Error updating user:', error);
+      this.logger.error('Error updating user:', 'UpdateUser', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -421,7 +482,7 @@ export class UsersService {
   async delete(id: number) {
     // Check if user exists
     const existingUser = await this.userSysRepo.findOne({
-      where: { user_sys_id: id }
+      where: { user_sys_id: id },
     });
 
     if (!existingUser) {
@@ -430,11 +491,14 @@ export class UsersService {
 
     try {
       await this.userSysRepo.delete({ user_sys_id: id });
-      const { password, ...userData } = existingUser;
-      return userData;
-
-    } catch (error) {
-      console.error('Error deleting user:', error);
+      const { password: _password, ...userData } = existingUser;
+      return {
+        success: true,
+        data: userData,
+        message: 'User deleted successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error deleting user:', 'DeleteUser', error);
       throw new InternalServerErrorException('Error deleting user');
     }
   }

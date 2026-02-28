@@ -1,5 +1,5 @@
 // edu-level.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import { EduType } from '../entities/edu-level.entity';
@@ -10,7 +10,7 @@ import { EduType } from '../entities/edu-level.entity';
 export class SearchEduLevelMasterDto {
   @ApiPropertyOptional({ description: 'Edu Level ID', example: 1 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   edu_lev_id?: number;
@@ -20,7 +20,11 @@ export class SearchEduLevelMasterDto {
   @IsString()
   level_name?: string;
 
-  @ApiPropertyOptional({ description: 'Education type', example: 'ประถมศึกษา', enum: EduType })
+  @ApiPropertyOptional({
+    description: 'Education type',
+    example: 'ประถมศึกษา',
+    enum: EduType,
+  })
   @IsOptional()
   @IsString()
   edu_type?: string;
@@ -45,7 +49,7 @@ export class SearchEduLevelMasterDto {
 export class SearchEduLevelDto {
   @ApiPropertyOptional({ description: 'Edu Level ID', example: 1 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   edu_lev_id?: number;
@@ -55,28 +59,32 @@ export class SearchEduLevelDto {
   @IsString()
   level_name?: string;
 
-  @ApiPropertyOptional({ description: 'Education type', example: 'ประถมศึกษา', enum: EduType })
+  @ApiPropertyOptional({
+    description: 'Education type',
+    example: 'ประถมศึกษา',
+    enum: EduType,
+  })
   @IsOptional()
   @IsString()
   edu_type?: string;
 
   @ApiPropertyOptional({ description: 'Program ID', example: 1 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   program_id?: number;
 
   @ApiPropertyOptional({ description: 'Institution ID', example: 1 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   inst_id?: number;
 
   @ApiPropertyOptional({ description: 'Parent ID', example: 1 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   parent_id?: number;
@@ -99,21 +107,25 @@ export class SearchEduLevelDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
 
   @ApiPropertyOptional({ description: 'Limit', example: 10 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   limit?: number;
 
   @ApiPropertyOptional({ description: 'Offset', example: 0 })
   @IsOptional()
-  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @Type(() => Number)
   @IsInt()
   offset?: number;
@@ -127,7 +139,11 @@ export class CreateEduLevelDto {
   @IsString()
   level_name?: string;
 
-  @ApiProperty({ description: 'Education type', example: 'ประถมศึกษา', enum: EduType })
+  @ApiProperty({
+    description: 'Education type',
+    example: 'ประถมศึกษา',
+    enum: EduType,
+  })
   @IsString()
   edu_type?: string;
 }
@@ -141,7 +157,11 @@ export class UpdateEduLevelDto {
   @IsString()
   level_name?: string;
 
-  @ApiPropertyOptional({ description: 'Education type', example: 'ประถมศึกษา', enum: EduType })
+  @ApiPropertyOptional({
+    description: 'Education type',
+    example: 'ประถมศึกษา',
+    enum: EduType,
+  })
   @IsOptional()
   @IsString()
   edu_type?: string;

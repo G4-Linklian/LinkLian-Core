@@ -18,9 +18,7 @@ describe('CommunityMemberController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommunityMemberController],
-      providers: [
-        { provide: CommunityMemberService, useValue: mockService },
-      ],
+      providers: [{ provide: CommunityMemberService, useValue: mockService }],
     }).compile();
 
     controller = module.get<CommunityMemberController>(
@@ -89,9 +87,7 @@ describe('CommunityMemberController', () => {
         joined_at: new Date(),
       };
 
-      (service.joinCommunity as jest.Mock).mockResolvedValueOnce(
-        mockResponse,
-      );
+      (service.joinCommunity as jest.Mock).mockResolvedValueOnce(mockResponse);
 
       const result = await controller.join(userId, communityId);
 
@@ -126,7 +122,11 @@ describe('CommunityMemberController', () => {
         status: 'active',
       });
 
-      const result = await controller.approve(ownerId, communityId, targetUserId);
+      const result = await controller.approve(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
 
       expect(service.approveMember).toHaveBeenCalledWith(1, 5, 10);
       expect(result.success).toBe(true);
@@ -189,7 +189,11 @@ describe('CommunityMemberController', () => {
         approved_at: new Date(),
       });
 
-      const result = await controller.approve(ownerId, communityId, targetUserId);
+      const result = await controller.approve(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
 
       expect(result.user_sys_id).toBe(10);
       expect(result.status).toBe('active');
@@ -221,7 +225,11 @@ describe('CommunityMemberController', () => {
         message: 'Rejected successfully',
       });
 
-      const result = await controller.reject(ownerId, communityId, targetUserId);
+      const result = await controller.reject(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
 
       expect(service.rejectMember).toHaveBeenCalledWith(1, 5, 10);
       expect((result as any).message).toBe('Rejected successfully');
@@ -281,7 +289,11 @@ describe('CommunityMemberController', () => {
         message: 'Rejected successfully',
       });
 
-      const result = await controller.reject(ownerId, communityId, targetUserId);
+      const result = await controller.reject(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
 
       expect((result as any).message).toBe('Rejected successfully');
     });
@@ -350,8 +362,18 @@ describe('CommunityMemberController', () => {
       const communityId = '5';
 
       const mockPending = [
-        { user_sys_id: 10, first_name: 'John', last_name: 'Doe', status: 'pending' },
-        { user_sys_id: 20, first_name: 'Jane', last_name: 'Smith', status: 'pending' },
+        {
+          user_sys_id: 10,
+          first_name: 'John',
+          last_name: 'Doe',
+          status: 'pending',
+        },
+        {
+          user_sys_id: 20,
+          first_name: 'Jane',
+          last_name: 'Smith',
+          status: 'pending',
+        },
       ];
 
       (service.getPendingMembers as jest.Mock).mockResolvedValueOnce(
@@ -449,8 +471,18 @@ describe('CommunityMemberController', () => {
       const communityId = '5';
 
       const mockMembers = [
-        { user_sys_id: 1, first_name: 'Owner', role: 'owner', status: 'active' },
-        { user_sys_id: 2, first_name: 'Member', role: 'member', status: 'active' },
+        {
+          user_sys_id: 1,
+          first_name: 'Owner',
+          role: 'owner',
+          status: 'active',
+        },
+        {
+          user_sys_id: 2,
+          first_name: 'Member',
+          role: 'member',
+          status: 'active',
+        },
       ];
 
       (service.getMembers as jest.Mock).mockResolvedValueOnce(mockMembers);
@@ -580,9 +612,9 @@ describe('CommunityMemberController', () => {
         new Error('Join failed'),
       );
 
-      await expect(
-        controller.join(userId, communityId),
-      ).rejects.toThrow('Join failed');
+      await expect(controller.join(userId, communityId)).rejects.toThrow(
+        'Join failed',
+      );
     });
 
     it('should propagate service errors in approve', async () => {
@@ -621,9 +653,9 @@ describe('CommunityMemberController', () => {
         new Error('Leave failed'),
       );
 
-      await expect(
-        controller.leave(userId, communityId),
-      ).rejects.toThrow('Leave failed');
+      await expect(controller.leave(userId, communityId)).rejects.toThrow(
+        'Leave failed',
+      );
     });
 
     it('should propagate service errors in getPendingMembers', async () => {
@@ -646,9 +678,9 @@ describe('CommunityMemberController', () => {
         new Error('Fetch failed'),
       );
 
-      await expect(
-        controller.members(communityId),
-      ).rejects.toThrow('Fetch failed');
+      await expect(controller.members(communityId)).rejects.toThrow(
+        'Fetch failed',
+      );
     });
   });
 
@@ -686,7 +718,11 @@ describe('CommunityMemberController', () => {
         status: 'active',
       });
 
-      const approved = await controller.approve(ownerId, communityId, targetUserId);
+      const approved = await controller.approve(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
       expect(approved.status).toBe('active');
 
       // Get pending
@@ -735,7 +771,11 @@ describe('CommunityMemberController', () => {
         success: true,
       });
 
-      const rejected = await controller.reject(ownerId, communityId, targetUserId);
+      const rejected = await controller.reject(
+        ownerId,
+        communityId,
+        targetUserId,
+      );
       expect((rejected as any).message).toBeDefined();
 
       // Get pending - should be empty

@@ -1,5 +1,11 @@
 // learning-area.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { LearningArea } from './entities/learning-area.entity';
@@ -10,8 +16,10 @@ import {
   UpdateLearningAreaDto,
   CreateLearningAreaUserSysDto,
   UpdateLearningAreaUserSysDto,
-  DeleteLearningAreaUserSysDto
+  DeleteLearningAreaUserSysDto,
 } from './dto/learning-area.dto';
+import { learningAreaFields } from 'src/common/interface/learningArea.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class LearningAreaService {
@@ -21,6 +29,7 @@ export class LearningAreaService {
     @InjectRepository(UserSysLearningAreaNormalize)
     private userSysLearningAreaNormRepo: Repository<UserSysLearningAreaNormalize>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== Learning Area Methods ==========
@@ -30,14 +39,14 @@ export class LearningAreaService {
    */
   async findById(id: number) {
     const learningArea = await this.learningAreaRepo.findOne({
-      where: { learning_area_id: id }
+      where: { learning_area_id: id },
     });
 
     if (!learningArea) {
       throw new NotFoundException('Learning area not found');
     }
 
-    return learningArea;
+    return { success: true, data: learningArea };
   }
 
   /**
@@ -46,9 +55,12 @@ export class LearningAreaService {
    */
   async search(dto: SearchLearningAreaDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.learning_area_id || dto.inst_id ||
-                     dto.learning_area_name || dto.remark ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.learning_area_id ||
+      dto.inst_id ||
+      dto.learning_area_name ||
+      dto.remark ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -127,10 +139,17 @@ export class LearningAreaService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (err) {
-      console.error('Error fetching learning areas:', err);
+      const result: learningAreaFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching learning areas:',
+        'SearchLearningArea',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching learning areas');
     }
   }
@@ -151,14 +170,29 @@ export class LearningAreaService {
         flag_valid: true,
       });
 
-      const savedLearningArea = await this.learningAreaRepo.save(newLearningArea);
-      return savedLearningArea;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This learning area already exists in the system');
+      const savedLearningArea =
+        await this.learningAreaRepo.save(newLearningArea);
+      return {
+        success: true,
+        data: savedLearningArea,
+        message: 'Learning area created successfully!',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'This learning area already exists in the system',
+        );
       }
-      console.error('Error creating learning area:', error);
+      this.logger.error(
+        'Error creating learning area:',
+        'CreateLearningArea',
+        error,
+      );
       throw new InternalServerErrorException('Error creating learning area');
     }
   }
@@ -169,7 +203,7 @@ export class LearningAreaService {
   async update(id: number, dto: UpdateLearningAreaDto) {
     // Check if learning area exists
     const existingLearningArea = await this.learningAreaRepo.findOne({
-      where: { learning_area_id: id }
+      where: { learning_area_id: id },
     });
 
     if (!existingLearningArea) {
@@ -180,9 +214,11 @@ export class LearningAreaService {
     const updates: Partial<LearningArea> = {};
 
     if (dto.inst_id !== undefined) updates.inst_id = dto.inst_id;
-    if (dto.learning_area_name !== undefined) updates.learning_area_name = dto.learning_area_name;
+    if (dto.learning_area_name !== undefined)
+      updates.learning_area_name = dto.learning_area_name;
     if (dto.remark !== undefined) updates.remark = dto.remark;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
 
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No fields to update!');
@@ -192,16 +228,28 @@ export class LearningAreaService {
       await this.learningAreaRepo.update({ learning_area_id: id }, updates);
 
       const updatedLearningArea = await this.learningAreaRepo.findOne({
-        where: { learning_area_id: id }
+        where: { learning_area_id: id },
       });
 
-      return updatedLearningArea;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      return {
+        success: true,
+        data: updatedLearningArea,
+        message: 'Learning area updated successfully!',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
         throw new ConflictException('This learning area already exists');
       }
-      console.error('Error updating learning area:', error);
+      this.logger.error(
+        'Error updating learning area:',
+        'UpdateLearningArea',
+        error,
+      );
       throw new InternalServerErrorException('Error updating learning area');
     }
   }
@@ -212,7 +260,7 @@ export class LearningAreaService {
   async delete(id: number) {
     // Check if learning area exists
     const existingLearningArea = await this.learningAreaRepo.findOne({
-      where: { learning_area_id: id }
+      where: { learning_area_id: id },
     });
 
     if (!existingLearningArea) {
@@ -221,10 +269,17 @@ export class LearningAreaService {
 
     try {
       await this.learningAreaRepo.delete({ learning_area_id: id });
-      return existingLearningArea;
-
-    } catch (error) {
-      console.error('Error deleting learning area:', error);
+      return {
+        success: true,
+        data: existingLearningArea,
+        message: 'Learning area deleted successfully!',
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error deleting learning area:',
+        'DeleteLearningArea',
+        error,
+      );
       throw new InternalServerErrorException('Error deleting learning area');
     }
   }
@@ -247,14 +302,30 @@ export class LearningAreaService {
       });
 
       const savedNorm = await this.userSysLearningAreaNormRepo.save(newNorm);
-      return savedNorm;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This user is already assigned to this learning area');
+      return {
+        success: true,
+        data: savedNorm,
+        message: 'Record created successfully!',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'This user is already assigned to this learning area',
+        );
       }
-      console.error('Error creating learning area user sys:', error);
-      throw new InternalServerErrorException('Error creating learning area user sys');
+      this.logger.error(
+        'Error creating learning area user sys:',
+        'CreateUserSysNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error creating learning area user sys',
+      );
     }
   }
 
@@ -268,8 +339,10 @@ export class LearningAreaService {
 
     // Build update object
     const updates: any = {};
-    if (dto.learning_area_id !== undefined) updates.learning_area_id = dto.learning_area_id;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (dto.learning_area_id !== undefined)
+      updates.learning_area_id = dto.learning_area_id;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
 
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No fields to update!');
@@ -277,22 +350,33 @@ export class LearningAreaService {
 
     try {
       const query = `UPDATE user_sys_learning_area_normalize SET learning_area_id = $1, flag_valid = $2 WHERE user_sys_id = $3 RETURNING *`;
-      const result = await this.dataSource.query(query, [
+      const result: learningAreaFields[] = await this.dataSource.query(query, [
         dto.learning_area_id,
         dto.flag_valid ?? true,
-        dto.user_sys_id
+        dto.user_sys_id,
       ]);
 
       if (result.length === 0) {
-        throw new NotFoundException('User sys learning area normalize record not found');
+        throw new NotFoundException(
+          'User sys learning area normalize record not found',
+        );
       }
 
-      return result[0];
-
-    } catch (error) {
+      return {
+        success: true,
+        data: result[0],
+        message: 'User learning area updated successfully!',
+      };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error updating learning area user sys:', error);
-      throw new InternalServerErrorException('Error updating learning area user sys');
+      this.logger.error(
+        'Error updating learning area user sys:',
+        'UpdateUserSysNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error updating learning area user sys',
+      );
     }
   }
 
@@ -306,18 +390,32 @@ export class LearningAreaService {
 
     try {
       const query = `DELETE FROM user_sys_learning_area_normalize WHERE learning_area_id = $1 AND user_sys_id = $2 RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.learning_area_id, dto.user_sys_id]);
+      const result = await this.dataSource.query(query, [
+        dto.learning_area_id,
+        dto.user_sys_id,
+      ]);
 
       if (result.length === 0) {
-        throw new NotFoundException('User sys learning area normalize record not found');
+        throw new NotFoundException(
+          'User sys learning area normalize record not found',
+        );
       }
 
-      return result[0];
-
-    } catch (error) {
+      return {
+        success: true,
+        data: result[0],
+        message: 'User learning area deleted successfully!',
+      };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting learning area user sys:', error);
-      throw new InternalServerErrorException('Error deleting learning area user sys');
+      this.logger.error(
+        'Error deleting learning area user sys:',
+        'DeleteUserSysNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error deleting learning area user sys',
+      );
     }
   }
 
@@ -325,7 +423,10 @@ export class LearningAreaService {
    * Internal function to create user_sys_learning_area_normalize record
    * Used by other services
    */
-  async createUserSysNormalizeInternal(user_sys_id: number, learning_area_id: number) {
+  async createUserSysNormalizeInternal(
+    user_sys_id: number,
+    learning_area_id: number,
+  ) {
     if (!user_sys_id || !learning_area_id) {
       throw new BadRequestException('Missing required fields!');
     }
@@ -338,9 +439,17 @@ export class LearningAreaService {
       });
 
       const result = await this.userSysLearningAreaNormRepo.save(newNorm);
-      return result;
-    } catch (error) {
-      console.error('Error creating learning area user sys internally:', error);
+      return {
+        success: true,
+        data: result,
+        message: 'User learning area created successfully!',
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error creating learning area user sys internally:',
+        'CreateUserSysNormalizeInternal',
+        error,
+      );
       throw error;
     }
   }

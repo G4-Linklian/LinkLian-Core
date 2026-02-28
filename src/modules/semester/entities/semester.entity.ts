@@ -1,5 +1,5 @@
 // semester.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * Enum for semester status

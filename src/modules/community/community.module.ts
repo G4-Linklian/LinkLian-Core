@@ -1,7 +1,7 @@
 // export class CommunityModule {}
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FileStorageModule } from '../file-storage/file-storage.module'; 
+import { FileStorageModule } from '../file-storage/file-storage.module';
 
 // core
 import { CommunityController } from './core/community.controller';
@@ -40,11 +40,11 @@ import { CommunityAttachmentEntity } from './post/entities/community-attachment.
       CommunityComment,
       CommunityCommentPath,
       CommunityBookmarkEntity,
-      CommunityTagEntity,           
+      CommunityTagEntity,
       CommunityTagNormalizeEntity,
       CommunityAttachmentEntity,
     ]),
-    FileStorageModule, 
+    FileStorageModule,
   ],
 
   controllers: [
