@@ -30,7 +30,7 @@ export class AccessGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const reqForm = request.req_form;
+    const reqForm = request.req_from;
 
     if (reqForm === 'institution') {
       this.logger.debug(
