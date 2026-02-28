@@ -1,5 +1,11 @@
 // section.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Section } from './entities/section.entity';
@@ -22,8 +28,10 @@ import {
   UpdateSectionEducatorDto,
   UpdateEnrollmentDto,
   DeleteSectionEducatorDto,
-  DeleteEnrollmentDto
+  DeleteEnrollmentDto,
 } from './dto/section.dto';
+import { sectionFields } from 'src/common/interface/section.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class SectionService {
@@ -37,6 +45,7 @@ export class SectionService {
     @InjectRepository(Enrollment)
     private enrollmentRepo: Repository<Enrollment>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== Section Master Search ==========
@@ -46,9 +55,12 @@ export class SectionService {
    */
   async searchMaster(dto: SearchSectionMasterDto) {
     // Validate input
-    const hasInput = dto.section_id || dto.semester_id ||
-                     dto.subject_id || dto.inst_id ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.section_id ||
+      dto.semester_id ||
+      dto.subject_id ||
+      dto.inst_id ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -147,10 +159,13 @@ export class SectionService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error querying sections:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error querying sections:', 'GetSectionMaster', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -162,11 +177,17 @@ export class SectionService {
    */
   async search(dto: SearchSectionDto) {
     // Validate input
-    const hasInput = dto.section_id || dto.semester_id ||
-                     dto.subject_id || dto.schedule_id ||
-                     dto.day_of_week || dto.start_time ||
-                     dto.end_time || dto.room_location_id ||
-                     dto.inst_id || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.section_id ||
+      dto.semester_id ||
+      dto.subject_id ||
+      dto.schedule_id ||
+      dto.day_of_week ||
+      dto.start_time ||
+      dto.end_time ||
+      dto.room_location_id ||
+      dto.inst_id ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -262,10 +283,13 @@ export class SectionService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error querying sections:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error querying sections:', 'SearchSections', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -277,10 +301,14 @@ export class SectionService {
    */
   async searchSchedule(dto: SearchScheduleDto) {
     // Validate input
-    const hasInput = dto.schedule_id || dto.section_id ||
-                     dto.day_of_week || dto.start_time ||
-                     dto.end_time || dto.room_location_id ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.schedule_id ||
+      dto.section_id ||
+      dto.day_of_week ||
+      dto.start_time ||
+      dto.end_time ||
+      dto.room_location_id ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -333,10 +361,13 @@ export class SectionService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error querying schedules:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error querying schedules:', 'SearchSchedules', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -348,10 +379,15 @@ export class SectionService {
    */
   async searchEducator(dto: SearchSectionEducatorDto) {
     // Validate input
-    const hasInput = dto.section_id || dto.semester_id ||
-                     dto.subject_id || dto.user_sys_id ||
-                     dto.role_id || dto.role_name ||
-                     dto.role_type || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.section_id ||
+      dto.semester_id ||
+      dto.subject_id ||
+      dto.user_sys_id ||
+      dto.role_id ||
+      dto.role_name ||
+      dto.role_type ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -485,10 +521,17 @@ export class SectionService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error querying section educators:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error querying section educators:',
+        'SearchSectionEducators',
+        error,
+      );
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -500,10 +543,15 @@ export class SectionService {
    */
   async searchEnrollment(dto: SearchEnrollmentDto) {
     // Validate input
-    const hasInput = dto.section_id || dto.semester_id ||
-                     dto.subject_id || dto.user_sys_id ||
-                     dto.role_id || dto.role_name ||
-                     dto.role_type || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.section_id ||
+      dto.semester_id ||
+      dto.subject_id ||
+      dto.user_sys_id ||
+      dto.role_id ||
+      dto.role_name ||
+      dto.role_type ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -608,10 +656,17 @@ export class SectionService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error querying enrollments:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error querying enrollments:',
+        'SearchEnrollments',
+        error,
+      );
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -641,11 +696,13 @@ export class SectionService {
         true,
       ];
 
-      const result = await this.dataSource.query(query, values);
-      return result[0];
-
-    } catch (error) {
-      console.error('Error creating section:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
+      this.logger.error('Error creating section:', 'CreateSection', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -654,7 +711,13 @@ export class SectionService {
    * Create a new schedule
    */
   async createSchedule(dto: CreateScheduleDto) {
-    if (!dto.section_id || !dto.day_of_week || !dto.start_time || !dto.end_time || !dto.room_location_id) {
+    if (
+      !dto.section_id ||
+      !dto.day_of_week ||
+      !dto.start_time ||
+      !dto.end_time ||
+      !dto.room_location_id
+    ) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -675,11 +738,13 @@ export class SectionService {
         true,
       ];
 
-      const result = await this.dataSource.query(query, values);
-      return result[0];
-
-    } catch (error) {
-      console.error('Error creating schedule:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
+      this.logger.error('Error creating schedule:', 'CreateSchedule', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -698,35 +763,53 @@ export class SectionService {
 
     try {
       // Insert section
-      const sectionResult = await queryRunner.query(
+      const sectionResult = (await queryRunner.query(
         `INSERT INTO section (subject_id, semester_id, section_name, flag_valid, created_at, updated_at) 
          VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *`,
-        [dto.subject_id, dto.semester_id, dto.section_name || null, true]
-      );
+        [dto.subject_id, dto.semester_id, dto.section_name || null, true],
+      )) as sectionFields[];
 
-      const section = sectionResult[0];
+      const section: sectionFields = sectionResult[0];
 
       // Insert schedule if schedule data is provided
-      let schedule = null;
-      if (dto.day_of_week && dto.start_time && dto.end_time && dto.room_location_id) {
-        const scheduleResult = await queryRunner.query(
+      let schedule: sectionFields | null = null;
+      if (
+        dto.day_of_week &&
+        dto.start_time &&
+        dto.end_time &&
+        dto.room_location_id
+      ) {
+        const scheduleResult = (await queryRunner.query(
           `INSERT INTO section_schedule (section_id, day_of_week, start_time, end_time, room_location_id, flag_valid)
            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-          [section.section_id, dto.day_of_week, dto.start_time, dto.end_time, dto.room_location_id, true]
-        );
+          [
+            section.section_id,
+            dto.day_of_week,
+            dto.start_time,
+            dto.end_time,
+            dto.room_location_id,
+            true,
+          ],
+        )) as sectionFields[];
         schedule = scheduleResult[0];
       }
 
       await queryRunner.commitTransaction();
 
       return {
-        section,
-        schedule
+        success: true,
+        data: {
+          section,
+          schedule,
+        },
       };
-
-    } catch (error) {
+    } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
-      console.error('Error creating section schedule:', error);
+      this.logger.error(
+        'Error creating section schedule:',
+        'CreateSectionSchedule',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     } finally {
       await queryRunner.release();
@@ -749,21 +832,29 @@ export class SectionService {
         RETURNING *
       `;
 
-      const values = [
-        dto.section_id,
-        dto.user_sys_id,
-        dto.position,
-        true,
-      ];
+      const values = [dto.section_id, dto.user_sys_id, dto.position, true];
 
-      const result = await this.dataSource.query(query, values);
-      return result[0];
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This educator is already added to this section');
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'This educator is already added to this section',
+        );
       }
-      console.error('Error creating section educator:', error);
+      this.logger.error(
+        'Error creating section educator:',
+        'CreateSectionEducator',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -779,15 +870,29 @@ export class SectionService {
     try {
       const query = `INSERT INTO enrollment (section_id, student_id, flag_valid, enrolled_at) 
                      VALUES ($1, $2, $3, NOW()) RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.section_id, dto.user_sys_id, true]);
+      const result: sectionFields[] = await this.dataSource.query(query, [
+        dto.section_id,
+        dto.user_sys_id,
+        true,
+      ]);
 
-      return result[0];
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This student is already enrolled in this section');
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'This student is already enrolled in this section',
+        );
       }
-      console.error('Error creating enrollment:', error);
+      this.logger.error(
+        'Error creating enrollment:',
+        'CreateEnrollment',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -799,7 +904,9 @@ export class SectionService {
    */
   async updateSection(id: number, dto: UpdateSectionDto) {
     // Check if section exists
-    const existing = await this.sectionRepo.findOne({ where: { section_id: id } });
+    const existing = await this.sectionRepo.findOne({
+      where: { section_id: id },
+    });
     if (!existing) {
       throw new NotFoundException('Section not found!');
     }
@@ -838,11 +945,13 @@ export class SectionService {
 
     try {
       const query = `UPDATE section SET ${updateFields.join(', ')} WHERE section_id = $${index} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
-      return result[0];
-
-    } catch (error) {
-      console.error('Error updating section:', error);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
+      this.logger.error('Error updating section:', 'UpdateSection', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -856,10 +965,15 @@ export class SectionService {
     }
 
     const sectionColumns = ['subject_id', 'semester_id', 'section_name'];
-    const scheduleColumns = ['day_of_week', 'start_time', 'end_time', 'room_location_id'];
+    const scheduleColumns = [
+      'day_of_week',
+      'start_time',
+      'end_time',
+      'room_location_id',
+    ];
 
-    let updatedSection = null;
-    let updatedSchedule = null;
+    let updatedSection: sectionFields | null = null;
+    let updatedSchedule: sectionFields | null = null;
 
     try {
       // Update section if any section field is provided
@@ -878,7 +992,10 @@ export class SectionService {
         sectionUpdates.push(`updated_at = NOW()`);
         sectionValues.push(dto.section_id);
         const sectionQuery = `UPDATE section SET ${sectionUpdates.join(', ')} WHERE section_id = $${sectionIndex} RETURNING *`;
-        const result = await this.dataSource.query(sectionQuery, sectionValues);
+        const result: sectionFields[] = await this.dataSource.query(
+          sectionQuery,
+          sectionValues,
+        );
         updatedSection = result[0];
       }
 
@@ -898,22 +1015,29 @@ export class SectionService {
         if (scheduleUpdates.length > 0) {
           scheduleValues.push(dto.schedule_id);
           const scheduleQuery = `UPDATE section_schedule SET ${scheduleUpdates.join(', ')} WHERE schedule_id = $${scheduleIndex} RETURNING *`;
-          const result = await this.dataSource.query(scheduleQuery, scheduleValues);
+          const result: sectionFields[] = await this.dataSource.query(
+            scheduleQuery,
+            scheduleValues,
+          );
           updatedSchedule = result[0];
         }
       }
 
       if (!updatedSection && !updatedSchedule) {
-        return null;
+        return { success: false, message: 'No changes made' };
       }
 
       return {
-        section: updatedSection || 'No changes',
-        schedule: updatedSchedule || 'No changes',
+        success: true,
+        data: { section: updatedSection, schedule: updatedSchedule },
+        message: 'Update successful',
       };
-
-    } catch (error) {
-      console.error('Error updating section schedule:', error);
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error updating section schedule:',
+        'UpdateSectionSchedule',
+        error,
+      );
       throw new InternalServerErrorException('Server Error during update');
     }
   }
@@ -923,7 +1047,9 @@ export class SectionService {
    */
   async updateEducator(dto: UpdateSectionEducatorDto) {
     if (!dto.section_id && !dto.user_sys_id) {
-      throw new BadRequestException('At least one of section_id or user_sys_id is required!');
+      throw new BadRequestException(
+        'At least one of section_id or user_sys_id is required!',
+      );
     }
 
     const updates: string[] = [];
@@ -967,20 +1093,33 @@ export class SectionService {
 
     try {
       const query = `UPDATE section_educator SET ${updates.join(', ')} ${whereClause} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
 
       if (result.length === 0) {
         throw new NotFoundException('Section educator not found!');
       }
 
-      return result;
-
-    } catch (error: any) {
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      if (error.code === '23505') {
-        throw new ConflictException('Educator is already added to this section');
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'Educator is already added to this section',
+        );
       }
-      console.error('Error updating section educator:', error);
+      this.logger.error(
+        'Error updating section educator:',
+        'UpdateSectionEducator',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -990,7 +1129,9 @@ export class SectionService {
    */
   async updateEnrollment(dto: UpdateEnrollmentDto) {
     if (!dto.section_id && !dto.user_sys_id) {
-      throw new BadRequestException('At least one of section_id or user_sys_id is required!');
+      throw new BadRequestException(
+        'At least one of section_id or user_sys_id is required!',
+      );
     }
 
     const updates: string[] = [];
@@ -1029,20 +1170,33 @@ export class SectionService {
 
     try {
       const query = `UPDATE enrollment SET ${updates.join(', ')} ${whereClause} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
 
       if (result.length === 0) {
         throw new NotFoundException('Enrollment not found!');
       }
 
-      return result;
-
-    } catch (error: any) {
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      if (error.code === '23505') {
-        throw new ConflictException('Student is already enrolled in this section');
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'Student is already enrolled in this section',
+        );
       }
-      console.error('Error updating enrollment:', error);
+      this.logger.error(
+        'Error updating enrollment:',
+        'UpdateEnrollment',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -1055,14 +1209,17 @@ export class SectionService {
   async deleteSection(id: number) {
     try {
       const query = `DELETE FROM section WHERE section_id = $1 RETURNING *`;
-      const result = await this.dataSource.query(query, [id]);
+      const result: sectionFields[] = await this.dataSource.query(query, [id]);
 
       if (result.length === 0) {
         throw new NotFoundException('Section not found!');
       }
 
-      return { message: 'Section deleted successfully!', data: result[0] };
-
+      return {
+        success: true,
+        message: 'Section deleted successfully!',
+        data: result[0],
+      };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       console.error('Error deleting section:', error);
@@ -1076,17 +1233,20 @@ export class SectionService {
   async deleteSchedule(id: number) {
     try {
       const query = `DELETE FROM section_schedule WHERE schedule_id = $1 RETURNING *`;
-      const result = await this.dataSource.query(query, [id]);
+      const result: sectionFields[] = await this.dataSource.query(query, [id]);
 
       if (result.length === 0) {
         throw new NotFoundException('Schedule not found!');
       }
 
-      return { message: 'Schedule deleted successfully!', data: result[0] };
-
-    } catch (error) {
+      return {
+        success: true,
+        message: 'Schedule deleted successfully!',
+        data: result[0],
+      };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting schedule:', error);
+      this.logger.error('Error deleting schedule:', 'DeleteSchedule', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -1095,9 +1255,10 @@ export class SectionService {
    * Delete section educator
    */
   async deleteEducator(dto: DeleteSectionEducatorDto) {
-    console.log('Delete Enrollment DTO:', dto);
     if (!dto.section_id && !dto.user_sys_id) {
-      throw new BadRequestException('At least one of section_id or user_sys_id is required!');
+      throw new BadRequestException(
+        'At least one of section_id or user_sys_id is required!',
+      );
     }
 
     const conditions: string[] = [];
@@ -1116,17 +1277,23 @@ export class SectionService {
 
     try {
       const query = `DELETE FROM section_educator WHERE ${conditions.join(' AND ')} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
 
       if (result.length === 0) {
         throw new NotFoundException('No matching records found!');
       }
 
-      return result;
-
-    } catch (error) {
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting section educator:', error);
+      this.logger.error(
+        'Error deleting section educator:',
+        'DeleteSectionEducator',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -1138,7 +1305,9 @@ export class SectionService {
     console.log('Delete Enrollment DTO:', dto);
 
     if (!dto.section_id && !dto.user_sys_id) {
-      throw new BadRequestException('At least one of section_id or user_sys_id is required!');
+      throw new BadRequestException(
+        'At least one of section_id or user_sys_id is required!',
+      );
     }
 
     const conditions: string[] = [];
@@ -1157,17 +1326,23 @@ export class SectionService {
 
     try {
       const query = `DELETE FROM enrollment WHERE ${conditions.join(' AND ')} RETURNING *`;
-      const result = await this.dataSource.query(query, values);
+      const result: sectionFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
 
       if (result.length === 0) {
         throw new NotFoundException('No matching records found!');
       }
 
-      return result;
-
-    } catch (error) {
+      return { success: true, data: result[0] };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting enrollment:', error);
+      this.logger.error(
+        'Error deleting enrollment:',
+        'DeleteEnrollment',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }

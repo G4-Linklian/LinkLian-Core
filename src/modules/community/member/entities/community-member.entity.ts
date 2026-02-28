@@ -1,12 +1,7 @@
-import {
-  Entity,
-  Column,
-  PrimaryColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity('community_member')
 export class CommunityMemberEntity {
-
   @PrimaryColumn()
   community_id: number;
 
@@ -28,4 +23,3 @@ export class CommunityMemberEntity {
   @Column({ default: true })
   flag_valid: boolean;
 }
-

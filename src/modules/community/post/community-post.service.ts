@@ -24,17 +24,14 @@ function getDomainFromUrl(url: string): string {
 }
 
 @Injectable()
-
 export class CommunityPostService {
-
   constructor(
     private dataSource: DataSource,
     private communityService: CommunityService,
     private fileStorageService: FileStorageService,
-  ) { }
+  ) {}
 
   async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
-
     if (!dto || !dto.content?.trim()) {
       throw new BadRequestException('Content required');
     }
@@ -44,7 +41,6 @@ export class CommunityPostService {
     await queryRunner.startTransaction();
 
     try {
-
       const community = await queryRunner.query(
         `
       SELECT status
@@ -63,10 +59,7 @@ export class CommunityPostService {
         throw new ForbiddenException('Community is inactive');
       }
 
-      await this.communityService.checkReadPermission(
-        userId,
-        dto.community_id,
-      );
+      await this.communityService.checkReadPermission(userId, dto.community_id);
 
       const result = await queryRunner.query(
         `
@@ -98,15 +91,13 @@ export class CommunityPostService {
 
       //  Handle files
       if (files?.length) {
-        const uploadResult =
-          await this.fileStorageService.uploadFiles(
-            'community',
-            'post',
-            files,
-          );
+        const uploadResult = await this.fileStorageService.uploadFiles(
+          'community',
+          'post',
+          files,
+        );
 
         for (const uploaded of uploadResult.files) {
-
           let type = 'image';
 
           if (uploaded.fileType.startsWith('video')) {
@@ -123,12 +114,7 @@ export class CommunityPostService {
           (post_commu_id,file_url,file_type,original_name,flag_valid)
           VALUES ($1,$2,$3,$4,true)
           `,
-            [
-              postId,
-              uploaded.fileUrl,
-              type,
-              uploaded.originalName,
-            ],
+            [postId, uploaded.fileUrl, type, uploaded.originalName],
           );
         }
       }
@@ -140,18 +126,13 @@ export class CommunityPostService {
         data: { post_id: postId },
         message: 'Post created successfully!',
       };
-
     } catch (error) {
-
       await queryRunner.rollbackTransaction();
       throw error;
-
     } finally {
-
       await queryRunner.release();
     }
   }
-
 
   async getPosts(
     userId: number,
@@ -160,11 +141,7 @@ export class CommunityPostService {
     offset: number = 0,
     sort: string = 'newest',
   ) {
-
-    await this.communityService.checkReadPermission(
-      userId,
-      communityId,
-    );
+    await this.communityService.checkReadPermission(userId, communityId);
 
     const order = sort === 'oldest' ? 'ASC' : 'DESC';
 
@@ -211,20 +188,18 @@ COALESCE(
       data: { posts: result },
       message: 'Posts fetched successfully!',
     };
-
-  } catch(error) {
+  }
+  catch(error) {
+    console.log('Error fetching posts', error);
     throw new InternalServerErrorException('Error fetching posts');
   }
 
-
   async hardDeletePost(userId: number, postId: number) {
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-
       const post = await queryRunner.query(
         `
       SELECT user_sys_id
@@ -235,53 +210,67 @@ COALESCE(
         [postId],
       );
 
-      if (!post.length)
-        throw new BadRequestException('Post not found');
+      if (!post.length) throw new BadRequestException('Post not found');
 
       if (post[0].user_sys_id !== userId)
         throw new ForbiddenException('Not allowed');
 
       // 1. delete comment_path
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_comment_path
       WHERE descendant_id IN (
         SELECT commu_comment_id
         FROM community_comment
         WHERE post_commu_id=$1
       )
-    `, [postId]);
+    `,
+        [postId],
+      );
 
       // 2. delete comments
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_comment
       WHERE post_commu_id=$1
-    `, [postId]);
+    `,
+        [postId],
+      );
 
       // 3. delete bookmark
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_bookmark
       WHERE post_commu_id=$1
-    `, [postId]);
+    `,
+        [postId],
+      );
 
       // 4. delete attachment
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_attachment
       WHERE post_commu_id=$1
-    `, [postId]);
+    `,
+        [postId],
+      );
 
       // 5. delete post
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM post_in_community
       WHERE post_commu_id=$1
-    `, [postId]);
+    `,
+        [postId],
+      );
 
       await queryRunner.commitTransaction();
 
       return {
-        success: true, data: { post_id: postId },
+        success: true,
+        data: { post_id: postId },
         message: 'Post deleted successfully!',
       };
-
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -382,15 +371,10 @@ COALESCE(
       (post_commu_id,file_url,file_type,original_name,flag_valid)
       VALUES ($1,$2,'link',$3,true)
       `,
-            [
-              postId,
-              url,
-              domainName,
-            ],
+            [postId, url, domainName],
           );
         }
       }
-
 
       // files update: delete old ones and add new ones
       if (files?.length) {
@@ -402,12 +386,11 @@ COALESCE(
           [postId],
         );
 
-        const uploadResult =
-          await this.fileStorageService.uploadFiles(
-            'community',
-            'post',
-            files,
-          );
+        const uploadResult = await this.fileStorageService.uploadFiles(
+          'community',
+          'post',
+          files,
+        );
 
         for (const uploaded of uploadResult.files) {
           let type = 'image';
@@ -426,12 +409,7 @@ COALESCE(
           (post_commu_id,file_url,file_type,original_name,flag_valid)
           VALUES ($1,$2,$3,$4,true)
           `,
-            [
-              postId,
-              uploaded.fileUrl,
-              type,
-              uploaded.originalName,
-            ],
+            [postId, uploaded.fileUrl, type, uploaded.originalName],
           );
         }
       }
@@ -443,7 +421,6 @@ COALESCE(
         data: { post_id: postId },
         message: 'Post updated successfully',
       };
-
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -452,8 +429,6 @@ COALESCE(
     }
   }
 
-
-
   async searchPosts(
     userId: number,
     communityId: number,
@@ -461,10 +436,7 @@ COALESCE(
     limit: number = 50,
   ) {
     try {
-      await this.communityService.checkReadPermission(
-        userId,
-        communityId,
-      );
+      await this.communityService.checkReadPermission(userId, communityId);
 
       const result = await this.dataSource.query(
         `
@@ -509,8 +481,8 @@ COALESCE(
         data: { posts: result },
         message: 'Search completed successfully!',
       };
-
     } catch (error) {
+      console.log('Error searching posts', error);
       throw new InternalServerErrorException('Error searching posts');
     }
   }

@@ -45,7 +45,13 @@ describe('CommunityController', () => {
   describe('create', () => {
     it('should throw BadRequestException if x-user-id is invalid', async () => {
       const invalidUserId = 'invalid-id';
-      const dto = { name: 'Test', description: 'Test', is_private: false, rules: [], tags: [] };
+      const dto = {
+        name: 'Test',
+        description: 'Test',
+        is_private: false,
+        rules: [],
+        tags: [],
+      };
 
       await expect(
         controller.create(invalidUserId, null as any, dto, {} as any),
@@ -54,7 +60,13 @@ describe('CommunityController', () => {
 
     it('should throw BadRequestException if x-user-id is not a number', async () => {
       const invalidUserId = 'abc';
-      const dto = { name: 'Test', description: 'Test', is_private: false, rules: [], tags: [] };
+      const dto = {
+        name: 'Test',
+        description: 'Test',
+        is_private: false,
+        rules: [],
+        tags: [],
+      };
 
       await expect(
         controller.create(invalidUserId, null as any, dto, {} as any),
@@ -76,7 +88,12 @@ describe('CommunityController', () => {
         community_name: dto.name,
       });
 
-      const result = await controller.create(userId, null as any, dto, {} as any);
+      const result = await controller.create(
+        userId,
+        null as any,
+        dto,
+        {} as any,
+      );
 
       expect(communityService.createCommunity).toHaveBeenCalledWith(1, {
         ...dto,
@@ -203,9 +220,7 @@ describe('CommunityController', () => {
         { community_tag_id: 2, tag_name: 'science' },
       ];
 
-      (communityService.searchTag as jest.Mock).mockResolvedValueOnce(
-        mockTags,
-      );
+      (communityService.searchTag as jest.Mock).mockResolvedValueOnce(mockTags);
 
       const result = await controller.searchTag();
 
@@ -217,9 +232,7 @@ describe('CommunityController', () => {
       const keyword = 'math';
       const mockTags = [{ community_tag_id: 1, tag_name: 'math' }];
 
-      (communityService.searchTag as jest.Mock).mockResolvedValueOnce(
-        mockTags,
-      );
+      (communityService.searchTag as jest.Mock).mockResolvedValueOnce(mockTags);
 
       const result = await controller.searchTag(keyword);
 
@@ -300,9 +313,9 @@ describe('CommunityController', () => {
       const invalidUserId = 'invalid-id';
       const communityId = 1;
 
-      await expect(
-        controller.get(invalidUserId, communityId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.get(invalidUserId, communityId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should get community detail', async () => {
@@ -580,9 +593,9 @@ describe('CommunityController', () => {
         new Error('Not found'),
       );
 
-      await expect(
-        controller.get(userId, communityId),
-      ).rejects.toThrow('Not found');
+      await expect(controller.get(userId, communityId)).rejects.toThrow(
+        'Not found',
+      );
     });
 
     it('should propagate file upload errors', async () => {
@@ -644,7 +657,12 @@ describe('CommunityController', () => {
         community_name: createDto.name,
       });
 
-      const created = await controller.create(userId, null as any, createDto, {} as any);
+      const created = await controller.create(
+        userId,
+        null as any,
+        createDto,
+        {} as any,
+      );
 
       // Get detail
       (communityService.getCommunityDetail as jest.Mock).mockResolvedValueOnce({

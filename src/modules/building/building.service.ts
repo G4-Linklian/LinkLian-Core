@@ -1,9 +1,19 @@
 // building.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Building } from './entities/building.entity';
-import { SearchBuildingDto, CreateBuildingDto, UpdateBuildingDto } from './dto/building.dto';
+import {
+  SearchBuildingDto,
+  CreateBuildingDto,
+  UpdateBuildingDto,
+} from './dto/building.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class BuildingService {
@@ -11,6 +21,7 @@ export class BuildingService {
     @InjectRepository(Building)
     private buildingRepo: Repository<Building>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -18,14 +29,14 @@ export class BuildingService {
    */
   async findById(id: number) {
     const building = await this.buildingRepo.findOne({
-      where: { building_id: id }
+      where: { building_id: id },
     });
 
     if (!building) {
       throw new NotFoundException('Building not found');
     }
 
-    return building;
+    return { success: true, data: building };
   }
 
   /**
@@ -33,9 +44,13 @@ export class BuildingService {
    */
   async search(dto: SearchBuildingDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.building_id || dto.inst_id ||
-                     dto.building_no || dto.building_name ||
-                     dto.remark || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.building_id ||
+      dto.inst_id ||
+      dto.building_no ||
+      dto.building_name ||
+      dto.remark ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -101,9 +116,13 @@ export class BuildingService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (err) {
-      console.error('Error executing search building query:', err);
+      return { success: true, data: result };
+    } catch (err: unknown) {
+      this.logger.error(
+        'Error executing search building query:',
+        'BuildingService',
+        err,
+      );
       throw new InternalServerErrorException('Error fetching buildings');
     }
   }
@@ -126,10 +145,13 @@ export class BuildingService {
       });
 
       const savedBuilding = await this.buildingRepo.save(newBuilding);
-      return savedBuilding;
-
-    } catch (error) {
-      console.error('Error creating building:', error);
+      return {
+        success: true,
+        data: savedBuilding,
+        message: 'Building created successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error creating building:', 'BuildingService', error);
       throw new InternalServerErrorException('Error creating building');
     }
   }
@@ -140,7 +162,7 @@ export class BuildingService {
   async update(id: number, dto: UpdateBuildingDto) {
     // Check if building exists
     const existingBuilding = await this.buildingRepo.findOne({
-      where: { building_id: id }
+      where: { building_id: id },
     });
 
     if (!existingBuilding) {
@@ -152,10 +174,12 @@ export class BuildingService {
 
     if (dto.inst_id !== undefined) updates.inst_id = dto.inst_id;
     if (dto.building_no !== undefined) updates.building_no = dto.building_no;
-    if (dto.building_name !== undefined) updates.building_name = dto.building_name;
+    if (dto.building_name !== undefined)
+      updates.building_name = dto.building_name;
     if (dto.remark !== undefined) updates.remark = dto.remark;
     if (dto.room_format !== undefined) updates.room_format = dto.room_format;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
 
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No fields to update!');
@@ -163,15 +187,18 @@ export class BuildingService {
 
     try {
       await this.buildingRepo.update({ building_id: id }, updates);
-      
+
       const updatedBuilding = await this.buildingRepo.findOne({
-        where: { building_id: id }
+        where: { building_id: id },
       });
 
-      return updatedBuilding;
-
-    } catch (error) {
-      console.error('Error updating building:', error);
+      return {
+        success: true,
+        data: updatedBuilding,
+        message: 'Building updated successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error updating building:', 'BuildingService', error);
       throw new InternalServerErrorException('Error updating building');
     }
   }
@@ -182,7 +209,7 @@ export class BuildingService {
   async delete(id: number) {
     // Check if building exists
     const existingBuilding = await this.buildingRepo.findOne({
-      where: { building_id: id }
+      where: { building_id: id },
     });
 
     if (!existingBuilding) {
@@ -191,10 +218,13 @@ export class BuildingService {
 
     try {
       await this.buildingRepo.delete({ building_id: id });
-      return existingBuilding;
-
-    } catch (error) {
-      console.error('Error deleting building:', error);
+      return {
+        success: true,
+        data: existingBuilding,
+        message: 'Building deleted successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error deleting building:', 'BuildingService', error);
       throw new InternalServerErrorException('Error deleting building');
     }
   }

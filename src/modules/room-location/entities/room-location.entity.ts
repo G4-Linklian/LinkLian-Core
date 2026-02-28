@@ -1,5 +1,5 @@
 // room-location.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('room_location')
 export class RoomLocation {
@@ -20,5 +20,4 @@ export class RoomLocation {
 
   @Column({ name: 'flag_valid', default: true })
   flag_valid!: boolean;
-
 }

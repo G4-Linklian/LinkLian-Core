@@ -1,29 +1,17 @@
-import {
-  Controller,
-  Post,
-  Delete,
-  Get,
-  Param,
-  Headers,
-} from '@nestjs/common';
+import { Controller, Post, Delete, Get, Param, Headers } from '@nestjs/common';
 
 import { CommunityMemberService } from './community-member.service';
 
 @Controller('community/member')
 export class CommunityMemberController {
-  constructor(
-    private readonly service: CommunityMemberService,
-  ) { }
+  constructor(private readonly service: CommunityMemberService) {}
 
   @Post(':communityId')
   join(
     @Headers('x-user-id') userId: string,
     @Param('communityId') communityId: string,
   ) {
-    return this.service.joinCommunity(
-      Number(userId),
-      Number(communityId),
-    );
+    return this.service.joinCommunity(Number(userId), Number(communityId));
   }
 
   @Post(':communityId/approve/:targetUserId')
@@ -57,10 +45,7 @@ export class CommunityMemberController {
     @Headers('x-user-id') userId: string,
     @Param('communityId') communityId: string,
   ) {
-    return this.service.leaveCommunity(
-      Number(userId),
-      Number(communityId),
-    );
+    return this.service.leaveCommunity(Number(userId), Number(communityId));
   }
 
   @Get(':communityId/pending')
@@ -68,18 +53,11 @@ export class CommunityMemberController {
     @Headers('x-user-id') ownerId: string,
     @Param('communityId') communityId: string,
   ) {
-    return this.service.getPendingMembers(
-      Number(ownerId),
-      Number(communityId),
-    );
+    return this.service.getPendingMembers(Number(ownerId), Number(communityId));
   }
 
   @Get(':communityId')
-  members(
-    @Param('communityId') communityId: string,
-  ) {
-    return this.service.getMembers(
-      Number(communityId),
-    );
+  members(@Param('communityId') communityId: string) {
+    return this.service.getMembers(Number(communityId));
   }
 }

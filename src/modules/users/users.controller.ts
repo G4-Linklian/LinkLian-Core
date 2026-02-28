@@ -1,8 +1,22 @@
 // users.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { SearchUserSysDto, CreateUserSysDto, UpdateUserSysDto } from './dto/users.dto';
+import {
+  SearchUserSysDto,
+  CreateUserSysDto,
+  UpdateUserSysDto,
+} from './dto/users.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -18,7 +32,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async findById(@Param('id', ParseIntPipe) id: number) {
     const data = await this.usersService.findById(id);
-    return { success: true, data };
+    return data;
   }
 
   /**
@@ -30,7 +44,7 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
   async search(@Query() dto: SearchUserSysDto) {
     const data = await this.usersService.search(dto);
-    return { success : true , data };
+    return data;
   }
 
   /**
@@ -42,8 +56,8 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   @ApiResponse({ status: 409, description: 'Email already in use' })
   async create(@Body() dto: CreateUserSysDto) {
-    const user_sys_id = await this.usersService.create(dto);
-    return { success: true, message: 'User created successfully', data: { user_sys_id } };
+    const data = await this.usersService.create(dto);
+    return data;
   }
 
   /**
@@ -54,9 +68,12 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 409, description: 'Email or code already in use' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserSysDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUserSysDto,
+  ) {
     const data = await this.usersService.update(id, dto);
-    return { success: true, message: "User updated successfully", data };
+    return data;
   }
 
   /**
@@ -68,6 +85,6 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async delete(@Param('id', ParseIntPipe) id: number) {
     const data = await this.usersService.delete(id);
-    return { success: true, message: "User deleted successfully", data };
+    return data;
   }
 }

@@ -1,5 +1,11 @@
 // semester.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsDateString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import { SemesterStatus } from '../entities/semester.entity';
@@ -25,12 +31,18 @@ export class SearchSemesterDto {
   @IsString()
   semester?: string;
 
-  @ApiPropertyOptional({ description: 'Start date (YYYY-MM-DD)', example: '2024-05-01' })
+  @ApiPropertyOptional({
+    description: 'Start date (YYYY-MM-DD)',
+    example: '2024-05-01',
+  })
   @IsOptional()
   @IsString()
   start_date?: string;
 
-  @ApiPropertyOptional({ description: 'End date (YYYY-MM-DD)', example: '2024-09-30' })
+  @ApiPropertyOptional({
+    description: 'End date (YYYY-MM-DD)',
+    example: '2024-09-30',
+  })
   @IsOptional()
   @IsString()
   end_date?: string;
@@ -41,7 +53,11 @@ export class SearchSemesterDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Status', example: 'active', enum: SemesterStatus })
+  @ApiPropertyOptional({
+    description: 'Status',
+    example: 'active',
+    enum: SemesterStatus,
+  })
   @IsOptional()
   @IsString()
   status?: string;
@@ -51,7 +67,11 @@ export class SearchSemesterDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -81,7 +101,10 @@ export class CreateSemesterDto {
   @IsString()
   semester!: string;
 
-  @ApiProperty({ description: 'Start date (YYYY-MM-DD)', example: '2024-05-01' })
+  @ApiProperty({
+    description: 'Start date (YYYY-MM-DD)',
+    example: '2024-05-01',
+  })
   @IsDateString()
   start_date!: string;
 
@@ -93,7 +116,12 @@ export class CreateSemesterDto {
   @IsBoolean()
   flag_valid!: boolean;
 
-  @ApiPropertyOptional({ description: 'Status', example: 'pending', enum: SemesterStatus, default: 'pending' })
+  @ApiPropertyOptional({
+    description: 'Status',
+    example: 'pending',
+    enum: SemesterStatus,
+    default: 'pending',
+  })
   @IsOptional()
   @IsString()
   status?: string;
@@ -113,12 +141,18 @@ export class UpdateSemesterDto {
   @IsString()
   semester?: string;
 
-  @ApiPropertyOptional({ description: 'Start date (YYYY-MM-DD)', example: '2024-05-01' })
+  @ApiPropertyOptional({
+    description: 'Start date (YYYY-MM-DD)',
+    example: '2024-05-01',
+  })
   @IsOptional()
   @IsDateString()
   start_date?: string;
 
-  @ApiPropertyOptional({ description: 'End date (YYYY-MM-DD)', example: '2024-09-30' })
+  @ApiPropertyOptional({
+    description: 'End date (YYYY-MM-DD)',
+    example: '2024-09-30',
+  })
   @IsOptional()
   @IsDateString()
   end_date?: string;
@@ -128,7 +162,11 @@ export class UpdateSemesterDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Status', example: 'active', enum: SemesterStatus })
+  @ApiPropertyOptional({
+    description: 'Status',
+    example: 'active',
+    enum: SemesterStatus,
+  })
   @IsOptional()
   @IsString()
   status?: string;

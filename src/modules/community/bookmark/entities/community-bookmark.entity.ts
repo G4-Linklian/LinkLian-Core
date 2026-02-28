@@ -1,12 +1,7 @@
-import {
-  Entity,
-  PrimaryColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('community_bookmark')
 export class CommunityBookmarkEntity {
-
   @PrimaryColumn()
   user_sys_id: number;
 
@@ -15,5 +10,4 @@ export class CommunityBookmarkEntity {
 
   @CreateDateColumn()
   saved_at: Date;
-
 }

@@ -9,7 +9,14 @@ import { SectionEducator } from './entities/section-educator.entity';
 import { Enrollment } from './entities/enrollment.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Section, SectionSchedule, SectionEducator, Enrollment])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Section,
+      SectionSchedule,
+      SectionEducator,
+      Enrollment,
+    ]),
+  ],
   controllers: [SectionController],
   providers: [SectionService],
   exports: [SectionService],

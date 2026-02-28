@@ -1,11 +1,23 @@
 // file-storage.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { blobServiceClient } from '../../config/blob.config';
-import { UploadedFileResponse, UploadResultResponse, DeleteResultResponse } from './dto/file-storage.dto';
+import {
+  UploadedFileResponse,
+  UploadResultResponse,
+  DeleteResultResponse,
+} from './dto/file-storage.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class FileStorageService {
+  constructor(private readonly logger: AppLogger) {}
+
   /**
    * Upload multiple files to Azure Blob Storage
    * @param containerName - The name of the blob container
@@ -16,7 +28,7 @@ export class FileStorageService {
   async uploadFiles(
     containerName: string,
     folderName: string,
-    files: Express.Multer.File[]
+    files: Express.Multer.File[],
   ): Promise<UploadResultResponse> {
     // Validate container and folder names
     if (!containerName || !folderName) {
@@ -30,7 +42,8 @@ export class FileStorageService {
 
     try {
       // Get container client
-      const containerClient = blobServiceClient.getContainerClient(containerName);
+      const containerClient =
+        blobServiceClient.getContainerClient(containerName);
       const containerExists = await containerClient.exists();
 
       if (!containerExists) {
@@ -41,45 +54,57 @@ export class FileStorageService {
       await containerClient.setAccessPolicy('blob');
 
       // Upload all files in parallel
-      console.log(`[FileStorage] Uploading ${files.length} files to ${containerName}/${folderName}`);
-      
-      const uploadPromises = files.map(async (file): Promise<UploadedFileResponse> => {
-        // Extract file extension from original name
-        const fileExtension = file.originalname.split('.').pop();
-        
-        // Generate unique blob name with UUID
-        const blobName = `${folderName}/${uuidv4()}.${fileExtension}`;
-        
-        console.log(`[FileStorage] Uploading file:`, {
-          originalName: file.originalname,
-          blobName: blobName,
-          size: file.size,
-          mimetype: file.mimetype
-        });
-        
-        // Get block blob client
-        const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      this.logger.log(
+        `Uploading ${files.length} files to ${containerName}/${folderName}`,
+        'FileStorageService',
+      );
 
-        // Upload file buffer with content type
-        await blockBlobClient.uploadData(file.buffer, {
-          blobHTTPHeaders: { blobContentType: file.mimetype }
-        });
+      const uploadPromises = files.map(
+        async (file): Promise<UploadedFileResponse> => {
+          // Extract file extension from original name
+          const fileExtension = file.originalname.split('.').pop();
 
-        const result = {
-          originalName: file.originalname,
-          fileType: fileExtension || '',
-          fileName: blobName,
-          fileUrl: blockBlobClient.url
-        };
-        
-        console.log(`[FileStorage] File uploaded successfully:`, result);
-        
-        return result;
-      });
+          // Generate unique blob name with UUID
+          const blobName = `${folderName}/${uuidv4()}.${fileExtension}`;
+
+          this.logger.log(`Uploading file:`, 'FileStorageService', {
+            originalName: file.originalname,
+            blobName,
+            size: file.size,
+            mimetype: file.mimetype,
+          });
+
+          // Get block blob client
+          const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+          // Upload file buffer with content type
+          await blockBlobClient.uploadData(file.buffer, {
+            blobHTTPHeaders: { blobContentType: file.mimetype },
+          });
+
+          const result = {
+            originalName: file.originalname,
+            fileType: fileExtension || '',
+            fileName: blobName,
+            fileUrl: blockBlobClient.url,
+          };
+
+          this.logger.log(
+            `File uploaded successfully:`,
+            'FileStorageService',
+            result,
+          );
+
+          return result;
+        },
+      );
 
       const uploadResult = await Promise.all(uploadPromises);
-      
-      console.log(`[FileStorage] All files uploaded. Total: ${uploadResult.length}`);
+
+      this.logger.log(
+        `All files uploaded. Total: ${uploadResult.length}`,
+        'FileStorageService',
+      );
 
       return {
         success: true,
@@ -87,16 +112,18 @@ export class FileStorageService {
         uploadedCount: uploadResult.length,
         container: containerName,
         folder: folderName,
-        files: uploadResult
+        files: uploadResult,
       };
-
-    } catch (error) {
+    } catch (error: unknown) {
       // Re-throw NestJS exceptions
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
-      
-      console.error('Upload failed:', error);
+
+      this.logger.error('Upload failed:', 'FileStorageService', error);
       throw new InternalServerErrorException('Upload failed');
     }
   }
@@ -109,7 +136,7 @@ export class FileStorageService {
    */
   async deleteFiles(
     containerName: string,
-    fileNames: string[]
+    fileNames: string[],
   ): Promise<DeleteResultResponse> {
     // Validate file names array
     if (!fileNames || fileNames.length === 0) {
@@ -118,7 +145,8 @@ export class FileStorageService {
 
     try {
       // Get container client
-      const containerClient = blobServiceClient.getContainerClient(containerName);
+      const containerClient =
+        blobServiceClient.getContainerClient(containerName);
       const containerExists = await containerClient.exists();
 
       if (!containerExists) {
@@ -131,16 +159,20 @@ export class FileStorageService {
         await blockBlobClient.delete();
 
         return {
-          fileName: fileName,
+          fileName,
           fileUrl: blockBlobClient.url,
         };
       });
 
       const deleteResult = await Promise.allSettled(deletePromises);
-      
+
       // Count successful and failed deletions
-      const successfulDeletes = deleteResult.filter(result => result.status === 'fulfilled').length;
-      const failedDeletes = deleteResult.filter(result => result.status === 'rejected').length;
+      const successfulDeletes = deleteResult.filter(
+        (result) => result.status === 'fulfilled',
+      ).length;
+      const failedDeletes = deleteResult.filter(
+        (result) => result.status === 'rejected',
+      ).length;
 
       return {
         success: true,
@@ -148,18 +180,20 @@ export class FileStorageService {
         container: containerName,
         deletedCount: {
           successfulDeletes,
-          failedDeletes
+          failedDeletes,
         },
-        files: deleteResult
+        files: deleteResult,
       };
-
-    } catch (error) {
+    } catch (error: unknown) {
       // Re-throw NestJS exceptions
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
-      
-      console.error('Delete failed:', error);
+
+      this.logger.error('Delete failed:', 'FileStorageService', error);
       throw new InternalServerErrorException('Delete failed');
     }
   }
@@ -170,19 +204,27 @@ export class FileStorageService {
    * @param fileName - The file path (blob name)
    * @returns File metadata including size
    */
-  async getFileMetadata(containerName: string, fileName: string): Promise<{ size: number; contentType: string }> {
+  async getFileMetadata(
+    containerName: string,
+    fileName: string,
+  ): Promise<{ size: number; contentType: string }> {
     try {
-      const containerClient = blobServiceClient.getContainerClient(containerName);
+      const containerClient =
+        blobServiceClient.getContainerClient(containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(fileName);
-      
+
       const properties = await blockBlobClient.getProperties();
-      
+
       return {
         size: properties.contentLength || 0,
-        contentType: properties.contentType || 'application/octet-stream'
+        contentType: properties.contentType || 'application/octet-stream',
       };
-    } catch (error) {
-      console.error(`[FileStorage] Error getting file metadata:`, error);
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error getting file metadata:`,
+        'FileStorageService',
+        error,
+      );
       return { size: 0, contentType: 'application/octet-stream' };
     }
   }
@@ -194,31 +236,35 @@ export class FileStorageService {
    * @returns Array of file metadata
    */
   async getMultipleFileMetadata(
-    containerName: string, 
-    fileNames: string[]
+    containerName: string,
+    fileNames: string[],
   ): Promise<Array<{ fileName: string; size: number; contentType: string }>> {
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    
+
     const metadataPromises = fileNames.map(async (fileName) => {
       try {
         const blockBlobClient = containerClient.getBlockBlobClient(fileName);
         const properties = await blockBlobClient.getProperties();
-        
+
         return {
           fileName,
           size: properties.contentLength || 0,
-          contentType: properties.contentType || 'application/octet-stream'
+          contentType: properties.contentType || 'application/octet-stream',
         };
-      } catch (error) {
-        console.error(`[FileStorage] Error getting metadata for ${fileName}:`, error);
+      } catch (error: unknown) {
+        this.logger.error(
+          `Error getting metadata for ${fileName}:`,
+          'FileStorageService',
+          error,
+        );
         return {
           fileName,
           size: 0,
-          contentType: 'application/octet-stream'
+          contentType: 'application/octet-stream',
         };
       }
     });
-    
+
     return Promise.all(metadataPromises);
   }
 }

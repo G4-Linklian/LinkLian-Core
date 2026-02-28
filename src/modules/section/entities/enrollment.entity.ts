@@ -3,7 +3,6 @@ import { Entity, Column, PrimaryColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('enrollment')
 export class Enrollment {
-
   @PrimaryColumn({ name: 'section_id' })
   section_id!: number;
 

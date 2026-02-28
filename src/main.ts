@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
+import { AppLogger } from './common/logger/app-logger.service';
+const logger = new AppLogger();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,16 +13,17 @@ async function bootstrap() {
     exclude: ['health', 'ping'],
   });
 
-
   // Enable validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: false,
-    transformOptions: {
-      //enableImplicitConversion: true,
-    },
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transformOptions: {
+        //enableImplicitConversion: true,
+      },
+    }),
+  );
 
   app.enableCors();
 
@@ -48,16 +51,25 @@ async function bootstrap() {
   // SwaggerModule.setup('docs', app, document);
   SwaggerModule.setup('docs', app, document, {
     swaggerOptions: {
-      docExpansion: 'none',     // พับทั้งหมด
-      // defaultModelsExpandDepth: -1, 
-      persistAuthorization: true,  // จำ token
+      docExpansion: 'none', // พับทั้งหมด
+      // defaultModelsExpandDepth: -1,
+      persistAuthorization: true, // จำ token
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
   });
 
   await app.listen(process.env.PORT ?? 5400);
-  console.log(`Application is running on: ${await app.getUrl()}/${process.env.API_PREFIX ?? 'v1'}`);
-  console.log(`Swagger docs available at: ${await app.getUrl()}/docs`);
+  logger.log(
+    `Application is running on: ${await app.getUrl()}/${process.env.API_PREFIX ?? 'v1'}`,
+    'LinkLianCore',
+  );
+  logger.log(
+    `Swagger docs available at: ${await app.getUrl()}/docs`,
+    'LinkLianCore',
+  );
 }
-bootstrap();
+void bootstrap().catch((err) => {
+  logger.error('Fatal startup error:', 'LinkLianCore', err);
+  process.exit(1);
+});
