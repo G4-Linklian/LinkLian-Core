@@ -15,29 +15,29 @@ import { Building } from '../../building/entities/building.entity';
 import { RoomLocation } from '../../room-location/entities/room-location.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            UserSys,
-            Subject,
-            Section,
-            SectionSchedule,
-            SectionEducator,
-            Institution,
-            Semester,
-            Building,
-            RoomLocation
-        ]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
-                signOptions: { expiresIn: '30m' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    controllers: [ImportSectionScheduleController],
-    providers: [ImportSectionScheduleService],
-    exports: [ImportSectionScheduleService],
+  imports: [
+    TypeOrmModule.forFeature([
+      UserSys,
+      Subject,
+      Section,
+      SectionSchedule,
+      SectionEducator,
+      Institution,
+      Semester,
+      Building,
+      RoomLocation,
+    ]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
+        signOptions: { expiresIn: '30m' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [ImportSectionScheduleController],
+  providers: [ImportSectionScheduleService],
+  exports: [ImportSectionScheduleService],
 })
 export class ImportSectionScheduleModule {}

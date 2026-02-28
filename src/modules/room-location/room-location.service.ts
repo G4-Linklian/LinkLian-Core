@@ -1,9 +1,21 @@
 // room-location.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { RoomLocation } from './entities/room-location.entity';
-import { SearchRoomLocationDto, CreateRoomLocationDto, CreateRoomLocationBatchDto, UpdateRoomLocationDto } from './dto/room-location.dto';
+import {
+  SearchRoomLocationDto,
+  CreateRoomLocationDto,
+  CreateRoomLocationBatchDto,
+  UpdateRoomLocationDto,
+} from './dto/room-location.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class RoomLocationService {
@@ -11,6 +23,7 @@ export class RoomLocationService {
     @InjectRepository(RoomLocation)
     private roomLocationRepo: Repository<RoomLocation>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -18,7 +31,7 @@ export class RoomLocationService {
    */
   async findById(id: number) {
     const roomLocation = await this.roomLocationRepo.findOne({
-      where: { room_location_id: id }
+      where: { room_location_id: id },
     });
 
     if (!roomLocation) {
@@ -34,9 +47,13 @@ export class RoomLocationService {
    */
   async search(dto: SearchRoomLocationDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.room_location_id || dto.building_id ||
-                     dto.room_number || dto.room_remark ||
-                     dto.floor || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.room_location_id ||
+      dto.building_id ||
+      dto.room_number ||
+      dto.room_remark ||
+      dto.floor ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -102,8 +119,12 @@ export class RoomLocationService {
     try {
       const result = await this.dataSource.query(query, values);
       return result;
-    } catch (err) {
-      console.error('Error executing search room location query:', err);
+    } catch (err: unknown) {
+      this.logger.error(
+        'Error executing search room location query:',
+        'SearchRoomLocation',
+        err,
+      );
       throw new InternalServerErrorException('Error fetching room locations');
     }
   }
@@ -125,15 +146,21 @@ export class RoomLocationService {
         flag_valid: true,
       });
 
-      const savedRoomLocation = await this.roomLocationRepo.save(newRoomLocation);
+      const savedRoomLocation =
+        await this.roomLocationRepo.save(newRoomLocation);
       return savedRoomLocation;
-
     } catch (error: any) {
       // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('Duplicate room number in the same building');
+        throw new ConflictException(
+          'Duplicate room number in the same building',
+        );
       }
-      console.error('Error creating room location:', error);
+      this.logger.error(
+        'Error creating room location:',
+        'CreateRoomLocation',
+        error,
+      );
       throw new InternalServerErrorException('Error creating room location');
     }
   }
@@ -151,10 +178,9 @@ export class RoomLocationService {
     }
 
     // Validate required fields for each room
-    const isValid = rooms.every(room =>
-      room.building_id &&
-      room.room_number &&
-      room.floor !== undefined
+    const isValid = rooms.every(
+      (room) =>
+        room.building_id && room.room_number && room.floor !== undefined,
     );
 
     if (!isValid) {
@@ -167,7 +193,7 @@ export class RoomLocationService {
       const key = `${room.building_id}-${room.floor}-${room.room_number}`;
       if (seen.has(key)) {
         throw new ConflictException(
-          `Duplicate room found in payload: Building ${room.building_id}, Floor ${room.floor}, Room ${room.room_number}`
+          `Duplicate room found in payload: Building ${room.building_id}, Floor ${room.floor}, Room ${room.room_number}`,
         );
       }
       seen.add(key);
@@ -190,11 +216,11 @@ export class RoomLocationService {
           room.room_number,
           room.room_remark || '',
           room.floor,
-          true
+          true,
         );
 
         placeholders.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`,
         );
 
         paramIndex += 5;
@@ -212,20 +238,25 @@ export class RoomLocationService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      return { 
+      return {
         success: true,
-        message: `Created ${result.length} rooms successfully!`, 
-        data: result 
+        message: `Created ${result.length} rooms successfully!`,
+        data: result,
       };
-
     } catch (error: any) {
       // Rollback on error
       await queryRunner.rollbackTransaction();
-      console.error('Batch insert error:', error);
+      this.logger.error(
+        'Batch insert error:',
+        'CreateRoomLocationBatch',
+        error,
+      );
 
       // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('Duplicate room number in the same building');
+        throw new ConflictException(
+          'Duplicate room number in the same building',
+        );
       }
 
       throw new InternalServerErrorException('Error creating room locations');
@@ -240,7 +271,7 @@ export class RoomLocationService {
   async update(id: number, dto: UpdateRoomLocationDto) {
     // Check if room location exists
     const existingRoom = await this.roomLocationRepo.findOne({
-      where: { room_location_id: id }
+      where: { room_location_id: id },
     });
 
     if (!existingRoom) {
@@ -254,7 +285,8 @@ export class RoomLocationService {
     if (dto.room_number !== undefined) updates.room_number = dto.room_number;
     if (dto.floor !== undefined) updates.floor = dto.floor;
     if (dto.room_remark !== undefined) updates.room_remark = dto.room_remark;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
 
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No fields to update!');
@@ -262,19 +294,24 @@ export class RoomLocationService {
 
     try {
       await this.roomLocationRepo.update({ room_location_id: id }, updates);
-      
+
       const updatedRoom = await this.roomLocationRepo.findOne({
-        where: { room_location_id: id }
+        where: { room_location_id: id },
       });
 
       return updatedRoom;
-
     } catch (error: any) {
       // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('Duplicate room number in the same building');
+        throw new ConflictException(
+          'Duplicate room number in the same building',
+        );
       }
-      console.error('Error updating room location:', error);
+      this.logger.error(
+        'Error updating room location:',
+        'UpdateRoomLocation',
+        error,
+      );
       throw new InternalServerErrorException('Error updating room location');
     }
   }
@@ -285,7 +322,7 @@ export class RoomLocationService {
   async delete(id: number) {
     // Check if room location exists
     const existingRoom = await this.roomLocationRepo.findOne({
-      where: { room_location_id: id }
+      where: { room_location_id: id },
     });
 
     if (!existingRoom) {
@@ -295,9 +332,12 @@ export class RoomLocationService {
     try {
       await this.roomLocationRepo.delete({ room_location_id: id });
       return existingRoom;
-
-    } catch (error) {
-      console.error('Error deleting room location:', error);
+    } catch (error: any) {
+      this.logger.error(
+        'Error deleting room location:',
+        'DeleteRoomLocation',
+        error,
+      );
       throw new InternalServerErrorException('Error deleting room location');
     }
   }

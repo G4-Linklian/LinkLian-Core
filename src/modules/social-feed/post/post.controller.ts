@@ -1,8 +1,31 @@
 // post.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, Headers, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  Headers,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { PostService } from './post.service';
-import { CreatePostDto, UpdatePostDto, GetPostsInClassDto, SearchPostDto } from './dto/post.dto';
+import {
+  CreatePostDto,
+  UpdatePostDto,
+  GetPostsInClassDto,
+  SearchPostDto,
+} from './dto/post.dto';
 
 @ApiTags('Social Feed - Post')
 @Controller('social-feed/post')
@@ -25,9 +48,21 @@ export class PostController {
   @Get()
   @ApiOperation({ summary: 'Get posts in a class/section' })
   @ApiQuery({ name: 'section_id', description: 'Section ID', required: true })
-  @ApiQuery({ name: 'type', description: 'Filter by post type', required: false })
-  @ApiQuery({ name: 'offset', description: 'Offset for pagination', required: false })
-  @ApiQuery({ name: 'limit', description: 'Limit for pagination', required: false })
+  @ApiQuery({
+    name: 'type',
+    description: 'Filter by post type',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'offset',
+    description: 'Offset for pagination',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Limit for pagination',
+    required: false,
+  })
   @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
   getPostsInClass(@Query() dto: GetPostsInClassDto) {
     return this.postService.getPostsInClass(dto);
@@ -38,13 +73,14 @@ export class PostController {
    */
   @Post()
   @ApiOperation({ summary: 'Create a new post in class' })
-  @ApiHeader({ name: 'x-user-id', description: 'User ID from auth', required: true })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'User ID from auth',
+    required: true,
+  })
   @ApiResponse({ status: 201, description: 'Post created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-  createPost(
-    @Headers('x-user-id') userId: string,
-    @Body() dto: CreatePostDto,
-  ) {
+  createPost(@Headers('x-user-id') userId: string, @Body() dto: CreatePostDto) {
     const parsedUserId = parseInt(userId, 10);
     if (isNaN(parsedUserId)) {
       throw new BadRequestException('Invalid user ID');
@@ -57,7 +93,11 @@ export class PostController {
    */
   @Put(':postId')
   @ApiOperation({ summary: 'Update a post (owner only)' })
-  @ApiHeader({ name: 'x-user-id', description: 'User ID from auth', required: true })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'User ID from auth',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Post updated successfully' })
   @ApiResponse({ status: 403, description: 'Not allowed to update this post' })
   @ApiResponse({ status: 404, description: 'Post not found' })
@@ -78,7 +118,11 @@ export class PostController {
    */
   @Put()
   @ApiOperation({ summary: 'Update a post by post_content_id (owner only)' })
-  @ApiHeader({ name: 'x-user-id', description: 'User ID from auth', required: true })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'User ID from auth',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Post updated successfully' })
   updatePostByContentId(
     @Headers('x-user-id') userId: string,
@@ -92,7 +136,7 @@ export class PostController {
       parsedUserId,
       0,
       body,
-      body.post_content_id
+      body.post_content_id,
     );
   }
 
@@ -101,7 +145,11 @@ export class PostController {
    */
   @Delete(':postId')
   @ApiOperation({ summary: 'Delete a post (owner only, soft delete)' })
-  @ApiHeader({ name: 'x-user-id', description: 'User ID from auth', required: true })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'User ID from auth',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Post deleted successfully' })
   @ApiResponse({ status: 403, description: 'Not allowed to delete this post' })
   @ApiResponse({ status: 404, description: 'Post not found' })
@@ -121,7 +169,11 @@ export class PostController {
    */
   @Delete()
   @ApiOperation({ summary: 'Delete a post by post_id and post_content_id' })
-  @ApiHeader({ name: 'x-user-id', description: 'User ID from auth', required: true })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'User ID from auth',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Post deleted successfully' })
   deletePostByBody(
     @Headers('x-user-id') userId: string,

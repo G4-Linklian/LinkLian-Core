@@ -7,6 +7,13 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ACCESS_KEY } from '../decorators/access.decorator';
 import { AppLogger } from '../logger/app-logger.service';
+import { Request } from 'express';
+import { JwtPayload } from 'src/common/interface/payload.interface';
+
+type RequestWithUser = Request & {
+  user?: JwtPayload;
+  req_from?: 'user' | 'institution' | 'unknown';
+};
 
 @Injectable()
 export class AccessGuard implements CanActivate {
@@ -19,60 +26,46 @@ export class AccessGuard implements CanActivate {
     const requiredAccess = this.reflector.getAllAndOverride<{
       resource: string;
       action: string;
-    }>(ACCESS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    }>(ACCESS_KEY, [context.getHandler(), context.getClass()]);
 
     if (!requiredAccess) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
     const user = request.user;
-    const reqForm = request.req_form;
+    const reqForm = request.req_from;
 
     if (reqForm === 'institution') {
-      this.logger.debug(
-        'Institution bypass permission check',
-        'AccessGuard',
-        { resource: requiredAccess.resource },
-      );
+      this.logger.debug('Institution bypass permission check', 'AccessGuard', {
+        resource: requiredAccess.resource,
+      });
       return true;
     }
 
-    if (!user?.access) {
+    if (!user || !('access' in user)) {
       throw new ForbiddenException('Access denied');
     }
 
     const { resource, action } = requiredAccess;
 
-    const hasPermission =
-      user.access?.[resource]?.[action] === true;
+    const hasPermission = user.access?.[resource]?.[action] === true;
 
     if (!hasPermission) {
-      this.logger.warn(
-        'Permission denied',
-        'AccessGuard',
-        {
-          userId: user.user_id,
-          resource,
-          action,
-        },
-      );
+      this.logger.warn('Permission denied', 'AccessGuard', {
+        userId: user.user_id,
+        resource,
+        action,
+      });
 
       throw new ForbiddenException('Permission denied');
     }
 
-    this.logger.debug(
-      'Permission granted',
-      'AccessGuard',
-      {
-        userId: user.user_id,
-        resource,
-        action,
-      },
-    );
+    this.logger.debug('Permission granted', 'AccessGuard', {
+      userId: user.user_id,
+      resource,
+      action,
+    });
 
     return true;
   }

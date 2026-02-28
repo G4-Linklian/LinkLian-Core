@@ -8,7 +8,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityMemberService {
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   async joinCommunity(userId: number, communityId: number) {
     try {
@@ -33,7 +33,6 @@ export class CommunityMemberService {
       const isPrivate = community[0].is_private;
       const newStatus = isPrivate ? 'pending' : 'active';
 
-
       const existing = await this.dataSource.query(
         `
     SELECT *
@@ -46,13 +45,12 @@ export class CommunityMemberService {
 
       let result;
       if (existing.length > 0) {
-
-
-        if (existing[0].flag_valid === true &&
-          existing[0].status === 'active') {
+        if (
+          existing[0].flag_valid === true &&
+          existing[0].status === 'active'
+        ) {
           throw new BadRequestException('Already joined');
         }
-
 
         result = await this.dataSource.query(
           `
@@ -67,8 +65,6 @@ export class CommunityMemberService {
           [communityId, userId, newStatus],
         );
       } else {
-
-
         result = await this.dataSource.query(
           `
     INSERT INTO community_member
@@ -87,7 +83,6 @@ export class CommunityMemberService {
             ? 'Joined community successfully!'
             : 'Join request sent successfully!',
       };
-
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -104,7 +99,6 @@ export class CommunityMemberService {
     communityId: number,
     targetUserId: number,
   ) {
-
     const community = await this.dataSource.query(
       `
       SELECT status FROM community
@@ -181,7 +175,6 @@ export class CommunityMemberService {
         data: result[0][0],
         message: 'Member approved successfully!',
       };
-
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -200,7 +193,6 @@ export class CommunityMemberService {
     await queryRunner.startTransaction();
 
     try {
-
       const member = await queryRunner.query(
         `
         SELECT role, flag_valid, status
@@ -218,10 +210,7 @@ export class CommunityMemberService {
         throw new BadRequestException('Already left community');
       }
 
-      if (
-        member[0].role === 'owner' &&
-        member[0].status === 'active'
-      ) {
+      if (member[0].role === 'owner' && member[0].status === 'active') {
         await queryRunner.query(
           `
           UPDATE community
@@ -231,7 +220,6 @@ export class CommunityMemberService {
           [communityId],
         );
       }
-
 
       await queryRunner.query(
         `
@@ -250,7 +238,6 @@ export class CommunityMemberService {
         data: { community_id: communityId },
         message: 'Left community successfully!',
       };
-
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -281,7 +268,6 @@ export class CommunityMemberService {
         data: { members: result },
         message: 'Members fetched successfully!',
       };
-
     } catch {
       throw new InternalServerErrorException('Error fetching members');
     }
@@ -302,7 +288,6 @@ export class CommunityMemberService {
     if (owner.length === 0) {
       throw new ForbiddenException('Only owner can view pending members');
     }
-
 
     const result = await this.dataSource.query(
       `
@@ -331,14 +316,11 @@ export class CommunityMemberService {
       data: { members: result },
       message: 'Pending members fetched successfully!',
     };
-
-  } catch(error) {
-    if (error instanceof ForbiddenException) throw error;
-    throw new InternalServerErrorException(
-      'Error fetching pending members',
-    );
   }
-
+  catch(error) {
+    if (error instanceof ForbiddenException) throw error;
+    throw new InternalServerErrorException('Error fetching pending members');
+  }
 
   async rejectMember(
     ownerId: number,
@@ -412,12 +394,9 @@ export class CommunityMemberService {
         data: { user_sys_id: targetUserId },
         message: 'Member rejected successfully!',
       };
-
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
       throw new InternalServerErrorException('Error rejecting member');
     }
   }
 }
-
-

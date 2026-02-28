@@ -7,19 +7,19 @@ import { ImportSubjectService } from './import-subject.service';
 import { LearningArea } from '../../learning-area/entities/learning-area.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([LearningArea]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
-                signOptions: { expiresIn: '30m' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    controllers: [ImportSubjectController],
-    providers: [ImportSubjectService],
-    exports: [ImportSubjectService],
+  imports: [
+    TypeOrmModule.forFeature([LearningArea]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
+        signOptions: { expiresIn: '30m' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [ImportSubjectController],
+  providers: [ImportSubjectService],
+  exports: [ImportSubjectService],
 })
-export class ImportSubjectModule { }
+export class ImportSubjectModule {}

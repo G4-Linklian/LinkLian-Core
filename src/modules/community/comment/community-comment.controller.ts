@@ -7,7 +7,6 @@ import {
   Body,
   Query,
   Headers,
-  Req,
   Param,
   BadRequestException,
   ParseIntPipe,
@@ -23,7 +22,7 @@ import { ApiHeader, ApiQuery } from '@nestjs/swagger';
 
 @Controller('community-comment')
 export class CommunityCommentController {
-  constructor(private readonly service: CommunityCommentService) { }
+  constructor(private readonly service: CommunityCommentService) {}
 
   @Get()
   @ApiQuery({ name: 'post_commu_id', type: Number, required: true })
@@ -32,7 +31,6 @@ export class CommunityCommentController {
   async get(@Query() dto: GetCommunityCommentsDto) {
     return this.service.getComments(dto);
   }
-
 
   @Post()
   async create(
@@ -52,7 +50,6 @@ export class CommunityCommentController {
     return this.service.updateComment(userId, dto);
   }
 
-
   @Delete(':commentId/hard')
   @ApiHeader({ name: 'x-user-id', required: true })
   async hardDeleteComment(
@@ -65,10 +62,7 @@ export class CommunityCommentController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    return this.service.hardDeleteComment(
-      userId,
-      commentId,
-    );
+    return this.service.hardDeleteComment(userId, commentId);
   }
 
   @Delete()
@@ -85,6 +79,4 @@ export class CommunityCommentController {
 
     return this.service.deleteComment(userId, dto.comment_id);
   }
-
 }
-

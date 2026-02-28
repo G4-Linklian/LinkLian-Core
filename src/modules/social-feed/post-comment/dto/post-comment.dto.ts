@@ -1,6 +1,12 @@
 // post-comment.dto.ts
-import { IsNumber, IsString, IsBoolean, IsOptional, IsNotEmpty } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import {
+  IsNumber,
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsNotEmpty,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 /**
  * DTO for getting comments of a post (query params)
@@ -9,7 +15,7 @@ export class GetPostCommentsDto {
   @IsNotEmpty()
   @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
-  post_id: number;
+  post_id!: number;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
@@ -27,10 +33,10 @@ export class GetPostCommentsDto {
  */
 export class CreatePostCommentDto {
   @IsNumber()
-  post_id: number;
+  post_id!: number;
 
   @IsString()
-  comment_text: string;
+  comment_text!: string;
 
   @IsOptional()
   @IsBoolean()
@@ -46,7 +52,7 @@ export class CreatePostCommentDto {
  */
 export class UpdatePostCommentDto {
   @IsNumber()
-  comment_id: number;
+  comment_id!: number;
 
   @IsOptional()
   @IsString()
@@ -62,7 +68,7 @@ export class UpdatePostCommentDto {
  */
 export class DeletePostCommentDto {
   @IsNumber()
-  comment_id: number;
+  comment_id!: number;
 }
 
 /**

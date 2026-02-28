@@ -1,8 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CommunityCommentService } from './community-comment.service';
 
@@ -105,11 +102,11 @@ describe('CommunityCommentService', () => {
 
       await service.getComments(dto);
 
-      expect(dataSource.query).toHaveBeenNthCalledWith(
-        2,
-        expect.any(String),
-        [postId, 10, 0],
-      );
+      expect(dataSource.query).toHaveBeenNthCalledWith(2, expect.any(String), [
+        postId,
+        10,
+        0,
+      ]);
     });
 
     it('should handle pagination correctly', async () => {
@@ -194,9 +191,7 @@ describe('CommunityCommentService', () => {
         post_commu_id: postId,
       };
 
-      dataSource.query
-        .mockResolvedValueOnce([{}])
-        .mockResolvedValueOnce([]);
+      dataSource.query.mockResolvedValueOnce([{}]).mockResolvedValueOnce([]);
 
       const result = await service.getComments(dto);
 
@@ -413,9 +408,7 @@ describe('CommunityCommentService', () => {
         comment_text: 'New comment text',
       };
 
-      dataSource.query.mockResolvedValueOnce([
-        { commu_comment_id: commentId },
-      ]);
+      dataSource.query.mockResolvedValueOnce([{ commu_comment_id: commentId }]);
 
       await service.updateComment(userId, dto);
 
@@ -464,9 +457,7 @@ describe('CommunityCommentService', () => {
     });
 
     it('should throw error when not comment owner', async () => {
-      dataSource.query.mockResolvedValueOnce([
-        { user_sys_id: 999 },
-      ]);
+      dataSource.query.mockResolvedValueOnce([{ user_sys_id: 999 }]);
 
       await expect(service.deleteComment(userId, commentId)).rejects.toThrow(
         ForbiddenException,

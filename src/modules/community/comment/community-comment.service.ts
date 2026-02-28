@@ -8,7 +8,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityCommentService {
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   async getComments(dto: any) {
     const { post_commu_id, limit = 10, offset = 0 } = dto;
@@ -176,22 +176,22 @@ export class CommunityCommentService {
       throw new ForbiddenException('Community is inactive');
     }
     if (post[0].is_private) {
-
-      const member = await this.dataSource.query(`
+      const member = await this.dataSource.query(
+        `
     SELECT 1
     FROM community_member
     WHERE community_id=$1
       AND user_sys_id=$2
       AND status='active'
       AND flag_valid=true
-  `, [post[0].community_id, userId]);
+  `,
+        [post[0].community_id, userId],
+      );
 
       if (!member.length) {
         throw new ForbiddenException('Private community');
       }
     }
-
-
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -249,19 +249,20 @@ export class CommunityCommentService {
     }
   }
 
-
   async updateComment(userId: number, dto: any) {
     const { comment_id, comment_text } = dto;
-    const post = await this.dataSource.query(`
+    const post = await this.dataSource.query(
+      `
   SELECT c.status
   FROM community_comment cc
   JOIN post_in_community p ON p.post_commu_id = cc.post_commu_id
   JOIN community c ON c.community_id = p.community_id
   WHERE cc.commu_comment_id=$1
-`, [comment_id]);
+`,
+      [comment_id],
+    );
 
-    if (!post.length)
-      throw new BadRequestException('Comment not found');
+    if (!post.length) throw new BadRequestException('Comment not found');
 
     if (post[0].status !== 'active')
       throw new ForbiddenException('Community is inactive');
@@ -284,7 +285,8 @@ export class CommunityCommentService {
       }
 
       return {
-        success: true, data: { comment_id },
+        success: true,
+        data: { comment_id },
         message: 'Comment updated successfully!',
       };
     } catch (error) {
@@ -295,13 +297,11 @@ export class CommunityCommentService {
   }
 
   async hardDeleteComment(userId: number, commentId: number) {
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-
       const check = await queryRunner.query(
         `
       SELECT user_sys_id
@@ -311,18 +311,19 @@ export class CommunityCommentService {
         [commentId],
       );
 
-      if (!check.length)
-        throw new BadRequestException('Comment not found');
+      if (!check.length) throw new BadRequestException('Comment not found');
 
       if (Number(check[0].user_sys_id) !== userId)
         throw new ForbiddenException('Not allowed');
 
-
-      const descendants = await queryRunner.query(`
+      const descendants = await queryRunner.query(
+        `
       SELECT descendant_id
       FROM community_comment_path
       WHERE ancestor_id=$1
-    `, [commentId]);
+    `,
+        [commentId],
+      );
 
       const ids = descendants.map((d: any) => d.descendant_id);
 
@@ -336,15 +337,21 @@ export class CommunityCommentService {
         };
       }
 
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_comment
       WHERE commu_comment_id = ANY($1)
-    `, [ids]);
+    `,
+        [ids],
+      );
 
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
       DELETE FROM community_comment_path
       WHERE descendant_id = ANY($1)
-    `, [ids]);
+    `,
+        [ids],
+      );
 
       await queryRunner.commitTransaction();
       return {
@@ -352,7 +359,6 @@ export class CommunityCommentService {
         data: { deleted_ids: ids },
         message: 'Comment deleted successfully!',
       };
-
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -365,5 +371,4 @@ export class CommunityCommentService {
   async deleteComment(userId: number, commentId: number) {
     return this.hardDeleteComment(userId, commentId);
   }
-
 }

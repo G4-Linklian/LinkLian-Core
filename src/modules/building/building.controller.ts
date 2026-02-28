@@ -1,8 +1,22 @@
 // building.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BuildingService } from './building.service';
-import { SearchBuildingDto, CreateBuildingDto, UpdateBuildingDto } from './dto/building.dto';
+import {
+  SearchBuildingDto,
+  CreateBuildingDto,
+  UpdateBuildingDto,
+} from './dto/building.dto';
 
 @ApiTags('Building')
 @Controller('building')
@@ -18,7 +32,7 @@ export class BuildingController {
   @ApiResponse({ status: 404, description: 'Building not found' })
   async findById(@Param('id', ParseIntPipe) id: number) {
     const data = await this.buildingService.findById(id);
-    return { success: true, data };
+    return data;
   }
 
   /**
@@ -30,7 +44,7 @@ export class BuildingController {
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
   async search(@Query() dto: SearchBuildingDto) {
     const data = await this.buildingService.search(dto);
-    return { success: true, data };
+    return data;
   }
 
   /**
@@ -42,7 +56,7 @@ export class BuildingController {
   @ApiResponse({ status: 400, description: 'Missing required fields' })
   async create(@Body() dto: CreateBuildingDto) {
     const data = await this.buildingService.create(dto);
-    return { success: true, message: 'Building created successfully!', data };
+    return data;
   }
 
   /**
@@ -52,9 +66,12 @@ export class BuildingController {
   @ApiOperation({ summary: 'Update building by ID' })
   @ApiResponse({ status: 200, description: 'Building updated successfully' })
   @ApiResponse({ status: 404, description: 'Building not found' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBuildingDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateBuildingDto,
+  ) {
     const data = await this.buildingService.update(id, dto);
-    return { success: true, message: 'Building updated successfully!', data };
+    return data;
   }
 
   /**
@@ -66,6 +83,6 @@ export class BuildingController {
   @ApiResponse({ status: 404, description: 'Building not found' })
   async delete(@Param('id', ParseIntPipe) id: number) {
     const data = await this.buildingService.delete(id);
-    return { success: true, message: 'Building deleted successfully!', data };
+    return data;
   }
 }

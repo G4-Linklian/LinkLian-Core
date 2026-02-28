@@ -22,8 +22,13 @@ export class ClassInfoController {
    * Get class info (schedules, members, educators, room location)
    */
   @Get('class-info/:sectionId')
-  @ApiOperation({ summary: 'Get class info including schedules, members, and educators' })
-  @ApiResponse({ status: 200, description: 'Class info retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get class info including schedules, members, and educators',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Class info retrieved successfully',
+  })
   getClassInfo(@Param('sectionId', ParseIntPipe) sectionId: number) {
     return this.classInfoService.getClassInfo(sectionId);
   }

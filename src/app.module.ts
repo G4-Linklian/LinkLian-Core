@@ -22,12 +22,12 @@ import { SocialFeedModule } from './modules/social-feed/social-feed.module';
 import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
-import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { RegisSummaryModule } from './modules/summary/registration/regis.summary.module';
 import { ImportStudentModule } from './modules/import-csv/student/import-student.module';
 import { ImportSubjectModule } from './modules/import-csv/subject/import-subject.module';
 import { ImportTeacherModule } from './modules/import-csv/teacher/import-teacher.module';
 import { ImportProgramModule } from './modules/import-csv/program/import-program.module';
-import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schdule.module';
+import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schedule.module';
 import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
 import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
@@ -36,10 +36,10 @@ import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AccessGuard } from './common/guard/access.guard';
+import { RequestMethod } from '@nestjs/common';
 
 @Module({
   imports: [
-
     ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
@@ -99,14 +99,16 @@ import { AccessGuard } from './common/guard/access.guard';
       useClass: AccessGuard,
     },
   ],
-
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(AuthMiddleware)
-      .exclude('institution/login')
-      .exclude('auth/*')
+      .exclude(
+        { path: 'institution/login', method: RequestMethod.ALL },
+        { path: 'auth/(.*)', method: RequestMethod.ALL },
+        { path: 'health', method: RequestMethod.ALL },
+      )
       .forRoutes('*');
   }
 }

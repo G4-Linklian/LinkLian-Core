@@ -22,9 +22,7 @@ describe('CommunityCommentController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommunityCommentController],
-      providers: [
-        { provide: CommunityCommentService, useValue: mockService },
-      ],
+      providers: [{ provide: CommunityCommentService, useValue: mockService }],
     }).compile();
 
     controller = module.get<CommunityCommentController>(
@@ -51,9 +49,7 @@ describe('CommunityCommentController', () => {
         },
       ];
 
-      (service.getComments as jest.Mock).mockResolvedValueOnce(
-        mockComments,
-      );
+      (service.getComments as jest.Mock).mockResolvedValueOnce(mockComments);
 
       const result = await controller.get(dto);
 
@@ -95,9 +91,7 @@ describe('CommunityCommentController', () => {
         { comment_id: 3, comment_text: 'Comment 3' },
       ];
 
-      (service.getComments as jest.Mock).mockResolvedValueOnce(
-        mockComments,
-      );
+      (service.getComments as jest.Mock).mockResolvedValueOnce(mockComments);
 
       const result = await controller.get(dto);
 
@@ -148,9 +142,7 @@ describe('CommunityCommentController', () => {
         },
       ];
 
-      (service.getComments as jest.Mock).mockResolvedValueOnce(
-        mockComments,
-      );
+      (service.getComments as jest.Mock).mockResolvedValueOnce(mockComments);
 
       const result = await controller.get(dto);
 

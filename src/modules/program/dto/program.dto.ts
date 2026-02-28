@@ -1,5 +1,5 @@
 // program.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import { TreeType, ProgramType } from '../entities/program.entity';
@@ -20,12 +20,19 @@ export class SearchProgramDto {
   @IsInt()
   inst_id?: number;
 
-  @ApiPropertyOptional({ description: 'Program Name', example: 'Computer Science' })
+  @ApiPropertyOptional({
+    description: 'Program Name',
+    example: 'Computer Science',
+  })
   @IsOptional()
   @IsString()
   program_name?: string;
 
-  @ApiPropertyOptional({ description: 'Program Type', example: 'major', enum: ProgramType })
+  @ApiPropertyOptional({
+    description: 'Program Type',
+    example: 'major',
+    enum: ProgramType,
+  })
   @IsOptional()
   @IsString()
   program_type?: string;
@@ -36,13 +43,20 @@ export class SearchProgramDto {
   @IsInt()
   parent_id?: number;
 
-  @ApiPropertyOptional({ description: 'Parent IDs (for filtering)', example: 1 })
+  @ApiPropertyOptional({
+    description: 'Parent IDs (for filtering)',
+    example: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   parent_ids?: number;
 
-  @ApiPropertyOptional({ description: 'Tree Type', example: 'leaf', enum: TreeType })
+  @ApiPropertyOptional({
+    description: 'Tree Type',
+    example: 'leaf',
+    enum: TreeType,
+  })
   @IsOptional()
   @IsString()
   tree_type?: string;
@@ -69,17 +83,27 @@ export class SearchProgramDto {
   @IsString()
   children_type?: string;
 
-  @ApiPropertyOptional({ description: 'Search keyword for program name', example: 'science' })
+  @ApiPropertyOptional({
+    description: 'Search keyword for program name',
+    example: 'science',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'program_name' })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'program_name',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -109,7 +133,11 @@ export class CreateProgramDto {
   @IsString()
   program_name!: string;
 
-  @ApiProperty({ description: 'Program Type', example: 'major', enum: ProgramType })
+  @ApiProperty({
+    description: 'Program Type',
+    example: 'major',
+    enum: ProgramType,
+  })
   @IsString()
   program_type!: string;
 
@@ -137,12 +165,19 @@ export class UpdateProgramDto {
   @IsInt()
   inst_id?: number;
 
-  @ApiPropertyOptional({ description: 'Program Name', example: 'Computer Science' })
+  @ApiPropertyOptional({
+    description: 'Program Name',
+    example: 'Computer Science',
+  })
   @IsOptional()
   @IsString()
   program_name?: string;
 
-  @ApiPropertyOptional({ description: 'Program Type', example: 'major', enum: ProgramType })
+  @ApiPropertyOptional({
+    description: 'Program Type',
+    example: 'major',
+    enum: ProgramType,
+  })
   @IsOptional()
   @IsString()
   program_type?: string;

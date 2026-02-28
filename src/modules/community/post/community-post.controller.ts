@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
-  Req,
   ParseIntPipe,
   Put,
 } from '@nestjs/common';
@@ -23,8 +22,7 @@ import { CreateCommunityPostDto } from './dto/create-community-post.dto';
 
 @Controller('community/post')
 export class CommunityPostController {
-
-  constructor(private service: CommunityPostService) { }
+  constructor(private service: CommunityPostService) {}
 
   @Post()
   @ApiHeader({ name: 'x-user-id', required: true })
@@ -45,20 +43,14 @@ export class CommunityPostController {
       },
     },
   })
-
   @UseInterceptors(FilesInterceptor('files'))
   create(
     @Headers('x-user-id') userId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: CreateCommunityPostDto,
   ) {
-    return this.service.createPost(
-      Number(userId),
-      dto,
-      files,
-    );
+    return this.service.createPost(Number(userId), dto, files);
   }
-
 
   @Get('search')
   search(
@@ -131,28 +123,8 @@ async updatePost(
 
   const userId = parseInt(userIdHeader, 10);
 
-  if (isNaN(userId)) {
-    throw new BadRequestException('Invalid x-user-id');
+    return this.service.updatePost(userId, postId, dto, files);
   }
-
-  if (dto.keep_attachments) {
-    try {
-      if (typeof dto.keep_attachments === 'string') {
-        dto.keep_attachments = JSON.parse(dto.keep_attachments);
-      }
-    } catch (e) {
-      throw new BadRequestException('Invalid keep_attachments format');
-    }
-  }
-
-  return this.service.updatePost(
-    userId,
-    postId,
-    dto,
-    files,
-  );
-}
-
 
   // HARD DELETE POST
   @Delete(':postId/hard')
@@ -167,10 +139,7 @@ async updatePost(
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    return this.service.hardDeletePost(
-      userId,
-      postId,
-    );
+    return this.service.hardDeletePost(userId, postId);
   }
 
   @Delete(':postId')
@@ -188,9 +157,7 @@ async updatePost(
 
     return this.service.deletePost(userId, postIdNum);
   }
-
 }
-
 
 // @Delete(':postId')
 // deletePost(
@@ -202,4 +169,3 @@ async updatePost(
 //     Number(postId),
 //   );
 // }
-

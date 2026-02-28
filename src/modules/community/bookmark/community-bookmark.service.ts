@@ -9,16 +9,10 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityBookmarkService {
+  constructor(private dataSource: DataSource) {}
 
-  constructor(private dataSource: DataSource) { }
-
-  async toggleBookmark(
-    userId: number,
-    postCommuId: number,
-  ) {
-
-    if (!postCommuId)
-      throw new BadRequestException('post_commu_id required');
+  async toggleBookmark(userId: number, postCommuId: number) {
+    if (!postCommuId) throw new BadRequestException('post_commu_id required');
     try {
       const post = await this.dataSource.query(
         `
@@ -35,8 +29,7 @@ export class CommunityBookmarkService {
         [postCommuId],
       );
 
-      if (!post.length)
-        throw new BadRequestException('Post not found');
+      if (!post.length) throw new BadRequestException('Post not found');
 
       if (post[0].status !== 'active')
         throw new ForbiddenException('Community is inactive');
@@ -69,7 +62,6 @@ export class CommunityBookmarkService {
       );
 
       if (!exists.length) {
-
         // INSERT
         await this.dataSource.query(
           `
@@ -89,10 +81,9 @@ export class CommunityBookmarkService {
           data: bookmarkData,
           message: 'Bookmark created successfully!',
         };
-
       }
 
-      // DELETE 
+      // DELETE
       await this.dataSource.query(
         `
         DELETE FROM community_bookmark
@@ -167,7 +158,6 @@ export class CommunityBookmarkService {
         data: result,
         message: 'Bookmarks fetched successfully!',
       };
-
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
       throw new InternalServerErrorException('Error fetching bookmarks');

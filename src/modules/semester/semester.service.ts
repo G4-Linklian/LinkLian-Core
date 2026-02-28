@@ -1,5 +1,11 @@
 // semester.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Semester } from './entities/semester.entity';
@@ -9,8 +15,10 @@ import {
   CreateSemesterDto,
   UpdateSemesterDto,
   CreateSemesterSubjectDto,
-  DeleteSemesterSubjectDto
+  DeleteSemesterSubjectDto,
 } from './dto/semester.dto';
+import { semesterFields } from 'src/common/interface/semester.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class SemesterService {
@@ -20,6 +28,7 @@ export class SemesterService {
     @InjectRepository(SemesterSubjectNormalize)
     private semesterSubjectRepo: Repository<SemesterSubjectNormalize>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== Semester Methods ==========
@@ -29,7 +38,7 @@ export class SemesterService {
    */
   async findById(id: number) {
     const semester = await this.semesterRepo.findOne({
-      where: { semester_id: id }
+      where: { semester_id: id },
     });
 
     if (!semester) {
@@ -44,10 +53,14 @@ export class SemesterService {
    */
   async search(dto: SearchSemesterDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.semester_id || dto.inst_id ||
-                     dto.semester || dto.start_date ||
-                     dto.end_date || dto.status ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.semester_id ||
+      dto.inst_id ||
+      dto.semester ||
+      dto.start_date ||
+      dto.end_date ||
+      dto.status ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -118,10 +131,13 @@ export class SemesterService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (error) {
-      console.error('Error fetching semesters:', error);
+      const result: semesterFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error fetching semesters:', 'SearchSemester', error);
       throw new InternalServerErrorException('Error fetching data');
     }
   }
@@ -146,10 +162,14 @@ export class SemesterService {
           term_numeric ASC
       `;
 
-      const result = await this.dataSource.query(query);
-      return {data : result};
-    } catch (error) {
-      console.error('Error fetching active semesters:', error);
+      const result: semesterFields[] = await this.dataSource.query(query);
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching active semesters:',
+        'GetActiveSemesters',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching active semesters');
     }
   }
@@ -158,7 +178,13 @@ export class SemesterService {
    * Create a new semester
    */
   async create(dto: CreateSemesterDto) {
-    if (!dto.inst_id || !dto.semester || !dto.start_date || !dto.end_date || typeof dto.flag_valid !== 'boolean') {
+    if (
+      !dto.inst_id ||
+      !dto.semester ||
+      !dto.start_date ||
+      !dto.end_date ||
+      typeof dto.flag_valid !== 'boolean'
+    ) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -172,17 +198,27 @@ export class SemesterService {
         start_date: new Date(dto.start_date),
         end_date: new Date(dto.end_date),
         flag_valid: dto.flag_valid,
-        status: status,
+        status,
       });
 
-      const savedSemester = await this.semesterRepo.save(newSemester);
-      return savedSemester;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      const savedSemester: semesterFields =
+        await this.semesterRepo.save(newSemester);
+      return {
+        success: true,
+        data: savedSemester,
+        message: 'Semester created successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
         throw new ConflictException('This semester already exists');
       }
-      console.error('Error creating semester:', error);
+
+      this.logger.error('Error creating semester:', 'CreateSemester', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -193,7 +229,7 @@ export class SemesterService {
   async update(id: number, dto: UpdateSemesterDto) {
     // Check if semester exists
     const existingSemester = await this.semesterRepo.findOne({
-      where: { semester_id: id }
+      where: { semester_id: id },
     });
 
     if (!existingSemester) {
@@ -205,9 +241,11 @@ export class SemesterService {
 
     if (dto.inst_id !== undefined) updates.inst_id = dto.inst_id;
     if (dto.semester !== undefined) updates.semester = dto.semester;
-    if (dto.start_date !== undefined) updates.start_date = new Date(dto.start_date);
+    if (dto.start_date !== undefined)
+      updates.start_date = new Date(dto.start_date);
     if (dto.end_date !== undefined) updates.end_date = new Date(dto.end_date);
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
     if (dto.status !== undefined) updates.status = dto.status;
 
     if (Object.keys(updates).length === 0) {
@@ -218,16 +256,24 @@ export class SemesterService {
       await this.semesterRepo.update({ semester_id: id }, updates);
 
       const updatedSemester = await this.semesterRepo.findOne({
-        where: { semester_id: id }
+        where: { semester_id: id },
       });
 
-      return updatedSemester;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      return {
+        success: true,
+        data: updatedSemester,
+        message: 'Semester updated successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
         throw new ConflictException('This semester already exists');
       }
-      console.error('Error updating semester:', error);
+      this.logger.error('Error updating semester:', 'UpdateSemester', error);
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -238,7 +284,7 @@ export class SemesterService {
   async delete(id: number) {
     // Check if semester exists
     const existingSemester = await this.semesterRepo.findOne({
-      where: { semester_id: id }
+      where: { semester_id: id },
     });
 
     if (!existingSemester) {
@@ -247,10 +293,13 @@ export class SemesterService {
 
     try {
       await this.semesterRepo.delete({ semester_id: id });
-      return existingSemester;
-
-    } catch (error) {
-      console.error('Error deleting semester:', error);
+      return {
+        success: true,
+        data: existingSemester,
+        message: 'Semester deleted successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error('Error deleting semester:', 'DeleteSemester', error);
       throw new InternalServerErrorException('Error deleting semester');
     }
   }
@@ -261,7 +310,11 @@ export class SemesterService {
    * Create semester_subject_normalize record
    */
   async createSemesterSubject(dto: CreateSemesterSubjectDto) {
-    if (!dto.subject_id || !dto.semester_id || typeof dto.flag_valid !== 'boolean') {
+    if (
+      !dto.subject_id ||
+      !dto.semester_id ||
+      typeof dto.flag_valid !== 'boolean'
+    ) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -273,13 +326,27 @@ export class SemesterService {
       });
 
       const savedRecord = await this.semesterSubjectRepo.save(newRecord);
-      return savedRecord;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('This subject is already linked to this semester');
+      return {
+        success: true,
+        data: savedRecord,
+        message: 'Semester subject created successfully',
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
+        throw new ConflictException(
+          'This subject is already linked to this semester',
+        );
       }
-      console.error('Error creating semester subject:', error);
+      this.logger.error(
+        'Error creating semester subject:',
+        'CreateSemesterSubject',
+        error,
+      );
       throw new InternalServerErrorException('Error creating semester subject');
     }
   }
@@ -289,22 +356,34 @@ export class SemesterService {
    */
   async deleteSemesterSubject(dto: DeleteSemesterSubjectDto) {
     if (!dto.subject_id || !dto.semester_id) {
-      throw new BadRequestException('Subject ID and Semester ID are required for deletion!');
+      throw new BadRequestException(
+        'Subject ID and Semester ID are required for deletion!',
+      );
     }
 
     try {
       const query = `DELETE FROM semester_subject_normalize WHERE subject_id = $1 AND semester_id = $2 RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.subject_id, dto.semester_id]);
+      const result: semesterFields[] = await this.dataSource.query(query, [
+        dto.subject_id,
+        dto.semester_id,
+      ]);
 
       if (result.length === 0) {
         throw new NotFoundException('Semester subject record not found');
       }
 
-      return result[0];
-
-    } catch (error) {
+      return {
+        success: true,
+        data: result[0],
+        message: 'Semester subject deleted successfully',
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error deleting semester subject:',
+        'DeleteSemesterSubject',
+        error,
+      );
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting semester subject:', error);
       throw new InternalServerErrorException('Error deleting semester subject');
     }
   }

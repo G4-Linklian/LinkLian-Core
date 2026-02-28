@@ -8,19 +8,19 @@ import { Program } from '../../program/entities/program.entity';
 import { Institution } from '../../institution/entities/institution.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Program, Institution]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
-                signOptions: { expiresIn: '30m' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    controllers: [ImportProgramController],
-    providers: [ImportProgramService],
-    exports: [ImportProgramService],
+  imports: [
+    TypeOrmModule.forFeature([Program, Institution]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
+        signOptions: { expiresIn: '30m' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [ImportProgramController],
+  providers: [ImportProgramService],
+  exports: [ImportProgramService],
 })
-export class ImportProgramModule { }
+export class ImportProgramModule {}

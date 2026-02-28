@@ -1,5 +1,5 @@
 // semester-subject-normalize.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity('semester_subject_normalize')
 export class SemesterSubjectNormalize {

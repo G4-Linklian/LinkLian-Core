@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, ParseIntPipe, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BookmarkService } from './bookmark.service';
 
@@ -22,7 +22,7 @@ export class BookmarkController {
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
     @Query('sort_by') sort_by?: string,
-    @Query('sort_order') sort_order?: 'ASC' | 'DESC'
+    @Query('sort_order') sort_order?: 'ASC' | 'DESC',
   ) {
     const userId = user_sys_id ? parseInt(user_sys_id, 10) : undefined;
     const postId = post_id ? parseInt(post_id, 10) : undefined;
@@ -41,7 +41,7 @@ export class BookmarkController {
       offsetVal,
       limitVal,
       sortByVal,
-      sortOrderVal
+      sortOrderVal,
     );
   }
 
@@ -52,9 +52,7 @@ export class BookmarkController {
   @Post('toggle')
   @ApiOperation({ summary: 'Toggle bookmark (create or remove)' })
   @ApiResponse({ status: 200, description: 'Bookmark toggled successfully' })
-  async toggleBookmark(
-    @Body() dto: { user_sys_id: number; post_id: number }
-  ) {
+  async toggleBookmark(@Body() dto: { user_sys_id: number; post_id: number }) {
     return this.bookmarkService.toggleBookmark(dto.user_sys_id, dto.post_id);
   }
 
@@ -65,11 +63,7 @@ export class BookmarkController {
   @Delete()
   @ApiOperation({ summary: 'Delete a bookmark' })
   @ApiResponse({ status: 200, description: 'Bookmark deleted successfully' })
-  async deleteBookmark(
-    @Body() dto: { user_sys_id: number; post_id: number }
-  ) {
+  async deleteBookmark(@Body() dto: { user_sys_id: number; post_id: number }) {
     return this.bookmarkService.deleteBookmark(dto.user_sys_id, dto.post_id);
   }
 }
-
-

@@ -7,9 +7,12 @@ const logger = new AppLogger();
 /**
  * Send initial password email to new user
  */
-export async function sendInitialPasswordEmail(email: string, password: string): Promise<void> {
+export async function sendInitialPasswordEmail(
+  email: string,
+  password: string,
+): Promise<void> {
   logger.debug('Starting sendInitialPasswordEmail...', 'MAILER', {
-    email: email,
+    email,
   });
   logger.debug('SMTP Config:', 'MAILER', {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -32,7 +35,8 @@ export async function sendInitialPasswordEmail(email: string, password: string):
   logger.debug('Transporter created', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@smartgis.com',
+    from:
+      process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@smartgis.com',
     to: email,
     subject: 'Your Initial Password - LinkLian',
     html: `
@@ -56,13 +60,33 @@ export async function sendInitialPasswordEmail(email: string, password: string):
       messageId: info.messageId,
       response: info.response,
     });
-  } catch (error : any) {
+  } catch (error: unknown) {
     logger.error('Error sending email:', 'MAILER', error);
-    logger.error('Error details:', 'MAILER', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-    });
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -73,8 +97,8 @@ export async function sendInitialPasswordEmail(email: string, password: string):
 export async function sendOTPEmail(email: string, otp: string): Promise<void> {
   logger.debug('Starting sendOTPEmail...', 'MAILER');
   logger.debug('SMTP Config:', 'MAILER', {
-    email: email,
-    otp: otp,
+    email,
+    otp,
   });
 
   const transporter = nodemailer.createTransport({
@@ -90,7 +114,10 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
   logger.debug('Transporter created for OTP', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Your OTP Code - LinkLian',
     html: `
@@ -118,13 +145,33 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
       messageId: info.messageId,
       response: info.response,
     });
-  } catch (error : any) {
-    logger.error('Error sending OTP email:', 'MAILER', error);
-    logger.error('Error details:', 'MAILER', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-    });
+  } catch (error: unknown) {
+    logger.error('Error sending OTP:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -132,11 +179,14 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
 /**
  * Send temporary password email (for forgot password)
  */
-export async function sendTempPasswordEmail(email: string, tempPassword: string): Promise<void> {
+export async function sendTempPasswordEmail(
+  email: string,
+  tempPassword: string,
+): Promise<void> {
   logger.debug('Starting sendTempPasswordEmail...', 'MAILER');
   logger.debug('SMTP Config:', 'MAILER', {
-    email: email,
-    tempPassword: tempPassword,
+    email,
+    tempPassword,
   });
 
   const transporter = nodemailer.createTransport({
@@ -152,7 +202,10 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
   logger.debug('Transporter created for temp password', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Temporary Password - LinkLian',
     html: `
@@ -180,13 +233,33 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
       messageId: info.messageId,
       response: info.response,
     });
-  } catch (error : any) {
-    logger.error('Error sending temp password email:', 'MAILER', error);
-    logger.error('Error details:', 'MAILER', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-    });
+  } catch (error: unknown) {
+    logger.error('Error temp password email:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -194,7 +267,10 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
 /**
  * Send password reset email
  */
-export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+export async function sendPasswordResetEmail(
+  email: string,
+  resetToken: string,
+): Promise<void> {
   logger.debug('Starting sendPasswordResetEmail...', 'MAILER');
   logger.debug('Target email:', 'MAILER', email);
 
@@ -213,7 +289,10 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Password Reset - LinkLian',
     html: `
@@ -238,13 +317,33 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
       messageId: info.messageId,
       response: info.response,
     });
-  } catch (error : any) {
+  } catch (error: unknown) {
     logger.error('Error sending password reset email:', 'MAILER', error);
-    logger.error('Error details:', 'MAILER', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-    });
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }

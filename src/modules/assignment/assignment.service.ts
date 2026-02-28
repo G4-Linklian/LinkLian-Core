@@ -1,27 +1,33 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { GetClassAssignmentsDto, CreateGroupDto, UpdateGroupDto } from './dto/assignment.dto';
+import {
+  GetClassAssignmentsDto,
+  CreateGroupDto,
+  UpdateGroupDto,
+} from './dto/assignment.dto';
 import { generateAnonymousName } from '../../common/utils/anonymous.util';
-import { group } from 'console';
-import { Message } from '../chat/entities/message.entity';
 
 @Injectable()
 export class AssignmentService {
-  constructor(private dataSource: DataSource) { }
-
+  constructor(private dataSource: DataSource) {}
 
   async getClassAssignments(userId: number, dto: GetClassAssignmentsDto) {
     const { section_id, role, offset = 0, limit = 10 } = dto;
 
-    const isStudent =
-      role === 'high school student' ||
-      role === 'uni student';
+    const isStudent = role === 'high school student' || role === 'uni student';
 
-    console.log(`[GetClassAssignments] section_id=${section_id}, role=${role}, userId=${userId}, offset=${offset}, limit=${limit}`);
+    console.log(
+      `[GetClassAssignments] section_id=${section_id}, role=${role}, userId=${userId}, offset=${offset}, limit=${limit}`,
+    );
 
     try {
       if (isStudent && userId) {
-        return await this.getStudentAssignments(section_id, userId, offset, limit);
+        return await this.getStudentAssignments(
+          section_id,
+          userId,
+          offset,
+          limit,
+        );
       } else {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
@@ -31,7 +37,12 @@ export class AssignmentService {
     }
   }
 
-  private async getStudentAssignments(sectionId: number, userId: number, offset: number, limit: number) {
+  private async getStudentAssignments(
+    sectionId: number,
+    userId: number,
+    offset: number,
+    limit: number,
+  ) {
     const query = `
       SELECT
         a.assignment_id,
@@ -116,10 +127,15 @@ export class AssignmentService {
 LIMIT $3 OFFSET $4
     `;
 
-    const result = await this.dataSource.query(
-      query,
-      [sectionId, userId, limit, offset],
-    ); console.log(`[GetClassAssignments] Student query returned ${result.length} assignments`);
+    const result = await this.dataSource.query(query, [
+      sectionId,
+      userId,
+      limit,
+      offset,
+    ]);
+    console.log(
+      `[GetClassAssignments] Student query returned ${result.length} assignments`,
+    );
 
     const final_result = result.map((row: any) => ({
       assignment_id: row.assignment_id,
@@ -139,7 +155,11 @@ LIMIT $3 OFFSET $4
     return { data: final_result };
   }
 
-  private async getTeacherAssignments(sectionId: number, offset: number, limit: number) {
+  private async getTeacherAssignments(
+    sectionId: number,
+    offset: number,
+    limit: number,
+  ) {
     const query = `
     SELECT
       a.assignment_id,
@@ -225,11 +245,14 @@ LIMIT $3 OFFSET $4
     LIMIT $2 OFFSET $3
   `;
 
-    const result = await this.dataSource.query(
-      query,
-      [sectionId, limit, offset],
+    const result = await this.dataSource.query(query, [
+      sectionId,
+      limit,
+      offset,
+    ]);
+    console.log(
+      `[GetClassAssignments] Teacher query returned ${result.length} assignments`,
     );
-    console.log(`[GetClassAssignments] Teacher query returned ${result.length} assignments`);
 
     const final_result = result.map((row: any) => ({
       assignment_id: row.assignment_id,
@@ -249,14 +272,8 @@ LIMIT $3 OFFSET $4
     return { data: final_result };
   }
 
-  async getPostAssignment(
-    postId: number,
-    userId: number,
-    role?: string,
-  ) {
-    const isStudent =
-      role === 'high school student' ||
-      role === 'uni student';
+  async getPostAssignment(postId: number, userId: number, role?: string) {
+    const isStudent = role === 'high school student' || role === 'uni student';
 
     try {
       /**
@@ -342,10 +359,9 @@ LIMIT 1
         AND flag_valid = true
     `;
 
-      const attachments = await this.dataSource.query(
-        attachmentQuery,
-        [post.post_content_id],
-      );
+      const attachments = await this.dataSource.query(attachmentQuery, [
+        post.post_content_id,
+      ]);
 
       /**
        * 3. ดึง submission (เฉพาะ student)
@@ -376,14 +392,13 @@ LIMIT 1
         LIMIT 1
       `;
 
-        const submissionResult = await this.dataSource.query(
-          submissionQuery,
-          [post.assignment_id, userId],
-        );
+        const submissionResult = await this.dataSource.query(submissionQuery, [
+          post.assignment_id,
+          userId,
+        ]);
 
         submission = submissionResult.length ? submissionResult[0] : null;
       }
-
 
       let group = null;
       let groups = [];
@@ -420,10 +435,10 @@ LIMIT 1
     LIMIT 1
   `;
 
-        const groupResult = await this.dataSource.query(
-          groupQuery,
-          [post.assignment_id, userId],
-        );
+        const groupResult = await this.dataSource.query(groupQuery, [
+          post.assignment_id,
+          userId,
+        ]);
 
         group = groupResult.length ? groupResult[0] : null;
       }
@@ -453,10 +468,7 @@ LIMIT 1
     ORDER BY sg.group_name
   `;
 
-        groups = await this.dataSource.query(
-          groupsQuery,
-          [post.assignment_id],
-        );
+        groups = await this.dataSource.query(groupsQuery, [post.assignment_id]);
       }
 
       const final_result = {
@@ -504,19 +516,19 @@ LIMIT 1
       };
     } catch (error) {
       console.error('[getPostAssignment] error:', error);
-      throw new InternalServerErrorException(
-        'Error fetching assignment post',
-      );
+      throw new InternalServerErrorException('Error fetching assignment post');
     }
   }
 
-  async createGroup(
-    userId: number,
-    dto: CreateGroupDto,
-  ) {
+  async createGroup(userId: number, dto: CreateGroupDto) {
     const { assignment_id, group_name, member_ids } = dto;
 
-    console.log('[createGroup] Input:', { userId, assignment_id, group_name, member_ids });
+    console.log('[createGroup] Input:', {
+      userId,
+      assignment_id,
+      group_name,
+      member_ids,
+    });
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
@@ -611,13 +623,16 @@ LIMIT 1
     });
   }
 
-  async updateGroup(
-    userId: number,
-    dto: UpdateGroupDto,
-  ) {
+  async updateGroup(userId: number, dto: UpdateGroupDto) {
     const { assignment_id, group_id, group_name, member_ids } = dto;
 
-    console.log('[updateGroup] Input:', { userId, assignment_id, group_id, group_name, member_ids });
+    console.log('[updateGroup] Input:', {
+      userId,
+      assignment_id,
+      group_id,
+      group_name,
+      member_ids,
+    });
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
@@ -646,7 +661,9 @@ LIMIT 1
       console.log('[updateGroup] Found group:', group);
 
       if (!group.length) {
-        console.error('[updateGroup] Invalid group - not found or user not a member');
+        console.error(
+          '[updateGroup] Invalid group - not found or user not a member',
+        );
         throw new Error('Group not found or you are not a member');
       }
 
@@ -718,7 +735,6 @@ LIMIT 1
     });
   }
 
-
   // assignment.service.ts - เมธอด getGroup
   async getGroup(userId: number, assignmentId: number) {
     const result = await this.dataSource.query(
@@ -765,7 +781,6 @@ LIMIT 1
     return { data: result[0] };
   }
 
-
   // assignment.service.ts
   async getAllGroups(assignmentId: number) {
     const result = await this.dataSource.query(
@@ -799,15 +814,14 @@ LIMIT 1
       [assignmentId],
     );
 
-    console.log(`[getAllGroups] Found ${result.length} groups for assignment ${assignmentId}`);
+    console.log(
+      `[getAllGroups] Found ${result.length} groups for assignment ${assignmentId}`,
+    );
 
     return {
       success: true,
       message: 'Groups retrieved successfully',
-      data: result
+      data: result,
     };
   }
-
-
-
 }
