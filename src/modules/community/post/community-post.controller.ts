@@ -96,28 +96,62 @@ export class CommunityPostController {
     );
   }
 
+  // @Put(':postId')
+  // @ApiHeader({ name: 'x-user-id', required: true })
+  // @UseInterceptors(FilesInterceptor('files'))
+  // async updatePost(
+  //   @Headers('x-user-id') userIdHeader: string,
+  //   @Param('postId', ParseIntPipe) postId: number,
+  //   @Body() dto: any,
+  //   @UploadedFiles() files: Express.Multer.File[],
+  // ) {
+  //   const userId = parseInt(userIdHeader, 10);
+
+  //   if (isNaN(userId)) {
+  //     throw new BadRequestException('Invalid x-user-id');
+  //   }
+
+  //   return this.service.updatePost(
+  //     userId,
+  //     postId,
+  //     dto,
+  //     files,
+  //   );
+  // }
   @Put(':postId')
-  @ApiHeader({ name: 'x-user-id', required: true })
-  @UseInterceptors(FilesInterceptor('files'))
-  async updatePost(
-    @Headers('x-user-id') userIdHeader: string,
-    @Param('postId', ParseIntPipe) postId: number,
-    @Body() dto: any,
-    @UploadedFiles() files: Express.Multer.File[],
-  ) {
-    const userId = parseInt(userIdHeader, 10);
+@ApiHeader({ name: 'x-user-id', required: true })
+@ApiConsumes('multipart/form-data')
+@UseInterceptors(FilesInterceptor('files'))
+async updatePost(
+  @Headers('x-user-id') userIdHeader: string,
+  @Param('postId', ParseIntPipe) postId: number,
+  @Body() dto: any,
+  @UploadedFiles() files: Express.Multer.File[],
+) {
 
-    if (isNaN(userId)) {
-      throw new BadRequestException('Invalid x-user-id');
-    }
+  const userId = parseInt(userIdHeader, 10);
 
-    return this.service.updatePost(
-      userId,
-      postId,
-      dto,
-      files,
-    );
+  if (isNaN(userId)) {
+    throw new BadRequestException('Invalid x-user-id');
   }
+
+  if (dto.keep_attachments) {
+    try {
+      if (typeof dto.keep_attachments === 'string') {
+        dto.keep_attachments = JSON.parse(dto.keep_attachments);
+      }
+    } catch (e) {
+      throw new BadRequestException('Invalid keep_attachments format');
+    }
+  }
+
+  return this.service.updatePost(
+    userId,
+    postId,
+    dto,
+    files,
+  );
+}
 
 
   // HARD DELETE POST

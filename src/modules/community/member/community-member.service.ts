@@ -178,7 +178,7 @@ export class CommunityMemberService {
 
       return {
         success: true,
-        ddata: result[0][0],
+        data: result[0][0],
         message: 'Member approved successfully!',
       };
 
@@ -317,6 +317,7 @@ export class CommunityMemberService {
   WHERE cm.community_id = $1
     AND cm.flag_valid = true
     AND cm.role = 'member'
+    AND cm.status = 'pending'
   ORDER BY 
     CASE 
       WHEN cm.status = 'pending' THEN 1
