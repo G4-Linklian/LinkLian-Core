@@ -4,12 +4,16 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityBookmarkService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   async toggleBookmark(userId: number, postCommuId: number) {
     if (!postCommuId) throw new BadRequestException('post_commu_id required');
@@ -110,7 +114,7 @@ export class CommunityBookmarkService {
         throw error;
       }
 
-      console.error('Error toggling bookmark:', error);
+      this.logger.error('Error toggling bookmark:', 'GetBookmark', error);
       throw new InternalServerErrorException('Error processing bookmark');
     }
   }
@@ -159,7 +163,11 @@ export class CommunityBookmarkService {
         message: 'Bookmarks fetched successfully!',
       };
     } catch (error) {
-      console.error('Error fetching bookmarks:', error);
+      this.logger.error(
+        'Error fetching bookmarks:',
+        'GetBookmarkCommunity',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching bookmarks');
     }
   }
@@ -186,7 +194,11 @@ export class CommunityBookmarkService {
         message: 'Bookmark status checked successfully!',
       };
     } catch (error) {
-      console.error('Error checking bookmark:', error);
+      this.logger.error(
+        'Error checking bookmark:',
+        'CheckBookmarkCommunity',
+        error,
+      );
       throw new InternalServerErrorException('Error checking bookmark');
     }
   }

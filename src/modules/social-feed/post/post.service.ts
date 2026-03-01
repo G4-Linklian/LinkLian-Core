@@ -1349,19 +1349,19 @@ a.is_group,
 
       user: isAnonymous
         ? {
-          user_sys_id: userSysId,
-          email: null,
-          profile_pic: null,
-          display_name: displayName,
-          role_name: null,
-        }
+            user_sys_id: userSysId,
+            email: null,
+            profile_pic: null,
+            display_name: displayName,
+            role_name: null,
+          }
         : {
-          user_sys_id: userSysId,
-          email: row._email,
-          profile_pic: row._profile_pic,
-          display_name: row._display_name,
-          role_name: row._role_name,
-        },
+            user_sys_id: userSysId,
+            email: row._email,
+            profile_pic: row._profile_pic,
+            display_name: row._display_name,
+            role_name: row._role_name,
+          },
 
       attachments: row.attachments || [],
     };

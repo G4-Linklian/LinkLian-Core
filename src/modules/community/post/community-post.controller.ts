@@ -19,11 +19,13 @@ import { ApiBody, ApiConsumes, ApiHeader } from '@nestjs/swagger';
 
 import { CommunityPostService } from './community-post.service';
 import { CreateCommunityPostDto } from './dto/create-community-post.dto';
+import { Access } from 'src/common/decorators/access.decorator';
 
 @Controller('community/post')
 export class CommunityPostController {
   constructor(private service: CommunityPostService) {}
 
+  @Access('community', 'create')
   @Post()
   @ApiHeader({ name: 'x-user-id', required: true })
   @ApiConsumes('multipart/form-data')
@@ -52,6 +54,7 @@ export class CommunityPostController {
     return this.service.createPost(Number(userId), dto, files);
   }
 
+  @Access('community', 'read')
   @Get('search')
   search(
     @Headers('x-user-id') userId: string,
@@ -71,6 +74,7 @@ export class CommunityPostController {
     );
   }
 
+  @Access('community', 'read')
   @Get(':communityId')
   getPosts(
     @Headers('x-user-id') userId: string,
@@ -110,23 +114,24 @@ export class CommunityPostController {
   //     files,
   //   );
   // }
+  @Access('community', 'update')
   @Put(':postId')
-@ApiHeader({ name: 'x-user-id', required: true })
-@ApiConsumes('multipart/form-data')
-@UseInterceptors(FilesInterceptor('files'))
-async updatePost(
-  @Headers('x-user-id') userIdHeader: string,
-  @Param('postId', ParseIntPipe) postId: number,
-  @Body() dto: any,
-  @UploadedFiles() files: Express.Multer.File[],
-) {
-
-  const userId = parseInt(userIdHeader, 10);
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('files'))
+  async updatePost(
+    @Headers('x-user-id') userIdHeader: string,
+    @Param('postId', ParseIntPipe) postId: number,
+    @Body() dto: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const userId = parseInt(userIdHeader, 10);
 
     return this.service.updatePost(userId, postId, dto, files);
   }
 
   // HARD DELETE POST
+  @Access('community', 'delete')
   @Delete(':postId/hard')
   @ApiHeader({ name: 'x-user-id', required: true })
   async hardDeletePost(
@@ -142,6 +147,7 @@ async updatePost(
     return this.service.hardDeletePost(userId, postId);
   }
 
+  @Access('community', 'delete')
   @Delete(':postId')
   @ApiHeader({ name: 'x-user-id', required: true })
   async deletePost(

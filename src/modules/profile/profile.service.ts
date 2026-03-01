@@ -7,10 +7,14 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UpdateProfileDto, EducationInfo } from './dto/profile.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ProfileService {
-  constructor(private dataSource: DataSource) { }
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get user profile with education info based on role and edu_type
@@ -90,7 +94,7 @@ export class ProfileService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      console.error('Error querying user profile:', error);
+      this.logger.error('Error querying user profile:', 'GetProfile', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -260,7 +264,7 @@ export class ProfileService {
       ) {
         throw error;
       }
-      console.error('Error updating profile:', error);
+      this.logger.error('Error updating profile:', 'UpdateProfile', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -304,14 +308,18 @@ export class ProfileService {
           className: schedule.section_name ?? '-',
           subjectName: schedule.subject_name,
           subjectCode: schedule.subject_code,
-          building: schedule.building_name && schedule.room_number
-            ? `${schedule.building_name} ห้อง ${schedule.room_number}`
-            : schedule.building_name ?? '-',
+          building:
+            schedule.building_name && schedule.room_number
+              ? `${schedule.building_name} ห้อง ${schedule.room_number}`
+              : (schedule.building_name ?? '-'),
         })),
       };
-
     } catch (error) {
-      console.error('Error fetching teaching schedule:', error);
+      this.logger.error(
+        'Error fetching teaching schedule:',
+        'GetTeachingSchedule',
+        error,
+      );
       throw new InternalServerErrorException(
         'Failed to fetch teaching schedule',
       );
