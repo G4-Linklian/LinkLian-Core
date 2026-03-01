@@ -206,8 +206,19 @@ export class UsersService {
         values,
       );
       // Remove password from results
-      return result.map((user: any) => {
+      const finalResult = result.map((user: any) => {
         const { password: _password, ...rest } = user;
+        return rest as UserSysFields;
+      });
+      return { success: true, data: finalResult };
+    } catch (error: unknown) {
+      this.logger.error('Error fetching users:', 'SearchUser', error);
+      throw new InternalServerErrorException('Server Error');
+    }
+  }
+
+  /**
+   * Create a new user with auto-generated password and email notification
         return rest as UserSysFields;
       });
     } catch (error: unknown) {
