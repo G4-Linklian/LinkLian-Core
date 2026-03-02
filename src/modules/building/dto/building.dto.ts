@@ -130,13 +130,13 @@ export class UpdateBuildingDto {
   @IsString()
   remark?: string;
 
-  @ApiPropertyOptional({
-    description: 'Room format',
-    example: 'A-{floor}{room}',
-  })
-  @IsOptional()
-  @IsString()
-  room_format?: string;
+  // @ApiPropertyOptional({
+  //   description: 'Room format',
+  //   example: 'A-{floor}{room}',
+  // })
+  // @IsOptional()
+  // @IsString()
+  // room_format?: string;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()

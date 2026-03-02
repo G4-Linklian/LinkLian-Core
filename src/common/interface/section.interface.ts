@@ -16,7 +16,6 @@ export interface sectionFields {
   building_id?: number | string;
   building_name?: string;
   building_no?: string;
-  room_format?: string;
 
   learning_area_name?: string;
   subject_code?: string;

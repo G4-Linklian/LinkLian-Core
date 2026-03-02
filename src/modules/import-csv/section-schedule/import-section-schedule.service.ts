@@ -414,14 +414,13 @@ export class ImportSectionScheduleService {
 
       if (!roomLocationId) {
         const insertRoomQuery = `
-                    INSERT INTO room_location (building_id, room_number, floor, flag_valid)
-                    VALUES ($1, $2, $3, true)
+                    INSERT INTO room_location (building_id, room_number, flag_valid)
+                    VALUES ($1, $2, true)
                     RETURNING room_location_id
                 `;
         const roomResult = await queryRunner.manager.query(insertRoomQuery, [
           buildingId,
           dto.classroom,
-          '0', // default floor
         ]);
         roomLocationId = roomResult[0]?.room_location_id;
 

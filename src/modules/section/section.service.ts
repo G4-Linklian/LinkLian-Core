@@ -59,6 +59,7 @@ export class SectionService {
       dto.section_id ||
       dto.semester_id ||
       dto.subject_id ||
+      dto.learning_area_id ||
       dto.inst_id ||
       typeof dto.flag_valid === 'boolean';
 
@@ -113,6 +114,11 @@ export class SectionService {
     if (dto.subject_id) {
       query += ` AND s.subject_id = $${index++}`;
       values.push(dto.subject_id);
+    }
+
+    if (dto.learning_area_id) {
+      query += ` AND sub.learning_area_id = $${index++}`;
+      values.push(dto.learning_area_id);
     }
 
     if (dto.section_name) {
@@ -200,7 +206,7 @@ export class SectionService {
         sem.*,
         la.learning_area_name,
         rl.floor, rl.room_number, rl.room_location_id, 
-        b.building_id, b.building_name, b.building_no, b.room_format,
+        b.building_id, b.building_name, b.building_no,
         COUNT(*) OVER() AS total_count
       FROM section s
       LEFT JOIN section_schedule sch ON s.section_id = sch.section_id
@@ -1222,7 +1228,11 @@ export class SectionService {
       };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting section:', error);
+      this.logger.error(
+        'Error deleting section:',
+        'DeleteSection',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -1302,8 +1312,6 @@ export class SectionService {
    * Delete enrollment
    */
   async deleteEnrollment(dto: DeleteEnrollmentDto) {
-    console.log('Delete Enrollment DTO:', dto);
-
     if (!dto.section_id && !dto.user_sys_id) {
       throw new BadRequestException(
         'At least one of section_id or user_sys_id is required!',

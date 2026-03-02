@@ -52,7 +52,6 @@ export class RoomLocationService {
       dto.building_id ||
       dto.room_number ||
       dto.room_remark ||
-      dto.floor ||
       typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
@@ -84,10 +83,10 @@ export class RoomLocationService {
       values.push(dto.room_number);
     }
 
-    if (dto.floor) {
-      query += ` AND rl.floor = $${index++}`;
-      values.push(dto.floor);
-    }
+    // if (dto.floor) {
+    //   query += ` AND rl.floor = $${index++}`;
+    //   values.push(dto.floor);
+    // }
 
     if (dto.room_remark) {
       query += ` AND rl.room_remark = $${index++}`;
@@ -99,10 +98,10 @@ export class RoomLocationService {
       values.push(dto.flag_valid);
     }
 
-    // Sort - by floor (as integer) first, then by specified field
+    // Sort - by room number first, then by specified field
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY rl.floor::integer, rl.${dto.sort_by} ${order}`;
+      query += ` ORDER BY rl.room_number::varchar, rl.${dto.sort_by} ${order}`;
     }
 
     // Pagination
@@ -133,7 +132,7 @@ export class RoomLocationService {
    * Create a new room location
    */
   async create(dto: CreateRoomLocationDto) {
-    if (!dto.building_id || !dto.room_number || !dto.floor) {
+    if (!dto.building_id || !dto.room_number) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -142,7 +141,7 @@ export class RoomLocationService {
         building_id: dto.building_id,
         room_number: dto.room_number,
         room_remark: dto.room_remark || null,
-        floor: dto.floor,
+        // floor: dto.floor,
         flag_valid: true,
       });
 
@@ -180,7 +179,7 @@ export class RoomLocationService {
     // Validate required fields for each room
     const isValid = rooms.every(
       (room) =>
-        room.building_id && room.room_number && room.floor !== undefined,
+        room.building_id && room.room_number !== undefined,
     );
 
     if (!isValid) {
@@ -190,10 +189,10 @@ export class RoomLocationService {
     // Check for duplicates within the payload
     const seen = new Set<string>();
     for (const room of rooms) {
-      const key = `${room.building_id}-${room.floor}-${room.room_number}`;
+      const key = `${room.building_id}-${room.room_number}`;
       if (seen.has(key)) {
         throw new ConflictException(
-          `Duplicate room found in payload: Building ${room.building_id}, Floor ${room.floor}, Room ${room.room_number}`,
+          `Duplicate room found in payload: Building ${room.building_id}, Room ${room.room_number}`,
         );
       }
       seen.add(key);
@@ -215,20 +214,20 @@ export class RoomLocationService {
           room.building_id,
           room.room_number,
           room.room_remark || '',
-          room.floor,
+          // room.floor,
           true,
         );
 
         placeholders.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`,
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`,
         );
 
-        paramIndex += 5;
+        paramIndex += 4;
       });
 
       const query = `
         INSERT INTO room_location 
-        (building_id, room_number, room_remark, floor, flag_valid)
+        (building_id, room_number, room_remark, flag_valid)
         VALUES ${placeholders.join(', ')}
         RETURNING *;
       `;
@@ -283,7 +282,7 @@ export class RoomLocationService {
 
     if (dto.building_id !== undefined) updates.building_id = dto.building_id;
     if (dto.room_number !== undefined) updates.room_number = dto.room_number;
-    if (dto.floor !== undefined) updates.floor = dto.floor;
+    // if (dto.floor !== undefined) updates.floor = dto.floor;
     if (dto.room_remark !== undefined) updates.room_remark = dto.room_remark;
     if (typeof dto.flag_valid === 'boolean')
       updates.flag_valid = dto.flag_valid;
