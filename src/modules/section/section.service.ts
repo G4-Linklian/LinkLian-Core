@@ -1228,7 +1228,11 @@ export class SectionService {
       };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting section:', error);
+      this.logger.error(
+        'Error deleting section:',
+        'DeleteSection',
+        error,
+      );
       throw new InternalServerErrorException('Server Error');
     }
   }
@@ -1308,8 +1312,6 @@ export class SectionService {
    * Delete enrollment
    */
   async deleteEnrollment(dto: DeleteEnrollmentDto) {
-    console.log('Delete Enrollment DTO:', dto);
-
     if (!dto.section_id && !dto.user_sys_id) {
       throw new BadRequestException(
         'At least one of section_id or user_sys_id is required!',
