@@ -147,7 +147,7 @@ LIMIT $3 OFFSET $4
       a.assignment_id,
       pic.post_id,
       pc.title,
-      pc.created_at,   -- ✅ เพิ่มตรงนี้
+      pc.created_at,
       sub.name_th AS subject_name_th,
       sub.name_en AS subject_name_en,
       CASE WHEN a.is_group = true THEN 'งานกลุ่ม' ELSE 'งานเดี่ยว' END AS assignment_type,
@@ -941,7 +941,11 @@ LIMIT 1
         educators: row.educators || [],
       }));
 
-      return { data: final_result };
+      return { 
+        success: true, 
+        message: 'Assignments retrieved successfully', 
+        data: final_result 
+      };
     } catch (error) {
       console.error('[searchAssignments] Error:', error);
       throw new InternalServerErrorException('Error searching assignments');
