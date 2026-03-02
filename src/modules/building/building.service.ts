@@ -177,7 +177,6 @@ export class BuildingService {
     if (dto.building_name !== undefined)
       updates.building_name = dto.building_name;
     if (dto.remark !== undefined) updates.remark = dto.remark;
-    if (dto.room_format !== undefined) updates.room_format = dto.room_format;
     if (typeof dto.flag_valid === 'boolean')
       updates.flag_valid = dto.flag_valid;
 

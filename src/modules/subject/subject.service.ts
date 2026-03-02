@@ -203,11 +203,11 @@ export class SubjectService {
         error.code === '23505'
       ) {
         throw new ConflictException(
-          'This subject already exists in the system',
+          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
         );
       }
       this.logger.error('Error creating subject:', 'CreateSubject', error);
-      throw new InternalServerErrorException('Error creating subject');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการสร้างวิชา');
     }
   }
 
@@ -221,7 +221,7 @@ export class SubjectService {
     });
 
     if (!existingSubject) {
-      throw new NotFoundException('Subject not found');
+      throw new NotFoundException('วิชาไม่พบในระบบ');
     }
 
     // Build update object dynamically
@@ -292,11 +292,11 @@ export class SubjectService {
         error.code === '23505'
       ) {
         throw new ConflictException(
-          'This subject already exists in the system',
+          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
         );
       }
       this.logger.error('Error updating subject:', 'UpdateSubject', error);
-      throw new InternalServerErrorException('Server Error');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตวิชา');
     }
   }
 
@@ -310,7 +310,7 @@ export class SubjectService {
     });
 
     if (!existingSubject) {
-      throw new NotFoundException('Subject not found');
+      throw new NotFoundException('วิชาไม่พบในระบบ');
     }
 
     try {
@@ -318,11 +318,11 @@ export class SubjectService {
       return {
         success: true,
         data: existingSubject,
-        message: 'Subject deleted successfully',
+        message: 'วิชาถูกลบเรียบร้อยแล้ว',
       };
     } catch (error: unknown) {
       this.logger.error('Error deleting subject:', 'DeleteSubject', error);
-      throw new InternalServerErrorException('Error deleting subject');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการลบวิชา');
     }
   }
 }

@@ -185,7 +185,7 @@ export class LearningAreaService {
         (error as { code?: unknown }).code === '23505'
       ) {
         throw new ConflictException(
-          'This learning area already exists in the system',
+          'กลุ่มการเรียนรู้นี้มีอยู่ในระบบแล้ว',
         );
       }
       this.logger.error(
@@ -243,14 +243,14 @@ export class LearningAreaService {
         'code' in error &&
         (error as { code?: unknown }).code === '23505'
       ) {
-        throw new ConflictException('This learning area already exists');
+        throw new ConflictException('กลุ่มการเรียนรู้นี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error(
         'Error updating learning area:',
         'UpdateLearningArea',
         error,
       );
-      throw new InternalServerErrorException('Error updating learning area');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตกลุ่มการเรียนรู้');
     }
   }
 
@@ -315,7 +315,7 @@ export class LearningAreaService {
         (error as { code?: unknown }).code === '23505'
       ) {
         throw new ConflictException(
-          'This user is already assigned to this learning area',
+          'ผู้ใช้นี้ถูกกำหนดให้กลุ่มการเรียนรู้นี้แล้ว',
         );
       }
       this.logger.error(
@@ -324,7 +324,7 @@ export class LearningAreaService {
         error,
       );
       throw new InternalServerErrorException(
-        'Error creating learning area user sys',
+        'เกิดข้อผิดพลาดในการสร้างข้อมูลสำหรับผู้ใช้และกลุ่มการเรียนรู้',
       );
     }
   }
@@ -358,7 +358,7 @@ export class LearningAreaService {
 
       if (result.length === 0) {
         throw new NotFoundException(
-          'User sys learning area normalize record not found',
+          'ผู้ใช้นี้ไม่ได้ถูกกำหนดให้กลุ่มการเรียนรู้นี้ หรือข้อมูลนี้ไม่มีอยู่ในระบบ',
         );
       }
 
@@ -375,7 +375,7 @@ export class LearningAreaService {
         error,
       );
       throw new InternalServerErrorException(
-        'Error updating learning area user sys',
+        'เกิดข้อผิดพลาดในการอัปเดตข้อมูลสำหรับผู้ใช้และกลุ่มการเรียนรู้',
       );
     }
   }
@@ -397,7 +397,7 @@ export class LearningAreaService {
 
       if (result.length === 0) {
         throw new NotFoundException(
-          'User sys learning area normalize record not found',
+          'ผู้ใช้นี้ไม่ได้ถูกกำหนดให้กลุ่มการเรียนรู้นี้ หรือข้อมูลนี้ไม่มีอยู่ในระบบ',
         );
       }
 
@@ -414,7 +414,7 @@ export class LearningAreaService {
         error,
       );
       throw new InternalServerErrorException(
-        'Error deleting learning area user sys',
+        'เกิดข้อผิดพลาดในการลบข้อมูลสำหรับผู้ใช้และกลุ่มการเรียนรู้',
       );
     }
   }

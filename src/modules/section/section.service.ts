@@ -59,6 +59,7 @@ export class SectionService {
       dto.section_id ||
       dto.semester_id ||
       dto.subject_id ||
+      dto.learning_area_id ||
       dto.inst_id ||
       typeof dto.flag_valid === 'boolean';
 
@@ -113,6 +114,11 @@ export class SectionService {
     if (dto.subject_id) {
       query += ` AND s.subject_id = $${index++}`;
       values.push(dto.subject_id);
+    }
+
+    if (dto.learning_area_id) {
+      query += ` AND sub.learning_area_id = $${index++}`;
+      values.push(dto.learning_area_id);
     }
 
     if (dto.section_name) {
@@ -200,7 +206,7 @@ export class SectionService {
         sem.*,
         la.learning_area_name,
         rl.floor, rl.room_number, rl.room_location_id, 
-        b.building_id, b.building_name, b.building_no, b.room_format,
+        b.building_id, b.building_name, b.building_no,
         COUNT(*) OVER() AS total_count
       FROM section s
       LEFT JOIN section_schedule sch ON s.section_id = sch.section_id
