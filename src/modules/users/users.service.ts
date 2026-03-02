@@ -21,8 +21,8 @@ import {
   hashPassword,
 } from '../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
-import { UserSysFields } from 'src/common/interface/user.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { UserSysFields } from '../../common/interface/user.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class UsersService {

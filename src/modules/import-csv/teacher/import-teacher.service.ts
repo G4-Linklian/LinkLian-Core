@@ -27,7 +27,7 @@ import {
   IMPORT_MAX_CONCURRENT_BATCHES,
   USER_STATUS_MAP,
 } from '../shared';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class ImportTeacherService {

@@ -17,8 +17,8 @@ import {
   CreateSemesterSubjectDto,
   DeleteSemesterSubjectDto,
 } from './dto/semester.dto';
-import { semesterFields } from 'src/common/interface/semester.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { semesterFields } from '../../common/interface/semester.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class SemesterService {

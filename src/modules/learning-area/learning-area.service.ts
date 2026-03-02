@@ -18,8 +18,8 @@ import {
   UpdateLearningAreaUserSysDto,
   DeleteLearningAreaUserSysDto,
 } from './dto/learning-area.dto';
-import { learningAreaFields } from 'src/common/interface/learningArea.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { learningAreaFields } from '../../common/interface/learningArea.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class LearningAreaService {
