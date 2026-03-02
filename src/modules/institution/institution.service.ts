@@ -15,6 +15,7 @@ import {
   SearchInstitutionDto,
   UpdateInstitutionDto,
   LoginInstitutionDto,
+  CheckInstitutionEmailDto,
 } from './dto/institution.dto';
 import { hashPassword, generateJwtToken } from 'src/common/utils/auth.util';
 import { verifyPassword } from 'src/common/utils/auth.util';
@@ -27,7 +28,7 @@ export class InstitutionService {
     @InjectRepository(Institution)
     private institutionRepo: Repository<Institution>,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   async findById(id: number) {
     const institution = await this.institutionRepo.findOne({
@@ -361,6 +362,37 @@ export class InstitutionService {
         error,
       );
       throw new InternalServerErrorException('Error verifying institution');
+    }
+  }
+
+  async checkInstitutionEmail(dto: CheckInstitutionEmailDto) {
+    if (!dto.inst_email) {
+      throw new BadRequestException(
+        'Institution email is required for verification!',
+      );
+    }
+
+    try {
+      const institution = await this.institutionRepo.findOne({
+        where: { inst_email: dto.inst_email },
+        // ดึงข้อมูลที่ต้องใช้ใน Step ถัดไปออกมาด้วย
+        select: [
+          'inst_id',
+          'inst_email',
+          'inst_name_th',
+          'approve_status',
+          'flag_valid'
+        ],
+      });
+
+      return {
+        success: true,
+        message: institution ? 'Email exists' : 'Email does not exist',
+        data: institution || null
+      };
+    } catch (error) {
+      this.logger.error('Error checking email:', 'CheckEmailExists', error);
+      throw new InternalServerErrorException('ไม่สามารถตรวจสอบข้อมูลได้');
     }
   }
 }

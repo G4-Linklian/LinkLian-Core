@@ -336,3 +336,9 @@ export class LoginInstitutionDto {
   @IsString()
   inst_password!: string;
 }
+
+export class CheckInstitutionEmailDto {
+  @ApiProperty({ description: 'อีเมลสถาบัน', example: 'info@university.ac.th' })
+  @IsEmail()
+  inst_email!: string;
+}
