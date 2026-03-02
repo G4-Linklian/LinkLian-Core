@@ -23,7 +23,7 @@ export class RegisSummaryController {
   @ApiResponse({ status: 400, description: 'พารามิเตอร์ไม่ถูกต้อง' })
   async getInfo(@Query() dto: RegisSummaryInfoDto) {
     const data = await this.regisSummaryService.getInfo(dto);
-    return { success: true, data };
+    return data;
   }
 
   @Get('curriculum')
@@ -35,7 +35,7 @@ export class RegisSummaryController {
   @ApiResponse({ status: 400, description: 'พารามิเตอร์ไม่ถูกต้อง' })
   async getCurriculum(@Query() dto: RegisSummaryCurriculumDto) {
     const data = await this.regisSummaryService.getCurriculum(dto);
-    return { success: true, data };
+    return data;
   }
 
   @Get('schedule')
@@ -47,7 +47,7 @@ export class RegisSummaryController {
   @ApiResponse({ status: 400, description: 'พารามิเตอร์ไม่ถูกต้อง' })
   async getSchedule(@Query() dto: RegisSummaryScheduleDto) {
     const data = await this.regisSummaryService.getSchedule(dto);
-    return { success: true, data };
+    return data;
   }
 
   @Get('registration')
@@ -59,6 +59,6 @@ export class RegisSummaryController {
   @ApiResponse({ status: 400, description: 'พารามิเตอร์ไม่ถูกต้อง' })
   async getRegistration(@Query() dto: RegisSummaryRegistrationDto) {
     const data = await this.regisSummaryService.getRegistration(dto);
-    return { success: true, data };
+    return data;
   }
 }

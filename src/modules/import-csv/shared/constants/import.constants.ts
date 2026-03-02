@@ -6,9 +6,9 @@ export const VALIDATION_TOKEN_EXPIRY = '30m';
 
 // Status mapping สำหรับ user
 export const USER_STATUS_MAP: Record<string, string> = {
-    'ใช้งาน': 'Active',
-    'ไม่ใช้งาน': 'Inactive',
-    'ลาออก': 'Resigned',
-    'สำเร็จการศึกษา': 'Graduated',
-    'เกษียณ': 'Retired',
+  ใช้งาน: 'Active',
+  ไม่ใช้งาน: 'Inactive',
+  ลาออก: 'Resigned',
+  สำเร็จการศึกษา: 'Graduated',
+  เกษียณ: 'Retired',
 };

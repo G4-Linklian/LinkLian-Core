@@ -1,17 +1,25 @@
 // edu-level.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EduLevel } from './entities/edu-level.entity';
 import { EduLevelProgramNormalize } from './entities/edu-level-program-normalize.entity';
-import { 
-  SearchEduLevelMasterDto, 
-  SearchEduLevelDto, 
-  CreateEduLevelDto, 
+import {
+  SearchEduLevelMasterDto,
+  SearchEduLevelDto,
+  CreateEduLevelDto,
   UpdateEduLevelDto,
   CreateEduLevelNormDto,
-  DeleteEduLevelNormDto 
+  DeleteEduLevelNormDto,
 } from './dto/edu-level.dto';
+import { eduLevelFields } from 'src/common/interface/eduLevel.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class EduLevelService {
@@ -21,6 +29,7 @@ export class EduLevelService {
     @InjectRepository(EduLevelProgramNormalize)
     private eduLevelNormRepo: Repository<EduLevelProgramNormalize>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== EduLevel Master Methods ==========
@@ -30,14 +39,14 @@ export class EduLevelService {
    */
   async findById(id: number) {
     const eduLevel = await this.eduLevelRepo.findOne({
-      where: { edu_lev_id: id }
+      where: { edu_lev_id: id },
     });
 
     if (!eduLevel) {
       throw new NotFoundException('EduLevel not found');
     }
 
-    return eduLevel;
+    return { success: true, data: eduLevel };
   }
 
   /**
@@ -45,8 +54,11 @@ export class EduLevelService {
    */
   async searchMaster(dto: SearchEduLevelMasterDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.edu_lev_id || dto.level_name ||
-                     dto.edu_type || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.edu_lev_id ||
+      dto.level_name ||
+      dto.edu_type ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -77,10 +89,17 @@ export class EduLevelService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (err) {
-      console.error('Error fetching edu levels:', err);
+      const result: eduLevelFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching edu levels:',
+        'SearchMasterEduLevel',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching edu levels');
     }
   }
@@ -91,10 +110,14 @@ export class EduLevelService {
    */
   async search(dto: SearchEduLevelDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.edu_lev_id || dto.level_name ||
-                     dto.edu_type || dto.program_id ||
-                     dto.inst_id || dto.parent_id ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.edu_lev_id ||
+      dto.level_name ||
+      dto.edu_type ||
+      dto.program_id ||
+      dto.inst_id ||
+      dto.parent_id ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -166,10 +189,13 @@ export class EduLevelService {
     }
 
     try {
-      const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (err) {
-      console.error('Error fetching edu levels:', err);
+      const result: eduLevelFields[] = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error fetching edu levels:', 'SearchEduLevel', error);
       throw new InternalServerErrorException('Error fetching edu levels');
     }
   }
@@ -189,14 +215,18 @@ export class EduLevelService {
         flag_valid: true,
       });
 
-      const savedEduLevel = await this.eduLevelRepo.save(newEduLevel);
-      return savedEduLevel;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      const savedEduLevel: eduLevelFields =
+        await this.eduLevelRepo.save(newEduLevel);
+      return {
+        success: true,
+        data: savedEduLevel,
+        message: 'EduLevel created successfully',
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === '23505') {
         throw new ConflictException('This education level already exists');
       }
-      console.error('Error creating edu level:', error);
+      this.logger.error('Error creating edu level:', 'CreateEduLevel', error);
       throw new InternalServerErrorException('Error creating edu level');
     }
   }
@@ -207,7 +237,7 @@ export class EduLevelService {
   async update(id: number, dto: UpdateEduLevelDto) {
     // Check if edu_level exists
     const existingEduLevel = await this.eduLevelRepo.findOne({
-      where: { edu_lev_id: id }
+      where: { edu_lev_id: id },
     });
 
     if (!existingEduLevel) {
@@ -219,7 +249,8 @@ export class EduLevelService {
 
     if (dto.level_name !== undefined) updates.level_name = dto.level_name;
     if (dto.edu_type !== undefined) updates.edu_type = dto.edu_type;
-    if (typeof dto.flag_valid === 'boolean') updates.flag_valid = dto.flag_valid;
+    if (typeof dto.flag_valid === 'boolean')
+      updates.flag_valid = dto.flag_valid;
 
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('No fields to update!');
@@ -229,16 +260,19 @@ export class EduLevelService {
       await this.eduLevelRepo.update({ edu_lev_id: id }, updates);
 
       const updatedEduLevel = await this.eduLevelRepo.findOne({
-        where: { edu_lev_id: id }
+        where: { edu_lev_id: id },
       });
 
-      return updatedEduLevel;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      return {
+        success: true,
+        data: updatedEduLevel,
+        message: 'EduLevel updated successfully',
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === '23505') {
         throw new ConflictException('This education level already exists');
       }
-      console.error('Error updating edu level:', error);
+      this.logger.error('Error updating edu level:', 'UpdateEduLevel', error);
       throw new InternalServerErrorException('Error updating edu level');
     }
   }
@@ -249,7 +283,7 @@ export class EduLevelService {
   async delete(id: number) {
     // Check if edu_level exists
     const existingEduLevel = await this.eduLevelRepo.findOne({
-      where: { edu_lev_id: id }
+      where: { edu_lev_id: id },
     });
 
     if (!existingEduLevel) {
@@ -258,10 +292,9 @@ export class EduLevelService {
 
     try {
       await this.eduLevelRepo.delete({ edu_lev_id: id });
-      return existingEduLevel;
-
-    } catch (error) {
-      console.error('Error deleting edu level:', error);
+      return { success: true, message: 'EduLevel deleted successfully' };
+    } catch (error: unknown) {
+      this.logger.error('Error deleting edu level:', 'DeleteEduLevel', error);
       throw new InternalServerErrorException('Error deleting edu level');
     }
   }
@@ -284,14 +317,23 @@ export class EduLevelService {
       });
 
       const savedNorm = await this.eduLevelNormRepo.save(newNorm);
-      return savedNorm;
-
-    } catch (error: any) {
-      if (error.code === '23505') {
+      return {
+        success: true,
+        data: savedNorm,
+        message: 'EduLevel normalize created successfully',
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === '23505') {
         throw new ConflictException('This class has already been added');
       }
-      console.error('Error creating edu level normalize:', error);
-      throw new InternalServerErrorException('Error creating edu level normalize');
+      this.logger.error(
+        'Error creating edu level normalize:',
+        'CreateEduLevelNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error creating edu level normalize',
+      );
     }
   }
 
@@ -305,21 +347,33 @@ export class EduLevelService {
 
     try {
       const query = `UPDATE edu_level_program_normalize SET flag_valid = true WHERE edu_lev_id = $1 AND program_id = $2 RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.edu_lev_id, dto.program_id]);
+      const result = await this.dataSource.query(query, [
+        dto.edu_lev_id,
+        dto.program_id,
+      ]);
 
       if (result.length === 0) {
         throw new NotFoundException('EduLevel normalize record not found');
       }
 
-      return result[0];
-
-    } catch (error: any) {
+      return {
+        success: true,
+        data: result[0],
+        message: 'EduLevel normalize updated successfully',
+      };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      if (error.code === '23505') {
+      if (error instanceof Error && 'code' in error && error.code === '23505') {
         throw new ConflictException('This class has already been added');
       }
-      console.error('Error updating edu level normalize:', error);
-      throw new InternalServerErrorException('Error updating edu level normalize');
+      this.logger.error(
+        'Error updating edu level normalize:',
+        'UpdateEduLevelNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error updating edu level normalize',
+      );
     }
   }
 
@@ -333,18 +387,30 @@ export class EduLevelService {
 
     try {
       const query = `DELETE FROM edu_level_program_normalize WHERE edu_lev_id = $1 AND program_id = $2 RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.edu_lev_id, dto.program_id]);
+      const result = await this.dataSource.query(query, [
+        dto.edu_lev_id,
+        dto.program_id,
+      ]);
 
       if (result.length === 0) {
         throw new NotFoundException('EduLevel normalize record not found');
       }
 
-      return result[0];
-
-    } catch (error) {
+      return {
+        success: true,
+        data: result[0],
+        message: 'EduLevel normalize deleted successfully',
+      };
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting edu level normalize:', error);
-      throw new InternalServerErrorException('Error deleting edu level normalize');
+      this.logger.error(
+        'Error deleting edu level normalize:',
+        'DeleteEduLevelNormalize',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error deleting edu level normalize',
+      );
     }
   }
 }

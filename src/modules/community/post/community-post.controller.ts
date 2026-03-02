@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
-  Req,
   ParseIntPipe,
   Put,
 } from '@nestjs/common';
@@ -23,8 +22,7 @@ import { CreateCommunityPostDto } from './dto/create-community-post.dto';
 
 @Controller('community/post')
 export class CommunityPostController {
-
-  constructor(private service: CommunityPostService) { }
+  constructor(private service: CommunityPostService) {}
 
   @Post()
   @ApiHeader({ name: 'x-user-id', required: true })
@@ -45,20 +43,14 @@ export class CommunityPostController {
       },
     },
   })
-
   @UseInterceptors(FilesInterceptor('files'))
   create(
     @Headers('x-user-id') userId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: CreateCommunityPostDto,
   ) {
-    return this.service.createPost(
-      Number(userId),
-      dto,
-      files,
-    );
+    return this.service.createPost(Number(userId), dto, files);
   }
-
 
   @Get('search')
   search(
@@ -111,14 +103,8 @@ export class CommunityPostController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    return this.service.updatePost(
-      userId,
-      postId,
-      dto,
-      files,
-    );
+    return this.service.updatePost(userId, postId, dto, files);
   }
-
 
   // HARD DELETE POST
   @Delete(':postId/hard')
@@ -133,10 +119,7 @@ export class CommunityPostController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    return this.service.hardDeletePost(
-      userId,
-      postId,
-    );
+    return this.service.hardDeletePost(userId, postId);
   }
 
   @Delete(':postId')
@@ -154,9 +137,7 @@ export class CommunityPostController {
 
     return this.service.deletePost(userId, postIdNum);
   }
-
 }
-
 
 // @Delete(':postId')
 // deletePost(
@@ -168,4 +149,3 @@ export class CommunityPostController {
 //     Number(postId),
 //   );
 // }
-

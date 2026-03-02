@@ -1,5 +1,9 @@
 // regis.summary.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
   RegisSummaryInfoDto,
@@ -7,10 +11,15 @@ import {
   RegisSummaryScheduleDto,
   RegisSummaryRegistrationDto,
 } from './dto/regis.summary.dto';
+import { regisSummaryFields } from './interface/regis.summary.interface';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class RegisSummaryService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private logger: AppLogger,
+  ) {}
 
   /**
    * Get general registration information summary
@@ -42,12 +51,20 @@ export class RegisSummaryService {
            WHERE b2.inst_id = $1) AS classroom
       `;
 
-      const result = await this.dataSource.query(query, [dto.inst_id]);
+      const result: regisSummaryFields[] = await this.dataSource.query(query, [
+        dto.inst_id,
+      ]);
 
-      return result[0] || {};
-    } catch (error) {
-      console.error('Error fetching registration info:', error);
-      throw new InternalServerErrorException('Error fetching registration info');
+      return { success: true, data: result[0] || {} };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching registration info:',
+        'SummaryGetInfo',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching registration info',
+      );
     }
   }
 
@@ -77,12 +94,20 @@ export class RegisSummaryService {
              AND p.inst_id = $1) AS curriculum
       `;
 
-      const result = await this.dataSource.query(query, [dto.inst_id]);
+      const result: regisSummaryFields[] = await this.dataSource.query(query, [
+        dto.inst_id,
+      ]);
 
-      return result[0] || {};
-    } catch (error) {
-      console.error('Error fetching curriculum registration:', error);
-      throw new InternalServerErrorException('Error fetching curriculum registration');
+      return { success: true, data: result[0] || {} };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching curriculum registration:',
+        'SummaryGetCurriculum',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching curriculum registration',
+      );
     }
   }
 
@@ -114,12 +139,21 @@ export class RegisSummaryService {
              AND sem.semester_id = $2) AS "sectionSchedule"
       `;
 
-      const result = await this.dataSource.query(query, [dto.inst_id, dto.semester_id]);
+      const result: regisSummaryFields[] = await this.dataSource.query(query, [
+        dto.inst_id,
+        dto.semester_id,
+      ]);
 
-      return result[0] || {};
-    } catch (error) {
-      console.error('Error fetching schedule registration:', error);
-      throw new InternalServerErrorException('Error fetching schedule registration');
+      return { success: true, data: result[0] || {} };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching schedule registration:',
+        'SummaryGetSchedule',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching schedule registration',
+      );
     }
   }
 
@@ -151,12 +185,20 @@ export class RegisSummaryService {
           AND us.inst_id = $1
       `;
 
-      const result = await this.dataSource.query(query, [dto.inst_id]);
+      const result: regisSummaryFields[] = await this.dataSource.query(query, [
+        dto.inst_id,
+      ]);
 
-      return result[0] || {};
-    } catch (error) {
-      console.error('Error fetching registration status:', error);
-      throw new InternalServerErrorException('Error fetching registration status');
+      return { success: true, data: result[0] || {} };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error fetching registration status:',
+        'SummaryGetRegistration',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching registration status',
+      );
     }
   }
 }

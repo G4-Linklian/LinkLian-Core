@@ -1,9 +1,8 @@
 // user-sys-learning-area-normalize.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity('user_sys_learning_area_normalize')
 export class UserSysLearningAreaNormalize {
-
   @PrimaryColumn({ name: 'learning_area_id' })
   learning_area_id!: number;
 

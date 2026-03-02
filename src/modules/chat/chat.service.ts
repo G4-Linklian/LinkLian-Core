@@ -1,12 +1,24 @@
 // chat.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
-import { CreateChatDto, SearchChatDto, CreateMessageDto, SearchMessageDto, ChatSendEvent } from './dto/chat.dto';
+import {
+  CreateChatDto,
+  SearchChatDto,
+  CreateMessageDto,
+  SearchMessageDto,
+  ChatSendEvent,
+} from './dto/chat.dto';
 import { connect } from 'amqplib';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ChatService {
@@ -18,6 +30,7 @@ export class ChatService {
     @InjectRepository(UserSysChatNormalize)
     private userSysChatNormalizeRepo: Repository<UserSysChatNormalize>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== Chat Methods ==========
@@ -27,14 +40,14 @@ export class ChatService {
    */
   async findChatById(id: number) {
     const chat = await this.chatRepo.findOne({
-      where: { chat_id: id }
+      where: { chat_id: id },
     });
 
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
 
-    return chat;
+    return { success: true, data: chat };
   }
 
   /**
@@ -42,9 +55,11 @@ export class ChatService {
    */
   async searchChat(dto: SearchChatDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.chat_id || dto.user_sys_id ||
-                     typeof dto.is_ai_chat === 'boolean' ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.chat_id ||
+      dto.user_sys_id ||
+      typeof dto.is_ai_chat === 'boolean' ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -112,9 +127,13 @@ export class ChatService {
 
     try {
       const result = await this.dataSource.query(query, values);
-      return result;
-    } catch (err) {
-      console.error('Error executing searchChat query:', err);
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error executing searchChat query:',
+        'SearchChat',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching chats');
     }
   }
@@ -150,22 +169,28 @@ export class ChatService {
       await queryRunner.manager.save(senderNormalize);
 
       // Create normalize entries for receiver
-      const receiverNormalize = queryRunner.manager.create(UserSysChatNormalize, {
-        user_sys_id: dto.receiver_id,
-        chat_id: savedChat.chat_id,
-        flag_valid: true,
-      });
+      const receiverNormalize = queryRunner.manager.create(
+        UserSysChatNormalize,
+        {
+          user_sys_id: dto.receiver_id,
+          chat_id: savedChat.chat_id,
+          flag_valid: true,
+        },
+      );
       await queryRunner.manager.save(receiverNormalize);
 
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      return { message: 'Chat created successfully!', data: savedChat };
-
-    } catch (error) {
+      return {
+        success: true,
+        message: 'Chat created successfully!',
+        data: savedChat,
+      };
+    } catch (error: unknown) {
       // Rollback on error
       await queryRunner.rollbackTransaction();
-      console.error('Error creating chat:', error);
+      this.logger.error('Error creating chat:', 'CreateChat', error);
       throw new InternalServerErrorException('Error creating chat');
     } finally {
       await queryRunner.release();
@@ -179,20 +204,27 @@ export class ChatService {
    */
   async searchMessages(dto: SearchMessageDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.message_id || dto.chat_id || dto.sender_id ||
-                     dto.content || dto.reply_id ||
-                     typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.message_id ||
+      dto.chat_id ||
+      dto.sender_id ||
+      dto.content ||
+      dto.reply_id ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
     }
 
-    const query = this.messageRepo.createQueryBuilder('m')
+    const query = this.messageRepo
+      .createQueryBuilder('m')
       .select('m.*')
       .addSelect('COUNT(*) OVER()', 'total_count');
 
     if (dto.message_id) {
-      query.andWhere('m.message_id = :messageId', { messageId: dto.message_id });
+      query.andWhere('m.message_id = :messageId', {
+        messageId: dto.message_id,
+      });
     }
 
     if (dto.chat_id) {
@@ -205,7 +237,9 @@ export class ChatService {
 
     // Content search with ILIKE for case-insensitive partial match
     if (dto.content) {
-      query.andWhere('m.content ILIKE :content', { content: `%${dto.content}%` });
+      query.andWhere('m.content ILIKE :content', {
+        content: `%${dto.content}%`,
+      });
     }
 
     if (dto.reply_id) {
@@ -213,7 +247,9 @@ export class ChatService {
     }
 
     if (typeof dto.flag_valid === 'boolean') {
-      query.andWhere('m.flag_valid = :flagValid', { flagValid: dto.flag_valid });
+      query.andWhere('m.flag_valid = :flagValid', {
+        flagValid: dto.flag_valid,
+      });
     }
 
     // Sort
@@ -228,9 +264,13 @@ export class ChatService {
 
     try {
       const result = await query.getRawMany();
-      return result;
-    } catch (err) {
-      console.error('Error executing searchMessages query:', err);
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error(
+        'Error executing searchMessages query:',
+        'SearchMessages',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching messages');
     }
   }
@@ -263,12 +303,13 @@ export class ChatService {
       const savedMessage = await queryRunner.manager.save(newMessage);
 
       // Update chat's last_sent and last_messages
-      await queryRunner.manager.update(Chat, 
+      await queryRunner.manager.update(
+        Chat,
         { chat_id: dto.chat_id },
-        { 
+        {
           last_sent: new Date(),
           last_messages: dto.content,
-        }
+        },
       );
 
       // Commit transaction before sending to RabbitMQ
@@ -277,12 +318,15 @@ export class ChatService {
       // Send event to RabbitMQ for real-time delivery
       await this.sendMessageToRabbitMQ(savedMessage);
 
-      return { message: 'Message created successfully!', data: savedMessage };
-
+      return {
+        success: true,
+        message: 'Message created successfully!',
+        data: savedMessage,
+      };
     } catch (error) {
       // Rollback on error
       await queryRunner.rollbackTransaction();
-      console.error('Error creating message:', error);
+      this.logger.error('Error creating message:', 'CreateMessage', error);
       throw new InternalServerErrorException('Error creating message');
     } finally {
       await queryRunner.release();
@@ -294,7 +338,8 @@ export class ChatService {
    */
   private async sendMessageToRabbitMQ(message: Message): Promise<void> {
     try {
-      const mqUrl = process.env.RABBITMQ_URL || 'amqp://user:password@localhost:5672/';
+      const mqUrl =
+        process.env.RABBITMQ_URL || 'amqp://user:password@localhost:5672/';
       const connection = await connect(mqUrl);
       const channel = await connection.createChannel();
       const queue = 'socket_events';
@@ -308,22 +353,24 @@ export class ChatService {
           sender_id: message.sender_id,
           content: message.content,
           reply_id: message.reply_id ?? null,
-          file_url: message.file as object[] ?? [],
+          file_url: (message.file as object[]) ?? [],
           created_at: message.created_at,
         },
       };
 
-      channel.sendToQueue(
-        queue,
-        Buffer.from(JSON.stringify(eventMessage)),
-        { persistent: true }
-      );
+      channel.sendToQueue(queue, Buffer.from(JSON.stringify(eventMessage)), {
+        persistent: true,
+      });
 
       await channel.close();
       await connection.close();
-    } catch (mqError) {
+    } catch (mqError: unknown) {
       // Log error but don't fail the message creation
-      console.error('Error sending message to RabbitMQ:', mqError);
+      this.logger.error(
+        'Error sending message to RabbitMQ:',
+        'SendMessageToRabbitMQ',
+        mqError,
+      );
     }
   }
 }

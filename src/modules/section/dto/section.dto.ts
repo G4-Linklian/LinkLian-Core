@@ -1,5 +1,11 @@
 // section.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, Matches } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  Matches,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import { DayOfWeek } from '../entities/section-schedule.entity';
@@ -22,6 +28,12 @@ export class SearchSectionMasterDto {
   @Type(() => Number)
   @IsInt()
   semester_id?: number;
+
+  @ApiPropertyOptional({ description: 'Learning Area ID', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  learning_area_id?: number;
 
   @ApiPropertyOptional({ description: 'Subject ID', example: 1 })
   @IsOptional()
@@ -46,23 +58,37 @@ export class SearchSectionMasterDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Include student count', example: true, default: true })
+  @ApiPropertyOptional({
+    description: 'Include student count',
+    example: true,
+    default: true,
+  })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   count_student?: boolean;
 
-  @ApiPropertyOptional({ description: 'Keyword search for section_name', example: 'Section' })
+  @ApiPropertyOptional({
+    description: 'Keyword search for section_name',
+    example: 'Section',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'section_name' })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'section_name',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -113,17 +139,27 @@ export class SearchSectionDto {
   @IsInt()
   schedule_id?: number;
 
-  @ApiPropertyOptional({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
+  @ApiPropertyOptional({
+    description: 'Day of week',
+    example: 'Monday',
+    enum: DayOfWeek,
+  })
   @IsOptional()
   @IsString()
   day_of_week?: string;
 
-  @ApiPropertyOptional({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
+  @ApiPropertyOptional({
+    description: 'Start time (HH:mm:ss)',
+    example: '08:00:00',
+  })
   @IsOptional()
   @IsString()
   start_time?: string;
 
-  @ApiPropertyOptional({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
+  @ApiPropertyOptional({
+    description: 'End time (HH:mm:ss)',
+    example: '10:00:00',
+  })
   @IsOptional()
   @IsString()
   end_time?: string;
@@ -146,12 +182,19 @@ export class SearchSectionDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'section_name' })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'section_name',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -190,17 +233,27 @@ export class SearchScheduleDto {
   @IsInt()
   section_id?: number;
 
-  @ApiPropertyOptional({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
+  @ApiPropertyOptional({
+    description: 'Day of week',
+    example: 'Monday',
+    enum: DayOfWeek,
+  })
   @IsOptional()
   @IsString()
   day_of_week?: string;
 
-  @ApiPropertyOptional({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
+  @ApiPropertyOptional({
+    description: 'Start time (HH:mm:ss)',
+    example: '08:00:00',
+  })
   @IsOptional()
   @IsString()
   start_time?: string;
 
-  @ApiPropertyOptional({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
+  @ApiPropertyOptional({
+    description: 'End time (HH:mm:ss)',
+    example: '10:00:00',
+  })
   @IsOptional()
   @IsString()
   end_time?: string;
@@ -273,13 +326,21 @@ export class SearchSectionEducatorDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Join building info', example: false, default: false })
+  @ApiPropertyOptional({
+    description: 'Join building info',
+    example: false,
+    default: false,
+  })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   join_building?: boolean;
 
-  @ApiPropertyOptional({ description: 'From profile view', example: false, default: false })
+  @ApiPropertyOptional({
+    description: 'From profile view',
+    example: false,
+    default: false,
+  })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
@@ -290,7 +351,11 @@ export class SearchSectionEducatorDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -368,7 +433,11 @@ export class SearchEnrollmentDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -390,7 +459,10 @@ export class SearchEnrollmentDto {
   @IsInt()
   hour_per_week?: number;
 
-  @ApiPropertyOptional({ description: 'Keyword search for first_name, last_name, or username', example: 'John' })
+  @ApiPropertyOptional({
+    description: 'Keyword search for first_name, last_name, or username',
+    example: 'John',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
@@ -447,17 +519,25 @@ export class CreateScheduleDto {
   @IsInt()
   section_id!: number;
 
-  @ApiProperty({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
+  @ApiProperty({
+    description: 'Day of week',
+    example: 'Monday',
+    enum: DayOfWeek,
+  })
   @IsString()
   day_of_week!: string;
 
   @ApiProperty({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, { message: 'Invalid time format (HH:mm:ss)' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, {
+    message: 'Invalid time format (HH:mm:ss)',
+  })
   @IsString()
   start_time!: string;
 
   @ApiProperty({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, { message: 'Invalid time format (HH:mm:ss)' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/, {
+    message: 'Invalid time format (HH:mm:ss)',
+  })
   @IsString()
   end_time!: string;
 
@@ -483,17 +563,27 @@ export class CreateSectionScheduleDto {
   @IsString()
   section_name?: string;
 
-  @ApiPropertyOptional({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
+  @ApiPropertyOptional({
+    description: 'Day of week',
+    example: 'Monday',
+    enum: DayOfWeek,
+  })
   @IsOptional()
   @IsString()
   day_of_week?: string;
 
-  @ApiPropertyOptional({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
+  @ApiPropertyOptional({
+    description: 'Start time (HH:mm:ss)',
+    example: '08:00:00',
+  })
   @IsOptional()
   @IsString()
   start_time?: string;
 
-  @ApiPropertyOptional({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
+  @ApiPropertyOptional({
+    description: 'End time (HH:mm:ss)',
+    example: '10:00:00',
+  })
   @IsOptional()
   @IsString()
   end_time?: string;
@@ -516,7 +606,11 @@ export class CreateSectionEducatorDto {
   @IsInt()
   user_sys_id!: number;
 
-  @ApiProperty({ description: 'Position', example: 'main', enum: EducatorPosition })
+  @ApiProperty({
+    description: 'Position',
+    example: 'main',
+    enum: EducatorPosition,
+  })
   @IsString()
   position!: string;
 }
@@ -589,17 +683,27 @@ export class UpdateSectionScheduleDto {
   @IsString()
   section_name?: string;
 
-  @ApiPropertyOptional({ description: 'Day of week', example: 'Monday', enum: DayOfWeek })
+  @ApiPropertyOptional({
+    description: 'Day of week',
+    example: 'Monday',
+    enum: DayOfWeek,
+  })
   @IsOptional()
   @IsString()
   day_of_week?: string;
 
-  @ApiPropertyOptional({ description: 'Start time (HH:mm:ss)', example: '08:00:00' })
+  @ApiPropertyOptional({
+    description: 'Start time (HH:mm:ss)',
+    example: '08:00:00',
+  })
   @IsOptional()
   @IsString()
   start_time?: string;
 
-  @ApiPropertyOptional({ description: 'End time (HH:mm:ss)', example: '10:00:00' })
+  @ApiPropertyOptional({
+    description: 'End time (HH:mm:ss)',
+    example: '10:00:00',
+  })
   @IsOptional()
   @IsString()
   end_time?: string;
@@ -629,7 +733,11 @@ export class UpdateSectionEducatorDto {
   @IsInt()
   user_sys_id?: number;
 
-  @ApiPropertyOptional({ description: 'Position', example: 'main', enum: EducatorPosition })
+  @ApiPropertyOptional({
+    description: 'Position',
+    example: 'main',
+    enum: EducatorPosition,
+  })
   @IsOptional()
   @IsString()
   position?: string;

@@ -18,7 +18,7 @@ export class CreateCommunityDto {
 
   @Transform(({ value }) => {
     if (typeof value === 'string') {
-      return value.split(',').map(v => v.trim());
+      return value.split(',').map((v) => v.trim());
     }
     return value;
   })
@@ -27,10 +27,9 @@ export class CreateCommunityDto {
   @IsOptional()
   rules: string[];
 
-
   @Transform(({ value }) => {
     if (typeof value === 'string') {
-      return value.split(',').map(tag => tag.trim());
+      return value.split(',').map((tag) => tag.trim());
     }
     return value;
   })

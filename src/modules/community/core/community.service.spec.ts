@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource, Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { CommunityService } from './community.service';
 import { CommunityEntity } from './entities/community.entity';
 import { CommunityMemberEntity } from '../member/entities/community-member.entity';
@@ -15,9 +12,9 @@ describe('CommunityService', () => {
   let service: CommunityService;
   let dataSource: DataSource;
   let communityRepo: Repository<CommunityEntity>;
-  let memberRepo: Repository<CommunityMemberEntity>;
+  //let memberRepo: Repository<CommunityMemberEntity>;
   let tagRepo: Repository<CommunityTagEntity>;
-  let tagNormalizeRepo: Repository<CommunityTagNormalizeEntity>;
+  //let tagNormalizeRepo: Repository<CommunityTagNormalizeEntity>;
   let mockQueryRunner: any;
 
   beforeEach(async () => {
@@ -61,10 +58,22 @@ describe('CommunityService', () => {
       providers: [
         CommunityService,
         { provide: DataSource, useValue: mockDataSource },
-        { provide: getRepositoryToken(CommunityEntity), useValue: mockCommunityRepo },
-        { provide: getRepositoryToken(CommunityMemberEntity), useValue: mockMemberRepo },
-        { provide: getRepositoryToken(CommunityTagEntity), useValue: mockTagRepo },
-        { provide: getRepositoryToken(CommunityTagNormalizeEntity), useValue: mockTagNormalizeRepo },
+        {
+          provide: getRepositoryToken(CommunityEntity),
+          useValue: mockCommunityRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityMemberEntity),
+          useValue: mockMemberRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityTagEntity),
+          useValue: mockTagRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityTagNormalizeEntity),
+          useValue: mockTagNormalizeRepo,
+        },
       ],
     }).compile();
 
@@ -159,9 +168,7 @@ describe('CommunityService', () => {
         is_private: true,
       };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
       mockQueryRunner.manager.save
         .mockResolvedValueOnce({
@@ -172,8 +179,7 @@ describe('CommunityService', () => {
 
       await service.createCommunity(userId, dto);
 
-      const communityCreated =
-        mockQueryRunner.manager.save.mock.calls[0][0];
+      const communityCreated = mockQueryRunner.manager.save.mock.calls[0][0];
       expect(communityCreated.is_private).toBe(true);
     });
 
@@ -185,9 +191,7 @@ describe('CommunityService', () => {
         is_private: 'true',
       };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
       mockQueryRunner.manager.save
         .mockResolvedValueOnce({
@@ -198,8 +202,7 @@ describe('CommunityService', () => {
 
       await service.createCommunity(userId, dto);
 
-      const communityCreated =
-        mockQueryRunner.manager.save.mock.calls[0][0];
+      const communityCreated = mockQueryRunner.manager.save.mock.calls[0][0];
       expect(communityCreated.is_private).toBe(true);
     });
 
@@ -211,9 +214,7 @@ describe('CommunityService', () => {
         is_private: false,
       };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
       mockQueryRunner.manager.save
         .mockResolvedValueOnce({ community_id: 100 })
@@ -235,9 +236,7 @@ describe('CommunityService', () => {
         tags: ['#math', 'science'],
       };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
       mockQueryRunner.manager.save.mockResolvedValue({ community_id: 100 });
       mockQueryRunner.manager.findOne.mockResolvedValueOnce(null); // No existing tag
@@ -255,13 +254,9 @@ describe('CommunityService', () => {
       const userId = 1;
       const dto = { name: 'Test', description: 'Test', is_private: false };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
-      mockQueryRunner.manager.save.mockRejectedValueOnce(
-        new Error('DB Error'),
-      );
+      mockQueryRunner.manager.save.mockRejectedValueOnce(new Error('DB Error'));
 
       await expect(service.createCommunity(userId, dto)).rejects.toThrow();
 
@@ -273,18 +268,15 @@ describe('CommunityService', () => {
       const userId = 1;
       const dto = { name: 'Test', description: 'Test', is_private: false };
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
-      mockQueryRunner.manager.save.mockRejectedValueOnce(
-        new Error('DB Error'),
-      );
+      mockQueryRunner.manager.save.mockRejectedValueOnce(new Error('DB Error'));
 
       try {
         await service.createCommunity(userId, dto);
       } catch (e) {
         // Expected
+        console.log('Caught expected error:', e);
       }
 
       expect(mockQueryRunner.release).toHaveBeenCalled();
@@ -306,9 +298,7 @@ describe('CommunityService', () => {
         },
       ];
 
-      (dataSource.query as jest.Mock).mockResolvedValueOnce(
-        mockCommunities,
-      );
+      (dataSource.query as jest.Mock).mockResolvedValueOnce(mockCommunities);
 
       const result = await service.listCommunity(userId);
 
@@ -421,9 +411,7 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([{ user_sys_id: userId }]);
 
       const result = await service.checkReadPermission(userId, communityId);
@@ -436,9 +424,7 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([]);
 
       await expect(
@@ -454,9 +440,9 @@ describe('CommunityService', () => {
 
       (dataSource.query as jest.Mock).mockResolvedValueOnce([]);
 
-      await expect(service.getCommunityFeed(userId, communityId)).rejects.toThrow(
-        'Community not found',
-      );
+      await expect(
+        service.getCommunityFeed(userId, communityId),
+      ).rejects.toThrow('Community not found');
     });
 
     it('should throw error if community is inactive', async () => {
@@ -467,9 +453,9 @@ describe('CommunityService', () => {
         { status: 'inactive', is_private: false },
       ]);
 
-      await expect(service.getCommunityFeed(userId, communityId)).rejects.toThrow(
-        'Community inactive',
-      );
+      await expect(
+        service.getCommunityFeed(userId, communityId),
+      ).rejects.toThrow('Community inactive');
     });
 
     it('should allow feed access for public active community', async () => {
@@ -477,9 +463,7 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: false },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: false }])
         .mockResolvedValueOnce([
           {
             post_commu_id: 1,
@@ -502,9 +486,7 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([{ status: 'active' }])
         .mockResolvedValueOnce([]);
 
@@ -519,14 +501,12 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([]);
 
-      await expect(service.getCommunityFeed(userId, communityId)).rejects.toThrow(
-        'Private community',
-      );
+      await expect(
+        service.getCommunityFeed(userId, communityId),
+      ).rejects.toThrow('Private community');
     });
 
     it('should return posts with attachments and engagements', async () => {
@@ -534,9 +514,7 @@ describe('CommunityService', () => {
       const communityId = 5;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: false },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: false }])
         .mockResolvedValueOnce([
           {
             post_commu_id: 1,
@@ -700,9 +678,7 @@ describe('CommunityService', () => {
       };
 
       // Create
-      (dataSource.query as jest.Mock).mockResolvedValueOnce([
-        { role_id: 2 },
-      ]);
+      (dataSource.query as jest.Mock).mockResolvedValueOnce([{ role_id: 2 }]);
 
       mockQueryRunner.manager.save
         .mockResolvedValueOnce({ community_id: 100 })
@@ -728,9 +704,7 @@ describe('CommunityService', () => {
 
       // Check permission
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([{ status: 'active' }]);
 
       const hasAccess = await service.checkReadPermission(userId, communityId);
@@ -738,9 +712,7 @@ describe('CommunityService', () => {
 
       // Get feed
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([{ status: 'active' }])
         .mockResolvedValueOnce([
           {

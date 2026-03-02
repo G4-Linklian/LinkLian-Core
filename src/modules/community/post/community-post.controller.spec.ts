@@ -18,9 +18,7 @@ describe('CommunityPostController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommunityPostController],
-      providers: [
-        { provide: CommunityPostService, useValue: mockService },
-      ],
+      providers: [{ provide: CommunityPostService, useValue: mockService }],
     }).compile();
 
     controller = module.get<CommunityPostController>(CommunityPostController);
@@ -39,11 +37,7 @@ describe('CommunityPostController', () => {
 
       const result = await controller.create(userId, [], dto);
 
-      expect(service.createPost).toHaveBeenCalledWith(
-        1,
-        dto,
-        [],
-      );
+      expect(service.createPost).toHaveBeenCalledWith(1, dto, []);
       expect(result.success).toBe(true);
     });
 
@@ -561,9 +555,9 @@ describe('CommunityPostController', () => {
         new Error('Not allowed'),
       );
 
-      await expect(
-        controller.deletePost(userId, postId),
-      ).rejects.toThrow('Not allowed');
+      await expect(controller.deletePost(userId, postId)).rejects.toThrow(
+        'Not allowed',
+      );
     });
 
     it('should handle post not found error', async () => {
@@ -574,9 +568,9 @@ describe('CommunityPostController', () => {
         new Error('Post not found'),
       );
 
-      await expect(
-        controller.deletePost(userId, postId),
-      ).rejects.toThrow('Post not found');
+      await expect(controller.deletePost(userId, postId)).rejects.toThrow(
+        'Post not found',
+      );
     });
   });
 
@@ -651,7 +645,11 @@ describe('CommunityPostController', () => {
         { post_commu_id: 100, content: 'JavaScript tips' },
       ]);
 
-      const searchResult = await controller.search(userId, communityId, 'javascript');
+      const searchResult = await controller.search(
+        userId,
+        communityId,
+        'javascript',
+      );
       expect(searchResult).toHaveLength(1);
 
       // Get all posts
@@ -718,7 +716,11 @@ describe('CommunityPostController', () => {
         { post_commu_id: 100, content: 'Post with document' },
       ]);
 
-      const searchResult = await controller.search(userId, communityId, 'document');
+      const searchResult = await controller.search(
+        userId,
+        communityId,
+        'document',
+      );
       expect(searchResult).toHaveLength(1);
     });
 
@@ -825,9 +827,18 @@ describe('CommunityPostController', () => {
       const userId = '1';
       const dto = { community_id: 5, content: 'Gallery' };
       const files = [
-        { originalname: 'pic1.jpg', mimetype: 'image/jpeg' } as Express.Multer.File,
-        { originalname: 'pic2.png', mimetype: 'image/png' } as Express.Multer.File,
-        { originalname: 'pic3.gif', mimetype: 'image/gif' } as Express.Multer.File,
+        {
+          originalname: 'pic1.jpg',
+          mimetype: 'image/jpeg',
+        } as Express.Multer.File,
+        {
+          originalname: 'pic2.png',
+          mimetype: 'image/png',
+        } as Express.Multer.File,
+        {
+          originalname: 'pic3.gif',
+          mimetype: 'image/gif',
+        } as Express.Multer.File,
       ];
 
       (service.createPost as jest.Mock).mockResolvedValueOnce({
@@ -925,9 +936,9 @@ describe('CommunityPostController', () => {
         new Error('Delete failed'),
       );
 
-      await expect(
-        controller.deletePost(userId, postId),
-      ).rejects.toThrow('Delete failed');
+      await expect(controller.deletePost(userId, postId)).rejects.toThrow(
+        'Delete failed',
+      );
     });
   });
 
@@ -966,13 +977,7 @@ describe('CommunityPostController', () => {
 
       (service.getPosts as jest.Mock).mockResolvedValueOnce([]);
 
-      await controller.getPosts(
-        userId,
-        communityId,
-        20,
-        0,
-        'newest',
-      );
+      await controller.getPosts(userId, communityId, 20, 0, 'newest');
 
       const callArgs = (service.getPosts as jest.Mock).mock.calls[0];
       expect(callArgs[2]).toBe(20); // default limit

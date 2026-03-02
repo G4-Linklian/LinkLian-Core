@@ -1,20 +1,27 @@
 // role.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto, SearchRoleDto, UpdateRoleDto } from './dto/role.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class RoleService {
   constructor(
     @InjectRepository(Role)
     private roleRepo: Repository<Role>,
+    private readonly logger: AppLogger,
   ) {}
 
   async findById(id: number) {
     const role = await this.roleRepo.findOne({
-      where: { role_id: id }
+      where: { role_id: id },
     });
 
     if (!role) {
@@ -25,22 +32,25 @@ export class RoleService {
   }
 
   async searchRole(dto: SearchRoleDto) {
-    // เริ่มสร้าง QueryBuilder ('r' คือ alias ของ table role)
-    const query = this.roleRepo.createQueryBuilder('r')
-      .select([
-        'r.*',
-        'COUNT(*) OVER() AS total_count'
-      ]);
+    const query = this.roleRepo
+      .createQueryBuilder('r')
+      .select(['r.*', 'COUNT(*) OVER() AS total_count']);
 
-    // แปลงเงื่อนไข WHERE แบบปลอดภัย (Parameter Binding อัตโนมัติ)
-    if (dto.role_id) query.andWhere('r.role_id = :roleId', { roleId: dto.role_id });
-    if (dto.role_name) query.andWhere('r.role_name = :roleName', { roleName: dto.role_name });
-    if (dto.role_type) query.andWhere('r.role_type = :roleType', { roleType: dto.role_type });
-    if (dto.access) query.andWhere('r.access @> :access::jsonb', { access: JSON.stringify(dto.access) });
-    
-    // Check Boolean แบบระวัง null
+    if (dto.role_id)
+      query.andWhere('r.role_id = :roleId', { roleId: dto.role_id });
+    if (dto.role_name)
+      query.andWhere('r.role_name = :roleName', { roleName: dto.role_name });
+    if (dto.role_type)
+      query.andWhere('r.role_type = :roleType', { roleType: dto.role_type });
+    if (dto.access)
+      query.andWhere('r.access @> :access::jsonb', {
+        access: JSON.stringify(dto.access),
+      });
+
     if (typeof dto.flag_valid === 'boolean') {
-      query.andWhere('r.flag_valid = :flagValid', { flagValid: dto.flag_valid });
+      query.andWhere('r.flag_valid = :flagValid', {
+        flagValid: dto.flag_valid,
+      });
     }
 
     // Sort
@@ -57,38 +67,35 @@ export class RoleService {
       const result = await query.getRawMany();
       return result;
     } catch (err) {
+      this.logger.error('Error searching roles:', 'SearchRole', err);
       throw new InternalServerErrorException(err);
     }
   }
 
   async createRole(dto: CreateRoleDto) {
     try {
-      // สร้าง Object เตรียม save
       const newRole = this.roleRepo.create({
         ...dto,
         flag_valid: dto.flag_valid ?? true,
       });
 
       const savedRole = await this.roleRepo.save(newRole);
-      return { message: "Role created successfully!", data: savedRole };
-
+      return { message: 'Role created successfully!', data: savedRole };
     } catch (error) {
-      console.error('Error creating role:', error);
+      this.logger.error('Error creating role:', 'CreateRole', error);
       throw new InternalServerErrorException('Error creating role');
     }
   }
 
   async updateRole(id: number, dto: UpdateRoleDto) {
-    // เช็คว่า role มีอยู่หรือไม่
     const existing = await this.roleRepo.findOne({
-      where: { role_id: id }
+      where: { role_id: id },
     });
 
     if (!existing) {
       throw new NotFoundException('Role not found');
     }
 
-    // กรอง field ที่มีค่าเท่านั้น
     const fieldsToUpdate: Partial<Role> = {};
     for (const [key, value] of Object.entries(dto)) {
       if (value !== undefined && value !== null) {
@@ -102,18 +109,19 @@ export class RoleService {
 
     try {
       await this.roleRepo.update({ role_id: id }, fieldsToUpdate);
-      const updatedRole = await this.roleRepo.findOne({ where: { role_id: id } });
-      return { message: "Role updated successfully!", data: updatedRole };
+      const updatedRole = await this.roleRepo.findOne({
+        where: { role_id: id },
+      });
+      return { message: 'Role updated successfully!', data: updatedRole };
     } catch (error) {
-      console.error('Error updating role:', error);
+      this.logger.error('Error updating role:', 'UpdateRole', error);
       throw new InternalServerErrorException('Error updating role');
     }
   }
 
   async deleteRole(id: number) {
-    // เช็คว่า role มีอยู่หรือไม่
     const existing = await this.roleRepo.findOne({
-      where: { role_id: id }
+      where: { role_id: id },
     });
 
     if (!existing) {
@@ -122,9 +130,9 @@ export class RoleService {
 
     try {
       await this.roleRepo.delete({ role_id: id });
-      return { message: "Role deleted successfully!" };
+      return { message: 'Role deleted successfully!' };
     } catch (error) {
-      console.error('Error deleting role:', error);
+      this.logger.error('Error deleting role:', 'DeleteRole', error);
       throw new InternalServerErrorException('Error deleting role');
     }
   }

@@ -64,9 +64,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Hello world' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       const result = await service.createPost(userId, dto);
 
@@ -106,9 +104,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: '  Hello world  ' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -126,9 +122,7 @@ describe('CommunityPostService', () => {
         } as Express.Multer.File,
       ];
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -156,12 +150,13 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post with image' };
       const files = [
-        { originalname: 'pic.png', mimetype: 'image/png' } as Express.Multer.File,
+        {
+          originalname: 'pic.png',
+          mimetype: 'image/png',
+        } as Express.Multer.File,
       ];
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -191,9 +186,7 @@ describe('CommunityPostService', () => {
         } as Express.Multer.File,
       ];
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -223,9 +216,7 @@ describe('CommunityPostService', () => {
         } as Express.Multer.File,
       ];
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -259,9 +250,7 @@ describe('CommunityPostService', () => {
         } as Express.Multer.File,
       ];
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -306,9 +295,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post content' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -336,9 +323,7 @@ describe('CommunityPostService', () => {
       const userId = 42;
       const dto = { community_id: 5, content: 'My post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -350,9 +335,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 99, content: 'Community post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -859,9 +842,7 @@ describe('CommunityPostService', () => {
         {
           post_commu_id: 100,
           content: 'Post with image',
-          attachments: [
-            { url: 'image.jpg', type: 'image' },
-          ],
+          attachments: [{ url: 'image.jpg', type: 'image' }],
         },
       ];
 
@@ -916,9 +897,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -929,9 +908,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -942,9 +919,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -971,9 +946,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post' };
 
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       await service.createPost(userId, dto);
 
@@ -985,9 +958,7 @@ describe('CommunityPostService', () => {
       const userId = 1;
       const dto = { community_id: 5, content: 'Post' };
 
-      queryRunner.manager.query.mockRejectedValueOnce(
-        new Error('Error'),
-      );
+      queryRunner.manager.query.mockRejectedValueOnce(new Error('Error'));
 
       try {
         await service.createPost(userId, dto);
@@ -1006,9 +977,7 @@ describe('CommunityPostService', () => {
         { user_sys_id: 1 },
       ]);
 
-      queryRunner.manager.query.mockRejectedValueOnce(
-        new Error('Error'),
-      );
+      queryRunner.manager.query.mockRejectedValueOnce(new Error('Error'));
 
       try {
         await service.deletePost(userId, postId);
@@ -1043,9 +1012,7 @@ describe('CommunityPostService', () => {
       const communityId = 5;
 
       // Create post
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       const createDto = { community_id: communityId, content: 'Hello world' };
       const createResult = await service.createPost(userId, createDto);
@@ -1063,7 +1030,11 @@ describe('CommunityPostService', () => {
         },
       ]);
 
-      const searchResult = await service.searchPosts(userId, communityId, 'Hello');
+      const searchResult = await service.searchPosts(
+        userId,
+        communityId,
+        'Hello',
+      );
       expect(searchResult).toHaveLength(1);
     });
 
@@ -1078,9 +1049,7 @@ describe('CommunityPostService', () => {
       ];
 
       // Create post with attachment
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       (fileStorageService.uploadFiles as jest.Mock).mockResolvedValueOnce({
         files: [
@@ -1094,7 +1063,10 @@ describe('CommunityPostService', () => {
 
       queryRunner.manager.query.mockResolvedValueOnce(undefined);
 
-      const createDto = { community_id: communityId, content: 'Post with image' };
+      const createDto = {
+        community_id: communityId,
+        content: 'Post with image',
+      };
       await service.createPost(userId, createDto, files);
 
       // Delete post
@@ -1137,7 +1109,11 @@ describe('CommunityPostService', () => {
         { post_commu_id: 100, content: 'JavaScript tips' },
       ]);
 
-      const searchResult = await service.searchPosts(userId, communityId, 'JavaScript');
+      const searchResult = await service.searchPosts(
+        userId,
+        communityId,
+        'JavaScript',
+      );
       expect(searchResult).toHaveLength(1);
     });
 
@@ -1146,18 +1122,14 @@ describe('CommunityPostService', () => {
       const communityId = 5;
 
       // Create first post
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 100 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 100 }]);
 
       const dto1 = { community_id: communityId, content: 'First post' };
       const result1 = await service.createPost(userId, dto1);
       expect(result1.post_id).toBe(100);
 
       // Create second post
-      queryRunner.manager.query.mockResolvedValueOnce([
-        { post_commu_id: 101 },
-      ]);
+      queryRunner.manager.query.mockResolvedValueOnce([{ post_commu_id: 101 }]);
 
       const dto2 = { community_id: communityId, content: 'Second post' };
       const result2 = await service.createPost(userId, dto2);

@@ -1,7 +1,12 @@
 // profile.service.ts
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { UpdateProfileDto, EducationInfo, ProfileResponse } from './dto/profile.dto';
+import { UpdateProfileDto, EducationInfo } from './dto/profile.dto';
 
 @Injectable()
 export class ProfileService {
@@ -81,7 +86,6 @@ export class ProfileService {
           education,
         },
       };
-
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -94,7 +98,10 @@ export class ProfileService {
   /**
    * Get high school education info (level, classroom, study_plan)
    */
-  private async getHighSchoolEducation(userId: number, levelName: string): Promise<EducationInfo> {
+  private async getHighSchoolEducation(
+    userId: number,
+    levelName: string,
+  ): Promise<EducationInfo> {
     // Query class (program) and study plan
     const classQuery = `
       SELECT
@@ -125,7 +132,10 @@ export class ProfileService {
   /**
    * Get university education info (level, classroom, faculty, department)
    */
-  private async getUniversityEducation(userId: number, levelName: string): Promise<EducationInfo> {
+  private async getUniversityEducation(
+    userId: number,
+    levelName: string,
+  ): Promise<EducationInfo> {
     // Query class info for program_name (classroom)
     const classQuery = `
       SELECT
@@ -174,7 +184,7 @@ export class ProfileService {
       type: 'university',
       level: levelName,
       classroom: programName,
-      faculty: faculty,
+      faculty,
       program: department,
       display: `${levelName} ${department} ${sectionName}`,
     };
@@ -241,11 +251,13 @@ export class ProfileService {
       }
 
       // Remove password from response
-      const { password, ...userData } = result[0];
+      const { password: _password, ...userData } = result[0];
       return { message: 'Profile updated successfully', data: userData };
-
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       console.error('Error updating profile:', error);
@@ -277,11 +289,11 @@ export class ProfileService {
 
     try {
       const schedules = await this.dataSource.query(query, [educatorId]);
-      
+
       return {
         success: true,
         message: 'Teaching schedules retrieved successfully',
-        data: schedules.map(schedule => ({
+        data: schedules.map((schedule) => ({
           scheduleId: schedule.schedule_id,
           dayOfWeek: schedule.day_of_week,
           startTime: schedule.start_time,
@@ -294,7 +306,9 @@ export class ProfileService {
       };
     } catch (error) {
       console.error('Error fetching teaching schedule:', error);
-      throw new InternalServerErrorException('Failed to fetch teaching schedule');
+      throw new InternalServerErrorException(
+        'Failed to fetch teaching schedule',
+      );
     }
   }
 }

@@ -1,12 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity('community_attachment')
 export class CommunityAttachmentEntity {
-
   @PrimaryGeneratedColumn()
   attachment_id: number;
 

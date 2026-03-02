@@ -22,9 +22,7 @@ describe('CommunityBookmarkService', () => {
       ],
     }).compile();
 
-    service = module.get<CommunityBookmarkService>(
-      CommunityBookmarkService,
-    );
+    service = module.get<CommunityBookmarkService>(CommunityBookmarkService);
     dataSource = mockDataSource;
   });
 
@@ -83,17 +81,17 @@ describe('CommunityBookmarkService', () => {
     });
 
     it('should throw error when post_commu_id is null', async () => {
-      await expect(
-        service.toggleBookmark(userId, null as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.toggleBookmark(userId, null as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should check post exists before toggle', async () => {
       dataSource.query.mockResolvedValueOnce([]);
 
-      await expect(
-        service.toggleBookmark(userId, postId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.toggleBookmark(userId, postId)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(dataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT post_commu_id'),
         [postId],
@@ -103,9 +101,9 @@ describe('CommunityBookmarkService', () => {
     it('should throw error when post not found', async () => {
       dataSource.query.mockResolvedValueOnce([]);
 
-      await expect(
-        service.toggleBookmark(userId, postId),
-      ).rejects.toThrow('Post not found');
+      await expect(service.toggleBookmark(userId, postId)).rejects.toThrow(
+        'Post not found',
+      );
     });
 
     it('should toggle same post multiple times', async () => {
@@ -323,7 +321,7 @@ describe('CommunityBookmarkService', () => {
         .mockResolvedValueOnce([{ post_commu_id: 1 }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
-      result = await service.toggleBookmark(userId, postId) as any;
+      result = (await service.toggleBookmark(userId, postId)) as any;
       expect((result as any).action).toBe('created');
 
       // Check after creation
@@ -350,7 +348,7 @@ describe('CommunityBookmarkService', () => {
         .mockResolvedValueOnce([{ post_commu_id: 1 }])
         .mockResolvedValueOnce([{ 1: 1 }])
         .mockResolvedValueOnce([]);
-      result = await service.toggleBookmark(userId, postId) as any;
+      result = (await service.toggleBookmark(userId, postId)) as any;
       expect((result as any).action).toBe('removed');
     });
   });

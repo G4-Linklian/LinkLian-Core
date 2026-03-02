@@ -7,9 +7,7 @@ import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize]),
-  ],
+  imports: [TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize])],
   controllers: [ChatController],
   providers: [ChatService],
   exports: [ChatService],

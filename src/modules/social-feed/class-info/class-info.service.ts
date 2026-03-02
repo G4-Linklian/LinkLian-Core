@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ClassInfoService {
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   /**
    * Get section educators with user info
@@ -33,7 +33,9 @@ export class ClassInfoService {
       return result;
     } catch (error) {
       console.error('Error fetching section educators:', error);
-      throw new InternalServerErrorException('Error fetching section educators');
+      throw new InternalServerErrorException(
+        'Error fetching section educators',
+      );
     }
   }
 
@@ -92,7 +94,9 @@ export class ClassInfoService {
           AND ss.flag_valid = true
         ORDER BY ss.day_of_week ASC, ss.start_time ASC
       `;
-      const schedules = await this.dataSource.query(schedulesQuery, [sectionId]);
+      const schedules = await this.dataSource.query(schedulesQuery, [
+        sectionId,
+      ]);
 
       // 3. Get members (enrolled students)
       const membersQuery = `
@@ -125,13 +129,22 @@ export class ClassInfoService {
           AND se.flag_valid = true
         ORDER BY is_main_teacher DESC, u.first_name ASC
       `;
-      const educators = await this.dataSource.query(educatorsQuery, [sectionId]);
-      console.log(`[GetClassInfo] Educators query returned ${educators.length} educators`);
-      const final_result = { room_location: roomLocation, schedules, members, educators };
+      const educators = await this.dataSource.query(educatorsQuery, [
+        sectionId,
+      ]);
+      console.log(
+        `[GetClassInfo] Educators query returned ${educators.length} educators`,
+      );
+      const final_result = {
+        room_location: roomLocation,
+        schedules,
+        members,
+        educators,
+      };
       return {
         success: true,
         message: 'Class info fetched successfully',
-        data: final_result
+        data: final_result,
       };
     } catch (error) {
       console.error('Error fetching class info:', error);

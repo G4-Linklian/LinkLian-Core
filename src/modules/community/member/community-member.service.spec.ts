@@ -45,9 +45,7 @@ describe('CommunityMemberService', () => {
       const communityId = 1;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: false },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: false }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
           { community_id: 1, user_sys_id: 1, status: 'active' },
@@ -66,9 +64,7 @@ describe('CommunityMemberService', () => {
       const communityId = 1;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: true },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
           { community_id: 1, user_sys_id: 1, status: 'pending' },
@@ -87,9 +83,9 @@ describe('CommunityMemberService', () => {
 
       (dataSource.query as jest.Mock).mockResolvedValueOnce([]);
 
-      await expect(
-        service.joinCommunity(userId, communityId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.joinCommunity(userId, communityId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw error when community is inactive', async () => {
@@ -100,9 +96,9 @@ describe('CommunityMemberService', () => {
         { status: 'inactive', is_private: false },
       ]);
 
-      await expect(
-        service.joinCommunity(userId, communityId),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.joinCommunity(userId, communityId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw error when already joined', async () => {
@@ -110,16 +106,12 @@ describe('CommunityMemberService', () => {
       const communityId = 1;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: false },
-        ])
-        .mockResolvedValueOnce([
-          { flag_valid: true, status: 'active' },
-        ]);
+        .mockResolvedValueOnce([{ status: 'active', is_private: false }])
+        .mockResolvedValueOnce([{ flag_valid: true, status: 'active' }]);
 
-      await expect(
-        service.joinCommunity(userId, communityId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.joinCommunity(userId, communityId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update existing member if previously left', async () => {
@@ -127,12 +119,8 @@ describe('CommunityMemberService', () => {
       const communityId = 1;
 
       (dataSource.query as jest.Mock)
-        .mockResolvedValueOnce([
-          { status: 'active', is_private: false },
-        ])
-        .mockResolvedValueOnce([
-          { flag_valid: false, status: 'inactive' },
-        ])
+        .mockResolvedValueOnce([{ status: 'active', is_private: false }])
+        .mockResolvedValueOnce([{ flag_valid: false, status: 'inactive' }])
         .mockResolvedValueOnce([
           { community_id: 1, user_sys_id: 1, status: 'active' },
         ]);
@@ -293,9 +281,9 @@ describe('CommunityMemberService', () => {
       );
       mockQueryRunner.query.mockResolvedValueOnce([]);
 
-      await expect(
-        service.leaveCommunity(userId, communityId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.leaveCommunity(userId, communityId)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
@@ -310,9 +298,9 @@ describe('CommunityMemberService', () => {
         { role: 'member', flag_valid: false },
       ]);
 
-      await expect(
-        service.leaveCommunity(userId, communityId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.leaveCommunity(userId, communityId)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });

@@ -3,7 +3,6 @@ import { IsNumber, IsString, Length } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateCommunityPostDto {
-
   @ApiProperty({ example: 1 })
   @Type(() => Number)
   @IsNumber()

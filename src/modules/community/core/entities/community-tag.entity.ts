@@ -7,7 +7,6 @@ import {
 
 @Entity('community_tag')
 export class CommunityTagEntity {
-
   @PrimaryGeneratedColumn()
   community_tag_id: number;
 

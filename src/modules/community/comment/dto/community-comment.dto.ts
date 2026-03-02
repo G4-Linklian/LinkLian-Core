@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import { IsNumber, IsString, IsOptional } from 'class-validator';
 
 export class GetCommunityCommentsDto {
-
   @Type(() => Number)
   @IsNumber()
   post_commu_id: number;

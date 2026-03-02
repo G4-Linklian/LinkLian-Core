@@ -16,9 +16,7 @@ describe('CommunityBookmarkController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommunityBookmarkController],
-      providers: [
-        { provide: CommunityBookmarkService, useValue: mockService },
-      ],
+      providers: [{ provide: CommunityBookmarkService, useValue: mockService }],
     }).compile();
 
     controller = module.get<CommunityBookmarkController>(
@@ -32,27 +30,27 @@ describe('CommunityBookmarkController', () => {
       const invalidUserId = 'invalid-id';
       const dto = { post_commu_id: 1 };
 
-      await expect(
-        controller.toggle(invalidUserId, dto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.toggle(invalidUserId, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if x-user-id is not a number', async () => {
       const invalidUserId = 'abc';
       const dto = { post_commu_id: 1 };
 
-      await expect(
-        controller.toggle(invalidUserId, dto),
-      ).rejects.toThrow('Invalid x-user-id');
+      await expect(controller.toggle(invalidUserId, dto)).rejects.toThrow(
+        'Invalid x-user-id',
+      );
     });
 
     it('should throw BadRequestException if x-user-id is empty', async () => {
       const invalidUserId = '';
       const dto = { post_commu_id: 1 };
 
-      await expect(
-        controller.toggle(invalidUserId, dto),
-      ).rejects.toThrow('Invalid x-user-id');
+      await expect(controller.toggle(invalidUserId, dto)).rejects.toThrow(
+        'Invalid x-user-id',
+      );
     });
 
     it('should toggle bookmark for post', async () => {
@@ -404,9 +402,9 @@ describe('CommunityBookmarkController', () => {
         new Error('Service error'),
       );
 
-      await expect(
-        controller.checkBookmark(userId, postId),
-      ).rejects.toThrow('Service error');
+      await expect(controller.checkBookmark(userId, postId)).rejects.toThrow(
+        'Service error',
+      );
     });
   });
 
@@ -428,7 +426,10 @@ describe('CommunityBookmarkController', () => {
       // Check
       (service.checkBookmark as jest.Mock).mockResolvedValueOnce(true);
 
-      const checkResult = await controller.checkBookmark(userId, postId.toString());
+      const checkResult = await controller.checkBookmark(
+        userId,
+        postId.toString(),
+      );
       expect(checkResult).toBe(true);
     });
 

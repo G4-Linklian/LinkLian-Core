@@ -17,12 +17,20 @@ export class GetClassFeedDto {
   @IsInt()
   semester_id: number;
 
-  @ApiProperty({ description: 'Offset for pagination', example: 0, required: false })
+  @ApiProperty({
+    description: 'Offset for pagination',
+    example: 0,
+    required: false,
+  })
   @Type(() => Number)
   @IsInt()
   offset?: number = 0;
 
-  @ApiProperty({ description: 'Limit for pagination', example: 10, required: false })
+  @ApiProperty({
+    description: 'Limit for pagination',
+    example: 10,
+    required: false,
+  })
   @Type(() => Number)
   @IsInt()
   limit?: number = 10;
@@ -45,7 +53,7 @@ export interface ScheduleInfo {
     building_id: number | null;
     building_name: string | null;
     building_no: string | null;
-    room_format: string | null;
+    // room_format: string | null;
   };
 }
 

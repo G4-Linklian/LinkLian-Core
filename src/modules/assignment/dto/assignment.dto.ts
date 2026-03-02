@@ -3,7 +3,6 @@ import { IsInt, IsOptional, IsString , IsArray, IsNumber} from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-
 /**
  * DTO for getting assignments in a section
  * Used by both student and teacher roles
@@ -14,18 +13,21 @@ export class GetClassAssignmentsDto {
   @IsInt()
   section_id!: number;
 
-  @ApiPropertyOptional({ description: 'Role of user (student / teacher)', example: 'student' })
+  @ApiPropertyOptional({
+    description: 'Role of user (student / teacher)',
+    example: 'student',
+  })
   @IsOptional()
   @IsString()
   role?: string;
 
-    @ApiPropertyOptional({ description: 'offset', example: 0 })
+  @ApiPropertyOptional({ description: 'offset', example: 0 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   offset?: number;
 
-    @ApiPropertyOptional({ description: 'limit', example: 10 })
+  @ApiPropertyOptional({ description: 'limit', example: 10 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -96,7 +98,7 @@ export interface StudentAssignmentResponse {
   post_id: number;
   title: string;
   subject_name: string;
-  assignment_type: string;   // 'งานเดี่ยว' | 'งานกลุ่ม'
+  assignment_type: string; // 'งานเดี่ยว' | 'งานกลุ่ม'
   due_date: string | null;
   is_submitted: boolean;
   submitted_at: string | null;

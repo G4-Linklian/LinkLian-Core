@@ -1,5 +1,11 @@
 // program.service.ts
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Program } from './entities/program.entity';
@@ -10,8 +16,9 @@ import {
   UpdateProgramDto,
   CreateProgramUserSysDto,
   UpdateProgramUserSysDto,
-  DeleteProgramUserSysDto
+  DeleteProgramUserSysDto,
 } from './dto/program.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ProgramService {
@@ -21,6 +28,7 @@ export class ProgramService {
     @InjectRepository(UserSysProgramNormalize)
     private userSysProgramNormRepo: Repository<UserSysProgramNormalize>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   // ========== Program Methods ==========
@@ -30,7 +38,7 @@ export class ProgramService {
    */
   async findById(id: number) {
     const program = await this.programRepo.findOne({
-      where: { program_id: id }
+      where: { program_id: id },
     });
 
     if (!program) {
@@ -46,11 +54,17 @@ export class ProgramService {
    */
   async search(dto: SearchProgramDto) {
     // Validate that at least one search parameter is provided
-    const hasInput = dto.program_id || dto.inst_id ||
-                     dto.program_name || dto.program_type ||
-                     dto.parent_id || dto.tree_type ||
-                     dto.parent_ids || dto.inst_type ||
-                     dto.keyword || typeof dto.flag_valid === 'boolean';
+    const hasInput =
+      dto.program_id ||
+      dto.inst_id ||
+      dto.program_name ||
+      dto.program_type ||
+      dto.parent_id ||
+      dto.tree_type ||
+      dto.parent_ids ||
+      dto.inst_type ||
+      dto.keyword ||
+      typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -182,7 +196,7 @@ export class ProgramService {
       const result = await this.dataSource.query(query, values);
       return result;
     } catch (err) {
-      console.error('Error fetching programs:', err);
+      this.logger.error('Error fetching programs:', 'FetchPrograms', err);
       throw new InternalServerErrorException('Error fetching programs');
     }
   }
@@ -191,7 +205,12 @@ export class ProgramService {
    * Create a new program
    */
   async create(dto: CreateProgramDto) {
-    if (!dto.inst_id || !dto.program_name || !dto.program_type || !dto.tree_type) {
+    if (
+      !dto.inst_id ||
+      !dto.program_name ||
+      !dto.program_type ||
+      !dto.tree_type
+    ) {
       throw new BadRequestException('Missing required fields!');
     }
 
@@ -215,12 +234,11 @@ export class ProgramService {
 
       const result = await this.dataSource.query(query, values);
       return result[0];
-
     } catch (error: any) {
       if (error.code === '23505') {
         throw new ConflictException('Cannot add duplicate program');
       }
-      console.error('Error creating program:', error);
+      this.logger.error('Error creating program:', 'CreateProgram', error);
       throw new InternalServerErrorException('Error creating program');
     }
   }
@@ -231,7 +249,7 @@ export class ProgramService {
   async update(id: number, dto: UpdateProgramDto) {
     // Check if program exists
     const existingProgram = await this.programRepo.findOne({
-      where: { program_id: id }
+      where: { program_id: id },
     });
 
     if (!existingProgram) {
@@ -286,12 +304,11 @@ export class ProgramService {
       const result = await this.dataSource.query(query, values);
 
       return result[0];
-
     } catch (error: any) {
       if (error.code === '23505') {
         throw new ConflictException('Cannot add duplicate program');
       }
-      console.error('Error updating program:', error);
+      this.logger.error('Error updating program:', 'UpdateProgram', error);
       throw new InternalServerErrorException('Error updating program');
     }
   }
@@ -302,7 +319,7 @@ export class ProgramService {
   async delete(id: number) {
     // Check if program exists
     const existingProgram = await this.programRepo.findOne({
-      where: { program_id: id }
+      where: { program_id: id },
     });
 
     if (!existingProgram) {
@@ -312,9 +329,8 @@ export class ProgramService {
     try {
       await this.programRepo.delete({ program_id: id });
       return existingProgram;
-
     } catch (error) {
-      console.error('Error deleting program:', error);
+      this.logger.error('Error deleting program:', 'DeleteProgram', error);
       throw new InternalServerErrorException('Error deleting program');
     }
   }
@@ -338,12 +354,17 @@ export class ProgramService {
 
       const savedNorm = await this.userSysProgramNormRepo.save(newNorm);
       return savedNorm;
-
     } catch (error: any) {
       if (error.code === '23505') {
-        throw new ConflictException('This user is already assigned to this program');
+        throw new ConflictException(
+          'This user is already assigned to this program',
+        );
       }
-      console.error('Error creating program user sys:', error);
+      this.logger.error(
+        'Error creating program user sys:',
+        'CreateUserSysNormalize',
+        error,
+      );
       throw new InternalServerErrorException('Error creating program user sys');
     }
   }
@@ -382,14 +403,19 @@ export class ProgramService {
       const result = await this.dataSource.query(query, values);
 
       if (result.length === 0) {
-        throw new NotFoundException('User sys program normalize record not found');
+        throw new NotFoundException(
+          'User sys program normalize record not found',
+        );
       }
 
       return result[0];
-
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error updating program user sys:', error);
+      this.logger.error(
+        'Error updating program user sys:',
+        'UpdateUserSysNormalize',
+        error,
+      );
       throw new InternalServerErrorException('Error updating program user sys');
     }
   }
@@ -404,17 +430,25 @@ export class ProgramService {
 
     try {
       const query = `DELETE FROM user_sys_program_normalize WHERE program_id = $1 AND user_sys_id = $2 RETURNING *`;
-      const result = await this.dataSource.query(query, [dto.program_id, dto.user_sys_id]);
+      const result = await this.dataSource.query(query, [
+        dto.program_id,
+        dto.user_sys_id,
+      ]);
 
       if (result.length === 0) {
-        throw new NotFoundException('User sys program normalize record not found');
+        throw new NotFoundException(
+          'User sys program normalize record not found',
+        );
       }
 
       return result[0];
-
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.error('Error deleting program user sys:', error);
+      this.logger.error(
+        'Error deleting program user sys:',
+        'DeleteUserSysNormalize',
+        error,
+      );
       throw new InternalServerErrorException('Error deleting program user sys');
     }
   }
@@ -423,7 +457,10 @@ export class ProgramService {
    * Internal function to create user_sys_program_normalize record
    * Used by other services
    */
-  async createUserSysNormalizeInternal(user_sys_id: number, program_id: number) {
+  async createUserSysNormalizeInternal(
+    user_sys_id: number,
+    program_id: number,
+  ) {
     if (!user_sys_id || !program_id) {
       throw new BadRequestException('Missing required fields!');
     }
@@ -434,11 +471,15 @@ export class ProgramService {
         user_sys_id,
         flag_valid: true,
       });
-      
+
       const savedNorm = await this.userSysProgramNormRepo.save(newNorm);
       return savedNorm;
     } catch (error) {
-      console.error('Error creating program user sys internally:', error);
+      this.logger.error(
+        'Error creating program user sys internally:',
+        'CreateUserSysNormalizeInternal',
+        error,
+      );
       throw error;
     }
   }

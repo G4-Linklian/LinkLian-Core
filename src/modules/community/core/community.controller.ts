@@ -36,7 +36,7 @@ export class CommunityController {
   constructor(
     private readonly service: CommunityService,
     private readonly fileStorageService: FileStorageService,
-  ) { }
+  ) {}
 
   // Create Community
 
@@ -48,7 +48,6 @@ export class CommunityController {
     description: 'User ID from authentication system',
   })
   @ApiConsumes('multipart/form-data')
-
   @ApiBody({
     schema: {
       type: 'object',
@@ -69,11 +68,8 @@ export class CommunityController {
       },
     },
   })
-
   @ApiResponse({ status: 201, description: 'Community created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-
-
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Headers('x-user-id') userIdHeader: string,
@@ -81,8 +77,8 @@ export class CommunityController {
     @Body() dto: CreateCommunityDto,
     @Req() req: any,
   ) {
-      console.log('RAW BODY:', req.body);
-  console.log('DTO is_private:', dto.is_private, typeof dto.is_private);
+    console.log('RAW BODY:', req.body);
+    console.log('DTO is_private:', dto.is_private, typeof dto.is_private);
     const userId = parseInt(userIdHeader, 10);
 
     if (isNaN(userId)) {
@@ -112,7 +108,6 @@ export class CommunityController {
     });
   }
 
-
   @Get('tag/search')
   @ApiOperation({ summary: 'Search community tags' })
   @ApiQuery({
@@ -120,12 +115,9 @@ export class CommunityController {
     required: false,
     type: String,
   })
-  async searchTag(
-    @Query('keyword') keyword?: string,
-  ) {
+  async searchTag(@Query('keyword') keyword?: string) {
     return this.service.searchTag(keyword);
   }
-
 
   @Get()
   @ApiOperation({ summary: 'Get communities (owner or search)' })
@@ -150,8 +142,6 @@ export class CommunityController {
 
     return this.service.listCommunity(userId, keyword);
   }
-
-
 
   @Get('detail/:id')
   @ApiOperation({ summary: 'Get community by ID' })
@@ -206,14 +196,8 @@ export class CommunityController {
 
     console.log('DTO:', dto);
 
-    return this.service.updateCommunity(
-      userId,
-      communityId,
-      dto,
-    );
+    return this.service.updateCommunity(userId, communityId, dto);
   }
-
-
 
   // HARD DELETE COMMUNITY
   @Delete(':communityId/hard')
@@ -228,11 +212,6 @@ export class CommunityController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    return this.service.hardDeleteCommunity(
-      userId,
-      communityId,
-    );
+    return this.service.hardDeleteCommunity(userId, communityId);
   }
-
 }
-

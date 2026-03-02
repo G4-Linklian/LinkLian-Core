@@ -1,5 +1,11 @@
 // dto/role.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsObject,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -20,7 +26,10 @@ export class SearchRoleDto {
   @IsString()
   role_type?: string;
 
-  @ApiPropertyOptional({ description: 'สิทธิ์การเข้าถึง (JSON)', example: { read: true, write: true } })
+  @ApiPropertyOptional({
+    description: 'สิทธิ์การเข้าถึง (JSON)',
+    example: { read: true, write: true },
+  })
   @IsOptional()
   @IsObject()
   access?: object;
@@ -31,12 +40,19 @@ export class SearchRoleDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'ฟิลด์ที่ใช้เรียงลำดับ', example: 'role_name' })
+  @ApiPropertyOptional({
+    description: 'ฟิลด์ที่ใช้เรียงลำดับ',
+    example: 'role_name',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'ลำดับการเรียง', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'ลำดับการเรียง',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -56,28 +72,51 @@ export class SearchRoleDto {
 
 export class CreateRoleDto {
   @ApiProperty({ description: 'ชื่อ Role', example: 'admin' })
-  @IsString() role_name: string;
+  @IsString()
+  role_name!: string;
 
   @ApiProperty({ description: 'ประเภท Role', example: 'system' })
-  @IsString() role_type: string;
+  @IsString()
+  role_type!: string;
 
-  @ApiProperty({ description: 'สิทธิ์การเข้าถึง (JSON)', example: { read: true, write: true, delete: false } })
-  @IsObject() access: object;
+  @ApiProperty({
+    description: 'สิทธิ์การเข้าถึง (JSON)',
+    example: { read: true, write: true, delete: false },
+  })
+  @IsObject()
+  access!: object;
 
-  @ApiPropertyOptional({ description: 'สถานะการใช้งาน', example: true, default: true })
-  @IsOptional() @IsBoolean() flag_valid?: boolean;
+  @ApiPropertyOptional({
+    description: 'สถานะการใช้งาน',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  flag_valid?: boolean;
 }
 
 export class UpdateRoleDto {
   @ApiPropertyOptional({ description: 'ชื่อ Role', example: 'admin' })
-  @IsOptional() @IsString() role_name?: string;
+  @IsOptional()
+  @IsString()
+  role_name?: string;
 
   @ApiPropertyOptional({ description: 'ประเภท Role', example: 'system' })
-  @IsOptional() @IsString() role_type?: string;
+  @IsOptional()
+  @IsString()
+  role_type?: string;
 
-  @ApiPropertyOptional({ description: 'สิทธิ์การเข้าถึง (JSON)', example: { read: true, write: true, delete: true } })
-  @IsOptional() @IsObject() access?: object;
+  @ApiPropertyOptional({
+    description: 'สิทธิ์การเข้าถึง (JSON)',
+    example: { read: true, write: true, delete: true },
+  })
+  @IsOptional()
+  @IsObject()
+  access?: object;
 
   @ApiPropertyOptional({ description: 'สถานะการใช้งาน', example: true })
-  @IsOptional() @IsBoolean() flag_valid?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  flag_valid?: boolean;
 }

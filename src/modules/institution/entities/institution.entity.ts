@@ -1,67 +1,73 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('institution') // ชื่อ Table ใน Database
 export class Institution {
   @PrimaryGeneratedColumn('increment')
-  inst_id: number;
+  inst_id!: number;
 
   @Column({ name: 'inst_email', unique: true })
-  inst_email: string;
+  inst_email!: string;
 
   @Column({ name: 'inst_password' })
-  inst_password: string;
+  inst_password!: string;
 
   @Column({ name: 'inst_name_th' })
-  inst_name_th: string;
+  inst_name_th!: string;
 
-  @Column({ name: 'inst_name_en' })
-  inst_name_en: string;
+  @Column({ name: 'inst_name_en', nullable: true })
+  inst_name_en?: string;
 
-  @Column({ name: 'inst_abbr_th' })
-  inst_abbr_th: string;
+  @Column({ name: 'inst_abbr_th', nullable: true })
+  inst_abbr_th?: string;
 
-  @Column({ name: 'inst_abbr_en' })
-  inst_abbr_en: string;
+  @Column({ name: 'inst_abbr_en', nullable: true })
+  inst_abbr_en?: string;
 
   @Column({ name: 'inst_type' })
-  inst_type: string;
+  inst_type!: string;
 
   @Column({ name: 'inst_phone', nullable: true })
-  inst_phone: string;
+  inst_phone?: string;
 
   @Column({ name: 'website', nullable: true })
-  website: string;
+  website?: string;
 
   @Column({ name: 'address', nullable: true })
-  address: string;
+  address?: string;
 
   @Column({ name: 'subdistrict', nullable: true })
-  subdistrict: string;
+  subdistrict?: string;
 
   @Column({ name: 'district', nullable: true })
-  district: string;
+  district?: string;
 
   @Column({ name: 'province', nullable: true })
-  province: string;
+  province?: string;
 
   @Column({ name: 'postal_code', nullable: true })
-  postal_code: string;
+  postal_code?: string;
 
   @Column({ name: 'logo_url', nullable: true })
-  logo_url: string;
+  logo_url?: string;
 
   @Column({ name: 'docs_url', nullable: true })
-  docs_url: string;
+  docs_url?: string;
 
   @Column({ name: 'approve_status', default: 'pending' })
-  approve_status: string;
+  approve_status!: string;
 
   @Column({ name: 'flag_valid', default: true })
-  flag_valid: boolean;
+  flag_valid!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
+  updated_at!: Date;
 }

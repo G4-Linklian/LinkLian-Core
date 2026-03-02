@@ -9,19 +9,19 @@ import { EduLevel } from '../../edu-level/entities/edu-level.entity';
 import { Program } from '../../program/entities/program.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([UserSys, EduLevel, Program]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
-                signOptions: { expiresIn: '30m' },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
-    controllers: [ImportStudentController],
-    providers: [ImportStudentService],
-    exports: [ImportStudentService],
+  imports: [
+    TypeOrmModule.forFeature([UserSys, EduLevel, Program]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret-key',
+        signOptions: { expiresIn: '30m' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [ImportStudentController],
+  providers: [ImportStudentService],
+  exports: [ImportStudentService],
 })
 export class ImportStudentModule {}

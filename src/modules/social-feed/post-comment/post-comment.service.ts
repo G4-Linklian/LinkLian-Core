@@ -64,7 +64,9 @@ export class PostCommentService {
    * Get all comments for a post as a nested tree structure with pagination
    * Handles anonymous display names using section-based hashing
    */
-  async getPostComments(dto: GetPostCommentsDto): Promise<{ data: CommentNode[]; total: number; hasMore: boolean }> {
+  async getPostComments(
+    dto: GetPostCommentsDto,
+  ): Promise<{ data: CommentNode[]; total: number; hasMore: boolean }> {
     const { post_id, limit = 10, offset = 0 } = dto;
 
     if (!post_id) {
@@ -136,7 +138,11 @@ export class PostCommentService {
         LIMIT $2 OFFSET $3
       `;
 
-      const rootComments = await this.dataSource.query(rootQuery, [post_id, limit, offset]);
+      const rootComments = await this.dataSource.query(rootQuery, [
+        post_id,
+        limit,
+        offset,
+      ]);
 
       // Get section_id for anonymous name generation if needed
       let sectionIdForAnonymous: number | null = null;
@@ -152,10 +158,16 @@ export class PostCommentService {
       // For each root comment, fetch all descendants recursively
       const commentsWithChildren = await Promise.all(
         rootComments.map(async (root: any) => {
-          const processedRoot = this.processAnonymousComment(root, sectionIdForAnonymous);
-          const children = await this.fetchChildrenRecursive(root.comment_id, sectionIdForAnonymous);
+          const processedRoot = this.processAnonymousComment(
+            root,
+            sectionIdForAnonymous,
+          );
+          const children = await this.fetchChildrenRecursive(
+            root.comment_id,
+            sectionIdForAnonymous,
+          );
           return { ...processedRoot, children };
-        })
+        }),
       );
 
       return {
@@ -172,7 +184,10 @@ export class PostCommentService {
   /**
    * Recursively fetch all children of a comment
    */
-  private async fetchChildrenRecursive(parentId: number, sectionIdForAnonymous: number | null): Promise<any[]> {
+  private async fetchChildrenRecursive(
+    parentId: number,
+    sectionIdForAnonymous: number | null,
+  ): Promise<any[]> {
     const childrenQuery = `
       SELECT
         c.comment_id,
@@ -220,10 +235,16 @@ export class PostCommentService {
     // Recursively fetch children for each child
     const childrenWithNested = await Promise.all(
       children.map(async (child: any) => {
-        const processedChild = this.processAnonymousComment(child, sectionIdForAnonymous);
-        const nestedChildren = await this.fetchChildrenRecursive(child.comment_id, sectionIdForAnonymous);
+        const processedChild = this.processAnonymousComment(
+          child,
+          sectionIdForAnonymous,
+        );
+        const nestedChildren = await this.fetchChildrenRecursive(
+          child.comment_id,
+          sectionIdForAnonymous,
+        );
         return { ...processedChild, children: nestedChildren };
-      })
+      }),
     );
 
     return childrenWithNested;
@@ -232,11 +253,17 @@ export class PostCommentService {
   /**
    * Process anonymous comment to generate display name
    */
-  private processAnonymousComment(comment: any, sectionIdForAnonymous: number | null): any {
+  private processAnonymousComment(
+    comment: any,
+    sectionIdForAnonymous: number | null,
+  ): any {
     if (comment.is_anonymous && sectionIdForAnonymous) {
       return {
         ...comment,
-        display_name: generateAnonymousName(comment.user_sys_id, sectionIdForAnonymous),
+        display_name: generateAnonymousName(
+          comment.user_sys_id,
+          sectionIdForAnonymous,
+        ),
         profile_pic: null,
       };
     }
@@ -377,7 +404,10 @@ export class PostCommentService {
         data: result[0],
       };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       console.error('updatePostComment error:', error);
@@ -411,7 +441,10 @@ export class PostCommentService {
             ))
       `;
 
-      const checkResult = await this.dataSource.query(checkQuery, [comment_id, userId]);
+      const checkResult = await this.dataSource.query(checkQuery, [
+        comment_id,
+        userId,
+      ]);
 
       if (!checkResult || checkResult.length === 0) {
         throw new ForbiddenException('Unauthorized or comment not found');
@@ -437,7 +470,10 @@ export class PostCommentService {
           )
           RETURNING comment_id
         `;
-        const deleteCommentResult = await queryRunner.query(deleteCommentQuery, [comment_id]);
+        const deleteCommentResult = await queryRunner.query(
+          deleteCommentQuery,
+          [comment_id],
+        );
 
         // 2. Mark paths as invalid
         const deletePathQuery = `
@@ -458,7 +494,9 @@ export class PostCommentService {
           message: 'Comment and its replies deleted successfully',
           data: {
             deleted_count: deleteCommentResult.length,
-            deleted_comment_ids: deleteCommentResult.map((row: any) => row.comment_id),
+            deleted_comment_ids: deleteCommentResult.map(
+              (row: any) => row.comment_id,
+            ),
           },
         };
       } catch (error) {

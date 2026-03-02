@@ -6,27 +6,47 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  * DTO for updating user profile
  */
 export class UpdateProfileDto {
-  @ApiPropertyOptional({ description: 'First Name', example: 'John', required: false })
+  @ApiPropertyOptional({
+    description: 'First Name',
+    example: 'John',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   first_name?: string;
 
-  @ApiPropertyOptional({ description: 'Middle Name', example: 'David', required: false })
+  @ApiPropertyOptional({
+    description: 'Middle Name',
+    example: 'David',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   middle_name?: string;
 
-  @ApiPropertyOptional({ description: 'Last Name', example: 'Doe', required: false })
+  @ApiPropertyOptional({
+    description: 'Last Name',
+    example: 'Doe',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   last_name?: string;
 
-  @ApiPropertyOptional({ description: 'Phone number', example: '0812345678', required: false })
+  @ApiPropertyOptional({
+    description: 'Phone number',
+    example: '0812345678',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'Profile Picture URL', example: 'https://example.com/pic.jpg', required: false })
+  @ApiPropertyOptional({
+    description: 'Profile Picture URL',
+    example: 'https://example.com/pic.jpg',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   profile_pic?: string;

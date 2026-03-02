@@ -1,5 +1,15 @@
 // semester.controller.ts
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SemesterService } from './semester.service';
 import {
@@ -7,7 +17,7 @@ import {
   CreateSemesterDto,
   UpdateSemesterDto,
   CreateSemesterSubjectDto,
-  DeleteSemesterSubjectDto
+  DeleteSemesterSubjectDto,
 } from './dto/semester.dto';
 
 @ApiTags('Semester')
@@ -23,7 +33,10 @@ export class SemesterController {
    */
   @Get('active/list')
   @ApiOperation({ summary: 'Get active semesters sorted by semester name' })
-  @ApiResponse({ status: 200, description: 'Active semesters retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active semesters retrieved successfully',
+  })
   async getActiveSemesters() {
     const data = await this.semesterService.getActiveSemesters();
     return { success: true, data };
@@ -38,7 +51,7 @@ export class SemesterController {
   @ApiResponse({ status: 400, description: 'No search parameters provided' })
   async search(@Query() dto: SearchSemesterDto) {
     const data = await this.semesterService.search(dto);
-    return { success: true, data };
+    return data;
   }
 
   /**
@@ -50,7 +63,7 @@ export class SemesterController {
   @ApiResponse({ status: 404, description: 'Semester not found' })
   async findById(@Param('id', ParseIntPipe) id: number) {
     const data = await this.semesterService.findById(id);
-    return { success: true, data };
+    return data;
   }
 
   /**
@@ -63,8 +76,8 @@ export class SemesterController {
   @ApiResponse({ status: 409, description: 'Duplicate semester' })
   async create(@Body() dto: CreateSemesterDto) {
     const data = await this.semesterService.create(dto);
-    return { success: true, message: "Semester created successfully", data };
-  } 
+    return data;
+  }
 
   /**
    * Update an existing semester
@@ -74,9 +87,12 @@ export class SemesterController {
   @ApiResponse({ status: 200, description: 'Semester updated successfully' })
   @ApiResponse({ status: 404, description: 'Semester not found' })
   @ApiResponse({ status: 409, description: 'Duplicate semester' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSemesterDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSemesterDto,
+  ) {
     const data = await this.semesterService.update(id, dto);
-    return { success: true, message: "Semester updated successfully", data };
+    return data;
   }
 
   /**
@@ -87,8 +103,8 @@ export class SemesterController {
   @ApiResponse({ status: 200, description: 'Semester deleted successfully' })
   @ApiResponse({ status: 404, description: 'Semester not found' })
   async delete(@Param('id', ParseIntPipe) id: number) {
-    await this.semesterService.delete(id);
-    return { success: true, message: "Semester deleted successfully" };
+    const data = await this.semesterService.delete(id);
+    return data;
   }
 
   // ========== Semester Subject Normalize Endpoints ==========
@@ -103,7 +119,7 @@ export class SemesterController {
   @ApiResponse({ status: 409, description: 'Record already exists' })
   async createSemesterSubject(@Body() dto: CreateSemesterSubjectDto) {
     const data = await this.semesterService.createSemesterSubject(dto);
-    return { success: true, message: "Record created successfully", data };
+    return data;
   }
 
   /**
@@ -114,7 +130,7 @@ export class SemesterController {
   @ApiResponse({ status: 200, description: 'Record deleted successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
   async deleteSemesterSubject(@Body() dto: DeleteSemesterSubjectDto) {
-    await this.semesterService.deleteSemesterSubject(dto);
-    return { success: true, message: "Record deleted successfully" };
+    const data = await this.semesterService.deleteSemesterSubject(dto);
+    return data;
   }
 }
