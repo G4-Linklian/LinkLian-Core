@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Query, Body, Headers, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { AssignmentService } from './assignment.service';
-import { GetClassAssignmentsDto, GetPostAssignmentDto, CreateGroupDto, GetGroupDto , UpdateGroupDto } from './dto/assignment.dto';
+import { GetClassAssignmentsDto, GetPostAssignmentDto, CreateGroupDto, GetGroupDto , UpdateGroupDto, SearchAssignmentsDto } from './dto/assignment.dto';
 
 @ApiTags('Assignment')
 @Controller('assignment')
@@ -112,6 +112,30 @@ getGroup(
 @ApiQuery({ name: 'assignment_id', required: true })
 getAllGroups(@Query() dto: GetGroupDto) {
   return this.assignmentService.getAllGroups(dto.assignment_id);
+}
+
+@Get('search')
+@ApiOperation({ summary: 'Search assignments by keyword' })
+@ApiHeader({ name: 'x-user-id', required: true })
+@ApiQuery({ name: 'section_id', required: true })
+@ApiQuery({ name: 'keyword', required: true })
+@ApiQuery({ name: 'role', required: false })
+@ApiQuery({ name: 'limit', required: false })
+searchAssignments(
+  @Headers('x-user-id') userId: string,
+  @Query() dto: SearchAssignmentsDto,
+) {
+  const parsedUserId = parseInt(userId, 10);
+  if (isNaN(parsedUserId)) {
+    throw new BadRequestException('Invalid user ID');
+  }
+  return this.assignmentService.searchAssignments(
+    parsedUserId,
+    dto.section_id,
+    dto.keyword,
+    dto.role || 'student',
+    dto.limit || 50,
+  );
 }
 
   /**

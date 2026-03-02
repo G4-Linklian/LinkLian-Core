@@ -1,5 +1,5 @@
 // assignment.dto.ts
-import { IsInt, IsOptional, IsString , IsArray} from 'class-validator';
+import { IsInt, IsOptional, IsString , IsArray, IsNumber} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -116,4 +116,22 @@ export interface TeacherAssignmentResponse {
   due_date: string | null;
   total_students: number;
   submitted_count: number;
+}
+
+export class SearchAssignmentsDto {
+  @IsNumber()
+  @Type(() => Number)
+  section_id: number;
+
+  @IsString()
+  keyword: string;
+
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number = 50;
 }
