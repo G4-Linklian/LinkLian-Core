@@ -106,6 +106,8 @@ export class AppModule implements NestModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'institution/(.*)', method: RequestMethod.ALL },
+        { path: 'institution', method: RequestMethod.ALL },
+        { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )
