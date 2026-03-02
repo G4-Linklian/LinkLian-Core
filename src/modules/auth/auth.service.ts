@@ -38,7 +38,7 @@ import {
   ITokenPayload,
 } from './interfaces/auth.interface';
 
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 import { RoleQueryResult } from './interfaces/auth.interface';
 
 // User group to role mapping (ต้องใช้ role_id แทน role_name)

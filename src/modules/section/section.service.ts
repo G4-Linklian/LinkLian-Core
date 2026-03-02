@@ -30,8 +30,8 @@ import {
   DeleteSectionEducatorDto,
   DeleteEnrollmentDto,
 } from './dto/section.dto';
-import { sectionFields } from 'src/common/interface/section.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { sectionFields } from '../../common/interface/section.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class SectionService {

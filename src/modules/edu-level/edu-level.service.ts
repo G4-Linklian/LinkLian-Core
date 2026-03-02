@@ -18,8 +18,8 @@ import {
   CreateEduLevelNormDto,
   DeleteEduLevelNormDto,
 } from './dto/edu-level.dto';
-import { eduLevelFields } from 'src/common/interface/eduLevel.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { eduLevelFields } from '../../common/interface/eduLevel.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class EduLevelService {

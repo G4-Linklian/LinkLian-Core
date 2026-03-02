@@ -14,8 +14,8 @@ import {
   CreateSubjectDto,
   UpdateSubjectDto,
 } from './dto/subject.dto';
-import { subjectFields } from 'src/common/interface/subject.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { subjectFields } from '../../common/interface/subject.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class SubjectService {
