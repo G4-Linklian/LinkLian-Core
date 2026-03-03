@@ -3,8 +3,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
-import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class BookmarkService {
@@ -101,7 +101,7 @@ export class BookmarkService {
     }
 
     try {
-      // ✅ ตรวจสอบว่ามี bookmark อยู่แล้วหรือไม่
+      //ตรวจสอบว่ามี bookmark อยู่แล้วหรือไม่
       const checkQuery = `
         SELECT COUNT(*) as count FROM bookmark 
         WHERE user_sys_id = $1 AND post_id = $2

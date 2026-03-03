@@ -19,7 +19,7 @@ import {
 } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
-
+import { AppLogger } from '../../../common/logger/app-logger.service';
 @Injectable()
 export class PostService {
   constructor(
@@ -30,6 +30,7 @@ export class PostService {
     @InjectRepository(PostAttachment)
     private postAttachmentRepo: Repository<PostAttachment>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -80,8 +81,11 @@ export class PostService {
    * Get posts in a class (section)
    */
   async getPostsInClass(dto: GetPostsInClassDto): Promise<BaseResponse<any[]>> {
-    console.log(
-      `[GetPostsInClass] Fetching posts for section_id: ${dto.section_id}`,
+    this.logger.log(
+      `Fetching posts`, 'GetPostsInClass', {
+        section_id: dto.section_id,
+        type: dto.type,
+      }
     );
 
     const values: any[] = [dto.section_id];
@@ -180,12 +184,13 @@ export class PostService {
     try {
       const result = await this.dataSource.query(query, values);
 
-      console.log(`[GetPostsInClass] Query returned ${result.length} posts`);
+      this.logger.log(`Query returned ${result.length} posts`, 'GetPostsInClass');
 
       // Log first post's attachments for debugging
       if (result.length > 0 && result[0].attachments) {
-        console.log(
-          `[GetPostsInClass] First post attachments sample:`,
+        this.logger.log(
+          'First post attachments sample:',
+          'GetPostsInClass',
           result[0].attachments,
         );
       }
@@ -229,8 +234,8 @@ export class PostService {
           attachments: row.attachments || [],
         };
       });
-      console.log(
-        `[GetPostsInClass] Transformed posts sample:`,
+      this.logger.log(
+        `Transformed posts sample:`, 'GetPostsInClass',
         posts.length > 0 ? posts[0] : 'No posts',
       );
 
@@ -239,8 +244,8 @@ export class PostService {
         message: 'Posts retrieved successfully',
         data: posts,
       };
-    } catch (error) {
-      console.error('Error getting posts in class:', error);
+    } catch (error : any) {
+      this.logger.error('Error getting posts in class', 'GetPostInClass', error);
       throw new InternalServerErrorException('Error fetching posts');
     }
   }
@@ -281,18 +286,14 @@ export class PostService {
 
       // Strict validation for attachments
       if (dto.attachments && dto.attachments.length > 0) {
-        console.log(
-          `[CreatePost] Validating ${dto.attachments.length} attachments strictly`,
-        );
+        this.logger.log(`Validating ${dto.attachments.length} attachments strictly`, 'CreatePost');
 
         const invalidAttachments = dto.attachments.filter(
           (f) => !f.file_url || !f.file_type,
         );
 
         if (invalidAttachments.length > 0) {
-          console.error(
-            `[CreatePost] Found ${invalidAttachments.length} invalid attachments`,
-          );
+          this.logger.error(`Found ${invalidAttachments.length} invalid attachments`, 'CreatePost');
           throw new BadRequestException(
             `มีไฟล์แนบ ${invalidAttachments.length} ไฟล์ที่ไม่สมบูรณ์ กรุณาลองอัปโหลดใหม่อีกครั้ง`,
           );
@@ -302,13 +303,11 @@ export class PostService {
         const urls = dto.attachments.map((a) => a.file_url);
         const uniqueUrls = new Set(urls);
         if (urls.length !== uniqueUrls.size) {
-          console.error(`[CreatePost] Found duplicate file URLs`);
+          this.logger.error('Found duplicate file URLs', 'CreatePost');
           throw new BadRequestException('พบไฟล์ซ้ำ กรุณาตรวจสอบไฟล์แนบ');
         }
 
-        console.log(
-          `[CreatePost] All ${dto.attachments.length} attachments are valid`,
-        );
+        this.logger.log(`All ${dto.attachments.length} attachments are valid`, 'CreatePost');
       }
 
       // 1. Insert post_content
@@ -359,12 +358,10 @@ export class PostService {
       // 3. Insert attachments if any - MUST succeed all or rollback
       const attachments: any[] = [];
       if (dto.attachments && dto.attachments.length > 0) {
-        console.log(
-          `[CreatePost] Processing ${dto.attachments.length} attachments (strict mode)`,
-        );
+        this.logger.log(`Processing ${dto.attachments.length} attachments (strict mode)`, 'CreatePost');
 
         for (const attachment of dto.attachments) {
-          console.log(`[CreatePost] Attachment data:`, {
+          this.logger.log('Attachment data:', 'CreatePost', {
             file_url: attachment.file_url,
             file_type: attachment.file_type,
             original_name: attachment.original_name,
@@ -377,12 +374,16 @@ export class PostService {
             RETURNING attachment_id, file_url, file_type, original_name
           `;
 
-          console.log(`[CreatePost] Inserting attachment with params:`, {
-            post_content_id: postContent.post_content_id,
-            file_url: attachment.file_url,
-            file_type: attachment.file_type,
-            original_name: attachment.original_name || null,
-          });
+          this.logger.log(
+            'Inserting attachment with params:',
+            'CreatePost',
+            {
+              post_content_id: postContent.post_content_id,
+              file_url: attachment.file_url,
+              file_type: attachment.file_type,
+              original_name: attachment.original_name || null,
+            },
+          );
 
           const attachmentResult = await queryRunner.query(attachmentQuery, [
             postContent.post_content_id,
@@ -391,18 +392,17 @@ export class PostService {
             attachment.original_name || null,
           ]);
 
-          console.log(
-            `[CreatePost] Attachment inserted successfully:`,
+          this.logger.log(
+            'Attachment inserted successfully:',
+            'CreatePost',
             attachmentResult[0],
           );
           attachments.push(attachmentResult[0]);
         }
 
-        console.log(
-          `[CreatePost] All ${attachments.length} attachments inserted successfully`,
-        );
+        this.logger.log(`All ${attachments.length} attachments inserted successfully`, 'CreatePost');
       } else {
-        console.log(`[CreatePost] No attachments to process`);
+        this.logger.log('No attachments to process', 'CreatePost');
       }
 
       // 4. Handle assignment-specific logic if post_type is 'assignment'
@@ -410,7 +410,7 @@ export class PostService {
       const createdGroups: any[] = [];
 
       if (dto.post_type === 'assignment') {
-        console.log(`[CreatePost] Processing assignment creation`);
+        this.logger.log('Processing assignment creation', 'CreatePost');
 
         // Validate assignment fields
         if (!dto.due_date) {
@@ -441,14 +441,12 @@ export class PostService {
           const assignment = assignmentResult[0];
           assignmentIds.push(assignment.assignment_id);
 
-          console.log(`[CreatePost] Assignment created:`, assignment);
+          this.logger.log('Assignment created:', 'CreatePost', assignment);
 
           // Handle group creation based on is_group flag
           if (!dto.is_group) {
             // ===== งานเดี่ยว: สร้าง student_group + group_member ให้นักเรียนทุกคนใน section =====
-            console.log(
-              `[CreatePost] Individual assignment - auto-creating groups for all enrolled students`,
-            );
+            this.logger.log('Individual assignment - auto-creating groups for all enrolled students', 'CreatePost');
 
             // Find the section_id for this post_id
             const sectionForPost = sectionIds[postIds.indexOf(postId)];
@@ -464,9 +462,7 @@ export class PostService {
               [sectionForPost],
             );
 
-            console.log(
-              `[CreatePost] Found ${enrolledStudents.length} enrolled students in section ${sectionForPost}`,
-            );
+            this.logger.log(`Found ${enrolledStudents.length} enrolled students in section ${sectionForPost}`, 'CreatePost');
 
             // Create 1 student_group per student (งานเดี่ยว = 1 คน 1 กลุ่ม)
             for (const student of enrolledStudents) {
@@ -506,18 +502,14 @@ export class PostService {
               });
             }
 
-            console.log(
-              `[CreatePost] Created ${enrolledStudents.length} individual groups`,
-            );
+            this.logger.log(`Created ${enrolledStudents.length} individual groups`, 'CreatePost');
           } else {
             // ===== งานกลุ่ม: ไม่สร้าง group ตอนนี้ นักเรียนจะมาสร้างเองทีหลัง =====
-            console.log(
-              `[CreatePost] Group assignment - students will create groups later`,
-            );
+            this.logger.log('Group assignment - students will create groups later', 'CreatePost');
           }
         }
 
-        console.log(`[CreatePost] Assignment processing completed`);
+        this.logger.log('Assignment processing completed', 'CreatePost');
       }
 
       await queryRunner.commitTransaction();
@@ -544,8 +536,9 @@ export class PostService {
         warnings: warnings.length > 0 ? warnings : null,
       };
 
-      console.log(
-        `[CreatePost] Post created successfully with data:`,
+      this.logger.log(
+        `Post created successfully with data:`,
+        'CreatePost',
         responseData,
       );
 
@@ -556,7 +549,7 @@ export class PostService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error('Error creating post:', error);
+      this.logger.error('Error creating post:', 'CreatePost', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
@@ -602,8 +595,9 @@ export class PostService {
       user_sys_id: owner.user_sys_id,
     };
 
-    console.log(
-      `[FindPostOwner] Found owner for post_id ${postId}:`,
+    this.logger.log(
+      `Found owner for post_id ${postId}:`,
+      'FindPostOwner',
       responseData,
     );
 
@@ -625,9 +619,7 @@ export class PostService {
       let targetPostContentId: number;
       let ownerUserId: number;
 
-      console.log(
-        `[UpdatePost] userId=${userId}, postId=${postId}, postContentId=${postContentId}`,
-      );
+      this.logger.log(`userId=${userId}, postId=${postId}, postContentId=${postContentId}`, 'UpdatePost');
 
       // If postContentId is provided directly, use it
       if (postContentId && postContentId > 0) {
@@ -637,7 +629,7 @@ export class PostService {
           WHERE post_content_id = $1 AND flag_valid = true
         `;
         const result = await this.dataSource.query(ownerQuery, [postContentId]);
-        console.log(`[UpdatePost] Query result:`, result);
+        this.logger.log('Query result:', 'UpdatePost', result);
 
         if (!result.length) {
           throw new NotFoundException('Post not found');
@@ -653,15 +645,18 @@ export class PostService {
         throw new BadRequestException('post_id or post_content_id is required');
       }
 
-      console.log(
-        `[UpdatePost] targetPostContentId=${targetPostContentId}, ownerUserId=${ownerUserId}, requesterId=${userId}`,
-      );
+      this.logger.log(`update post detail`, 'UpdatePost', {
+        targetPostContentId,
+        ownerUserId,
+        requesterId: userId,
+      });
 
       // Check ownership
       if (ownerUserId !== userId) {
-        console.log(
-          `[UpdatePost] Permission denied: owner=${ownerUserId}, requester=${userId}`,
-        );
+        this.logger.log(`Permission denied`, 'UpdatePost', {
+            ownerUserId,
+            requesterId: userId,
+        });
         throw new ForbiddenException('You are not allowed to update this post');
       }
 
@@ -700,15 +695,11 @@ export class PostService {
 
       // Handle attachments if provided (including empty array to clear all)
       if (dto.attachments !== undefined) {
-        console.log(
-          `[UpdatePost] Updating attachments: ${dto.attachments.length} files`,
-        );
+        this.logger.log(`Updating attachments: ${dto.attachments.length} files`, 'UpdatePost');
 
         try {
           // Soft delete existing attachments
-          console.log(
-            `[UpdatePost] Soft deleting existing attachments for post_content_id: ${targetPostContentId}`,
-          );
+          this.logger.log(`Soft deleting existing attachments for post_content_id: ${targetPostContentId}`, 'UpdatePost');
           await this.dataSource.query(
             `
             UPDATE post_attachment
@@ -721,23 +712,26 @@ export class PostService {
           // Insert new attachments
           if (dto.attachments.length > 0) {
             for (const attachment of dto.attachments) {
-              console.log(`[UpdatePost] Processing attachment:`, {
-                file_url: attachment.file_url,
-                file_type: attachment.file_type,
-                original_name: attachment.original_name,
-              });
+              this.logger.log(
+                'Processing attachment:',
+                'UpdatePost',
+                {
+                  file_url: attachment.file_url,
+                  file_type: attachment.file_type,
+                  original_name: attachment.original_name,
+                },
+              );
 
               if (!attachment.file_url || !attachment.file_type) {
-                console.log(
-                  `[UpdatePost] Skipping invalid attachment:`,
+                this.logger.log(
+                  'Skipping invalid attachment:',
+                  'UpdatePost',
                   attachment,
                 );
                 continue;
               }
 
-              console.log(
-                `[UpdatePost] Inserting attachment with original_name: ${attachment.original_name || 'NULL'}`,
-              );
+              this.logger.log(`Inserting attachment with original_name: ${attachment.original_name || 'NULL'}`, 'UpdatePost');
               const result = await this.dataSource.query(
                 `
                 INSERT INTO post_attachment (post_content_id, file_url, file_type, original_name)
@@ -752,14 +746,15 @@ export class PostService {
                 ],
               );
 
-              console.log(`[UpdatePost] Attachment inserted:`, result[0]);
+              this.logger.log('Attachment inserted:', 'UpdatePost', result[0]);
             }
           }
 
-          console.log(`[UpdatePost] Attachments updated successfully`);
+          this.logger.log('Attachments updated successfully', 'UpdatePost');
         } catch (attachmentError) {
-          console.error(
-            `[UpdatePost] Error updating attachments:`,
+          this.logger.error(
+            `Error updating attachments:`,
+            'UpdatePost',
             attachmentError,
           );
         }
@@ -771,9 +766,11 @@ export class PostService {
         dto.max_score !== undefined ||
         dto.is_group !== undefined
       ) {
-        console.log(
-          `[UpdatePost] Updating assignment fields: due_date=${dto.due_date}, max_score=${dto.max_score}, is_group=${dto.is_group}`,
-        );
+        this.logger.log(`Updating assignment fields`, 'UpdatePost', {
+          due_date: dto.due_date,
+          max_score: dto.max_score,
+          is_group: dto.is_group,
+        });
 
         const setClauses: string[] = [];
         const assignmentValues: any[] = [];
@@ -804,7 +801,7 @@ export class PostService {
           `;
 
           await this.dataSource.query(assignmentQuery, assignmentValues);
-          console.log(`[UpdatePost] Assignment fields updated successfully`);
+          this.logger.log('Assignment fields updated successfully', 'UpdatePost');
         }
       }
 
@@ -821,7 +818,7 @@ export class PostService {
       ) {
         throw error;
       }
-      console.error('Error updating post:', error);
+      this.logger.error('Error updating post:', 'UpdatePost', error);
       throw new InternalServerErrorException('Error updating post');
     }
   }
@@ -922,9 +919,11 @@ export class PostService {
       let ownerUserId: number;
       let targetPostIds: number[] = [];
 
-      console.log(
-        `[DeletePost] userId=${userId}, postId=${postId}, postContentId=${postContentId}`,
-      );
+      this.logger.log(`delete post detail`, 'DeletePost', {
+        userId,
+        postId,
+        postContentId,
+      });
 
       // If postContentId is provided, find owner by post_content_id
       if (postContentId && postContentId > 0) {
@@ -934,7 +933,6 @@ export class PostService {
           WHERE pc.post_content_id = $1
         `;
         const result = await this.dataSource.query(ownerQuery, [postContentId]);
-        console.log(`[DeletePost] Query result:`, result);
 
         if (!result.length) {
           throw new NotFoundException('Post not found');
@@ -980,16 +978,18 @@ export class PostService {
         throw new BadRequestException('post_id or post_content_id is required');
       }
 
-      console.log(
-        `[DeletePost] targetPostContentId=${targetPostContentId}, ownerUserId=${ownerUserId}, requesterId=${userId}`,
-      );
-      console.log(`[DeletePost] targetPostIds=${targetPostIds}`);
+      this.logger.log(`delete post detail`, 'DeletePost', {
+          targetPostIds,
+          ownerUserId,
+          requesterId: userId,
+      });
 
       // Check ownership
       if (ownerUserId !== userId) {
-        console.log(
-          `[DeletePost] Permission denied: owner=${ownerUserId}, requester=${userId}`,
-        );
+        this.logger.log(`Permission denied`, 'DeletePost', {
+          owner: ownerUserId,
+          requester: userId,
+        });
         throw new ForbiddenException('You are not allowed to delete this post');
       }
 
@@ -1011,7 +1011,7 @@ export class PostService {
           assignmentIds = assignmentIdsResult.map(
             (row: any) => row.assignment_id,
           );
-          console.log(`[DeletePost] Found assignment_ids: ${assignmentIds}`);
+          this.logger.log(`Found assignment_ids: ${assignmentIds}`, 'DeletePost');
         }
 
         // 2. Delete group_member for all groups in these assignments
@@ -1025,9 +1025,7 @@ export class PostService {
           `,
             [assignmentIds],
           );
-          console.log(
-            `[DeletePost] Deleted group_member records for assignment_ids: ${assignmentIds}`,
-          );
+          this.logger.log(`Deleted group_member records for assignment_ids: ${assignmentIds}`, 'DeletePost');
         }
 
         // 3. Delete student_group for these assignments
@@ -1039,9 +1037,7 @@ export class PostService {
           `,
             [assignmentIds],
           );
-          console.log(
-            `[DeletePost] Deleted student_group records for assignment_ids: ${assignmentIds}`,
-          );
+          this.logger.log(`Deleted student_group records for assignment_ids: ${assignmentIds}`, 'DeletePost');
         }
 
         // 4. Delete assignments
@@ -1053,9 +1049,7 @@ export class PostService {
           `,
             [targetPostIds],
           );
-          console.log(
-            `[DeletePost] Deleted assignments for post_ids: ${targetPostIds}`,
-          );
+          this.logger.log(`Deleted assignments for post_ids: ${targetPostIds}`, 'DeletePost');
         }
 
         // 5. Delete attachments
@@ -1066,9 +1060,7 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        console.log(
-          `[DeletePost] Deleted attachments for post_content_id: ${targetPostContentId}`,
-        );
+        this.logger.log(`Deleted attachments for post_content_id: ${targetPostContentId}`, 'DeletePost');
 
         // 6. Delete all post_in_class records
         await queryRunner.query(
@@ -1078,9 +1070,7 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        console.log(
-          `[DeletePost] Deleted post_in_class records for post_content_id: ${targetPostContentId}`,
-        );
+        this.logger.log(`Deleted post_in_class records for post_content_id: ${targetPostContentId}`, 'DeletePost');
 
         // 7. Delete post_content
         await queryRunner.query(
@@ -1090,13 +1080,11 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        console.log(
-          `[DeletePost] Deleted post_content: ${targetPostContentId}`,
-        );
+        this.logger.log(`Deleted post_content: ${targetPostContentId}`, 'DeletePost');
 
         await queryRunner.commitTransaction();
 
-        console.log(`[DeletePost] Post hard deleted successfully`);
+        this.logger.log('Post hard deleted successfully', 'DeletePost');
 
         return {
           success: true,
@@ -1121,7 +1109,7 @@ export class PostService {
       ) {
         throw error;
       }
-      console.error('Error deleting post:', error);
+      this.logger.error('Error deleting post:', 'DeletePost', error);
       throw new InternalServerErrorException('Error deleting post');
     }
   }
@@ -1240,8 +1228,9 @@ a.is_group,
           attachments: row.attachments || [],
         };
       });
-      console.log(
-        `[SearchPosts] Search results transformed:`,
+      this.logger.log(
+        'Search results transformed:',
+        'SearchPosts',
         final_result.length > 0 ? final_result[0] : 'No posts',
       );
       return {
@@ -1250,7 +1239,7 @@ a.is_group,
         data: final_result,
       };
     } catch (error) {
-      console.error('Error searching posts:', error);
+      this.logger.error('Error searching posts:', 'SearchPosts', error);
       throw new InternalServerErrorException('Error searching posts');
     }
   }

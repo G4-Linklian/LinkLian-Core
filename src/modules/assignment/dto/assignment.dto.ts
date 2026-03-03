@@ -1,5 +1,11 @@
 // assignment.dto.ts
-import { IsInt, IsOptional, IsString , IsArray, IsNumber} from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsNumber,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
