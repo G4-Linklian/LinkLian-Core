@@ -9,7 +9,6 @@ import {
 
 describe('BookmarkService', () => {
   let service: BookmarkService;
-  let dataSource: DataSource;
 
   const mockDataSource = {
     query: jest.fn(),
@@ -29,14 +28,9 @@ describe('BookmarkService', () => {
     }).compile();
 
     service = module.get<BookmarkService>(BookmarkService);
-    dataSource = module.get<DataSource>(DataSource);
 
     jest.clearAllMocks();
   });
-
-  // =============================
-  // getBookmarks
-  // =============================
 
   describe('getBookmarks', () => {
     it('should return bookmarks successfully', async () => {
@@ -62,15 +56,11 @@ describe('BookmarkService', () => {
     });
   });
 
-  // =============================
-  // toggleBookmark
-  // =============================
-
   describe('toggleBookmark', () => {
     it('should create bookmark if not exists', async () => {
       mockDataSource.query
-        .mockResolvedValueOnce([{ count: '0' }]) // checkQuery
-        .mockResolvedValueOnce([]); // insertQuery
+        .mockResolvedValueOnce([{ count: '0' }])
+        .mockResolvedValueOnce([]);
 
       const result = await service.toggleBookmark(1, 100);
 
@@ -105,10 +95,6 @@ describe('BookmarkService', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
   });
-
-  // =============================
-  // deleteBookmark
-  // =============================
 
   describe('deleteBookmark', () => {
     it('should delete bookmark successfully', async () => {

@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource, Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { CommunityService } from './community.service';
 import { CommunityEntity } from './entities/community.entity';
 import { CommunityMemberEntity } from '../member/entities/community-member.entity';
@@ -16,9 +13,7 @@ describe('CommunityService', () => {
   let service: CommunityService;
   let dataSource: DataSource;
   let communityRepo: Repository<CommunityEntity>;
-  let memberRepo: Repository<CommunityMemberEntity>;
   let tagRepo: Repository<CommunityTagEntity>;
-  let tagNormalizeRepo: Repository<CommunityTagNormalizeEntity>;
   let mockQueryRunner: any;
 
   beforeEach(async () => {
@@ -70,10 +65,22 @@ describe('CommunityService', () => {
       providers: [
         CommunityService,
         { provide: DataSource, useValue: mockDataSource },
-        { provide: getRepositoryToken(CommunityEntity), useValue: mockCommunityRepo },
-        { provide: getRepositoryToken(CommunityMemberEntity), useValue: mockMemberRepo },
-        { provide: getRepositoryToken(CommunityTagEntity), useValue: mockTagRepo },
-        { provide: getRepositoryToken(CommunityTagNormalizeEntity), useValue: mockTagNormalizeRepo },
+        {
+          provide: getRepositoryToken(CommunityEntity),
+          useValue: mockCommunityRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityMemberEntity),
+          useValue: mockMemberRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityTagEntity),
+          useValue: mockTagRepo,
+        },
+        {
+          provide: getRepositoryToken(CommunityTagNormalizeEntity),
+          useValue: mockTagNormalizeRepo,
+        },
         { provide: AppLogger, useValue: mockLogger },
       ],
     }).compile();
@@ -81,9 +88,7 @@ describe('CommunityService', () => {
     service = module.get<CommunityService>(CommunityService);
     dataSource = mockDataSource as any;
     communityRepo = mockCommunityRepo as any;
-    memberRepo = mockMemberRepo as any;
     tagRepo = mockTagRepo as any;
-    tagNormalizeRepo = mockTagNormalizeRepo as any;
   });
 
   afterEach(() => {
@@ -175,9 +180,7 @@ describe('CommunityService', () => {
     it('should throw if not found', async () => {
       (dataSource.query as jest.Mock).mockResolvedValueOnce([]);
 
-      await expect(
-        service.getCommunityFeed(1, 5),
-      ).rejects.toThrow();
+      await expect(service.getCommunityFeed(1, 5)).rejects.toThrow();
     });
   });
 
@@ -198,9 +201,7 @@ describe('CommunityService', () => {
     it('should throw if not found', async () => {
       (dataSource.query as jest.Mock).mockResolvedValueOnce([]);
 
-      await expect(
-        service.getCommunityDetail(1, 5),
-      ).rejects.toThrow();
+      await expect(service.getCommunityDetail(1, 5)).rejects.toThrow();
     });
   });
 });
