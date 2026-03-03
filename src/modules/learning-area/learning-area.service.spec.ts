@@ -15,9 +15,7 @@ import { AppLogger } from '../../common/logger/app-logger.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const mockLearningArea = (
-  overrides: Partial<LearningArea> = {},
-): LearningArea =>
+const mockLearningArea = (overrides: Partial<LearningArea> = {}): LearningArea =>
   ({
     learning_area_id: 1,
     inst_id: 1,
@@ -134,9 +132,7 @@ describe('LearningAreaService', () => {
     it('should return results when searching by learning_area_name', async () => {
       mockDataSource.query.mockResolvedValue([mockLearningArea()]);
 
-      const result = await service.search({
-        learning_area_name: 'Mathematics',
-      });
+      const result = await service.search({ learning_area_name: 'Mathematics' });
 
       expect(result.success).toBe(true);
     });
@@ -260,9 +256,7 @@ describe('LearningAreaService', () => {
       const dbError = Object.assign(new Error('duplicate'), { code: '23505' });
       mockLearningAreaRepo.save.mockRejectedValue(dbError);
 
-      await expect(service.create(createDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other DB error', async () => {
@@ -414,18 +408,18 @@ describe('LearningAreaService', () => {
       const dbError = Object.assign(new Error('duplicate'), { code: '23505' });
       mockNormRepo.save.mockRejectedValue(dbError);
 
-      await expect(service.createUserSysNormalize(createDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.createUserSysNormalize(createDto),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other DB error', async () => {
       mockNormRepo.create.mockReturnValue(mockUserNorm());
       mockNormRepo.save.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.createUserSysNormalize(createDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.createUserSysNormalize(createDto),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -450,9 +444,9 @@ describe('LearningAreaService', () => {
     it('should throw NotFoundException when record not found', async () => {
       mockDataSource.query.mockResolvedValue([]);
 
-      await expect(service.updateUserSysNormalize(updateDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.updateUserSysNormalize(updateDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update normalize record and return success', async () => {
@@ -471,9 +465,9 @@ describe('LearningAreaService', () => {
     it('should throw InternalServerErrorException on DB error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.updateUserSysNormalize(updateDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.updateUserSysNormalize(updateDto),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -494,9 +488,9 @@ describe('LearningAreaService', () => {
     it('should throw NotFoundException when record not found', async () => {
       mockDataSource.query.mockResolvedValue([]);
 
-      await expect(service.deleteUserSysNormalize(deleteDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteUserSysNormalize(deleteDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should delete normalize record and return success', async () => {
@@ -515,9 +509,9 @@ describe('LearningAreaService', () => {
     it('should throw InternalServerErrorException on DB error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.deleteUserSysNormalize(deleteDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.deleteUserSysNormalize(deleteDto),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 

@@ -143,13 +143,13 @@ export class RoomLocationService {
     const existingRoom = await this.roomLocationRepo
       .createQueryBuilder('rl')
       .where('rl.building_id = :buildingId', { buildingId: dto.building_id })
-      .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', {
-        roomNumber: normalizedRoomNumber,
-      })
+      .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: normalizedRoomNumber })
       .getOne();
 
     if (existingRoom) {
-      throw new ConflictException('ห้องเรียนนี้มีอยู่แล้วในอาคารนี้');
+      throw new ConflictException(
+        'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
+      );
     }
 
     try {
@@ -167,7 +167,9 @@ export class RoomLocationService {
     } catch (error: any) {
       // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('ห้องเรียนนี้มีอยู่แล้วในอาคารนี้');
+        throw new ConflictException(
+          'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
+        );
       }
       this.logger.error(
         'Error creating room location:',
@@ -192,7 +194,8 @@ export class RoomLocationService {
 
     // Validate required fields for each room
     const isValid = rooms.every(
-      (room) => room.building_id && room.room_number !== undefined,
+      (room) =>
+        room.building_id && room.room_number !== undefined,
     );
 
     if (!isValid) {
@@ -217,9 +220,7 @@ export class RoomLocationService {
       const existingRoom = await this.roomLocationRepo
         .createQueryBuilder('rl')
         .where('rl.building_id = :buildingId', { buildingId: room.building_id })
-        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', {
-          roomNumber: normalizedRoomNumber,
-        })
+        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: normalizedRoomNumber })
         .getOne();
 
       if (existingRoom) {
@@ -312,24 +313,19 @@ export class RoomLocationService {
     if (dto.building_id !== undefined || dto.room_number !== undefined) {
       // Use existing values if not provided in DTO
       const targetBuildingId = dto.building_id ?? existingRoom.building_id;
-      const targetRoomNumber = (dto.room_number ?? existingRoom.room_number)
-        .trim()
-        .toUpperCase();
+      const targetRoomNumber = (dto.room_number ?? existingRoom.room_number).trim().toUpperCase();
 
       // Check for existing room with case-insensitive comparison
       const existingRoomLocation = await this.roomLocationRepo
         .createQueryBuilder('rl')
         .where('rl.building_id = :buildingId', { buildingId: targetBuildingId })
-        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', {
-          roomNumber: targetRoomNumber,
-        })
+        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: targetRoomNumber })
         .getOne();
 
-      if (
-        existingRoomLocation &&
-        existingRoomLocation.room_location_id !== id
-      ) {
-        throw new ConflictException('ห้องเรียนนี้มีอยู่แล้วในอาคารนี้');
+      if (existingRoomLocation && existingRoomLocation.room_location_id !== id) {
+        throw new ConflictException(
+          'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
+        );
       }
     }
 
@@ -337,8 +333,7 @@ export class RoomLocationService {
     const updates: Partial<RoomLocation> = {};
 
     if (dto.building_id !== undefined) updates.building_id = dto.building_id;
-    if (dto.room_number !== undefined)
-      updates.room_number = dto.room_number.trim(); // Store trimmed value
+    if (dto.room_number !== undefined) updates.room_number = dto.room_number.trim(); // Store trimmed value
     // if (dto.floor !== undefined) updates.floor = dto.floor;
     if (dto.room_remark !== undefined) updates.room_remark = dto.room_remark;
     if (typeof dto.flag_valid === 'boolean')
@@ -359,7 +354,9 @@ export class RoomLocationService {
     } catch (error: any) {
       // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('ห้องเรียนนี้มีอยู่ในอาคารนี้แล้ว');
+        throw new ConflictException(
+          'ห้องเรียนนี้มีอยู่ในอาคารนี้แล้ว',
+        );
       }
       this.logger.error(
         'Error updating room location:',

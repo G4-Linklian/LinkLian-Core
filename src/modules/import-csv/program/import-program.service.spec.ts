@@ -17,20 +17,17 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size)
-      chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest
-    .fn()
-    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-      const results: any[] = [];
-      for (const batch of batches) {
-        const res = await fn(batch);
-        results.push(...res);
-      }
-      return results;
-    }),
+  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+    const results: any[] = [];
+    for (const batch of batches) {
+      const res = await fn(batch);
+      results.push(...res);
+    }
+    return results;
+  }),
   createValidationToken: jest.fn().mockReturnValue('mock-program-token'),
   verifyValidationToken: jest.fn().mockReturnValue({
     type: 'program',
@@ -93,12 +90,8 @@ describe('ImportProgramService', () => {
 
   const mockBuffer = Buffer.from('mock-excel');
 
-  const mockSchoolRow = { แผนการเรียน: 'วิทย์-คณิต', ห้องเรียน: 'ม.4/1' };
-  const mockUniRow = {
-    คณะ: 'วิศวกรรมศาสตร์',
-    ภาค: 'คอมพิวเตอร์',
-    สาขา: 'Software',
-  };
+  const mockSchoolRow = { 'แผนการเรียน': 'วิทย์-คณิต', 'ห้องเรียน': 'ม.4/1' };
+  const mockUniRow = { 'คณะ': 'วิศวกรรมศาสตร์', 'ภาค': 'คอมพิวเตอร์', 'สาขา': 'Software' };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -109,10 +102,7 @@ describe('ImportProgramService', () => {
       providers: [
         ImportProgramService,
         { provide: getRepositoryToken(Program), useValue: programRepo },
-        {
-          provide: getRepositoryToken(Institution),
-          useValue: mockInstitutionRepo(),
-        },
+        { provide: getRepositoryToken(Institution), useValue: mockInstitutionRepo() },
         { provide: JwtService, useValue: mockJwtService },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AppLogger, useValue: mockLogger },
@@ -149,11 +139,7 @@ describe('ImportProgramService', () => {
 
       programRepo.find.mockResolvedValue([]);
 
-      const result = await service.validateProgramData(
-        1,
-        'university',
-        mockBuffer,
-      );
+      const result = await service.validateProgramData(1, 'university', mockBuffer);
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('summary');
@@ -187,11 +173,7 @@ describe('ImportProgramService', () => {
     it('should save school programs and return success', async () => {
       mockParseExcelFile.mockResolvedValue([mockSchoolRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'program',
-        instId: 1,
-        dataHash: 'mock-hash',
-        validCount: 1,
-        duplicateCount: 0,
+        type: 'program', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
       });
 
       programRepo.find.mockResolvedValue([]);
@@ -201,12 +183,7 @@ describe('ImportProgramService', () => {
         .mockResolvedValueOnce([{ program_id: 10 }]) // insert study plan
         .mockResolvedValueOnce([{ program_id: 11 }]); // insert class
 
-      const result = await service.saveProgramData(
-        1,
-        'school',
-        mockBuffer,
-        'mock-token',
-      );
+      const result = await service.saveProgramData(1, 'school', mockBuffer, 'mock-token');
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('สำเร็จ');
@@ -216,11 +193,7 @@ describe('ImportProgramService', () => {
     it('should save university programs and return success', async () => {
       mockParseExcelFile.mockResolvedValue([mockUniRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'program',
-        instId: 1,
-        dataHash: 'mock-hash',
-        validCount: 1,
-        duplicateCount: 0,
+        type: 'program', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
       });
 
       programRepo.find.mockResolvedValue([]);
@@ -230,12 +203,7 @@ describe('ImportProgramService', () => {
         .mockResolvedValueOnce([{ program_id: 21 }]) // department
         .mockResolvedValueOnce([{ program_id: 22 }]); // major
 
-      const result = await service.saveProgramData(
-        1,
-        'university',
-        mockBuffer,
-        'mock-token',
-      );
+      const result = await service.saveProgramData(1, 'university', mockBuffer, 'mock-token');
 
       expect(result.success).toBe(true);
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
@@ -244,11 +212,7 @@ describe('ImportProgramService', () => {
     it('should rollback and rethrow on error', async () => {
       mockParseExcelFile.mockResolvedValue([mockSchoolRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'program',
-        instId: 1,
-        dataHash: 'mock-hash',
-        validCount: 1,
-        duplicateCount: 0,
+        type: 'program', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
       });
 
       programRepo.find.mockRejectedValue(new Error('DB error'));

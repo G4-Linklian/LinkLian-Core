@@ -147,9 +147,10 @@ describe('RoleService', () => {
 
       await service.searchRole({ access });
 
-      expect(qb.andWhere).toHaveBeenCalledWith('r.access @> :access::jsonb', {
-        access: JSON.stringify(access),
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'r.access @> :access::jsonb',
+        { access: JSON.stringify(access) },
+      );
     });
 
     it('should apply flag_valid filter when true', async () => {
@@ -158,9 +159,10 @@ describe('RoleService', () => {
 
       await service.searchRole({ flag_valid: true });
 
-      expect(qb.andWhere).toHaveBeenCalledWith('r.flag_valid = :flagValid', {
-        flagValid: true,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'r.flag_valid = :flagValid',
+        { flagValid: true },
+      );
     });
 
     it('should apply flag_valid filter when false', async () => {
@@ -169,9 +171,10 @@ describe('RoleService', () => {
 
       await service.searchRole({ flag_valid: false });
 
-      expect(qb.andWhere).toHaveBeenCalledWith('r.flag_valid = :flagValid', {
-        flagValid: false,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'r.flag_valid = :flagValid',
+        { flagValid: false },
+      );
     });
 
     it('should apply sort ASC', async () => {
@@ -265,11 +268,7 @@ describe('RoleService', () => {
       mockRepo.create.mockReturnValue(created);
       mockRepo.save.mockResolvedValue(created);
 
-      await service.createRole({
-        ...createDto,
-        access: { read: true, write: true },
-        flag_valid: false,
-      });
+      await service.createRole({ ...createDto, access: { read: true, write: true }, flag_valid: false });
 
       expect(mockRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ flag_valid: false }),

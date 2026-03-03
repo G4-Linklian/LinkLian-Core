@@ -38,9 +38,7 @@ import { blobServiceClient } from '../../config/blob.config';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const mockFile = (
-  overrides: Partial<Express.Multer.File> = {},
-): Express.Multer.File =>
+const mockFile = (overrides: Partial<Express.Multer.File> = {}): Express.Multer.File =>
   ({
     originalname: 'test-image.jpg',
     mimetype: 'image/jpeg',
@@ -180,9 +178,7 @@ describe('FileStorageService', () => {
     });
 
     it('should throw InternalServerErrorException on unexpected upload error', async () => {
-      mockBlockBlobClient.uploadData.mockRejectedValue(
-        new Error('Azure error'),
-      );
+      mockBlockBlobClient.uploadData.mockRejectedValue(new Error('Azure error'));
 
       await expect(
         service.uploadFiles('container', 'folder', [mockFile()]),
@@ -194,9 +190,9 @@ describe('FileStorageService', () => {
 
   describe('deleteFiles', () => {
     it('should throw BadRequestException when fileNames is empty', async () => {
-      await expect(service.deleteFiles('container', [])).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deleteFiles('container', []),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when fileNames is null/undefined', async () => {
@@ -271,10 +267,7 @@ describe('FileStorageService', () => {
 
   describe('getFileMetadata', () => {
     it('should return file size and contentType on success', async () => {
-      const result = await service.getFileMetadata(
-        'container',
-        'folder/file.jpg',
-      );
+      const result = await service.getFileMetadata('container', 'folder/file.jpg');
 
       expect(result).toEqual({ size: 2048, contentType: 'image/jpeg' });
       expect(mockBlockBlobClient.getProperties).toHaveBeenCalled();
@@ -285,15 +278,9 @@ describe('FileStorageService', () => {
         new Error('Blob not found'),
       );
 
-      const result = await service.getFileMetadata(
-        'container',
-        'folder/missing.jpg',
-      );
+      const result = await service.getFileMetadata('container', 'folder/missing.jpg');
 
-      expect(result).toEqual({
-        size: 0,
-        contentType: 'application/octet-stream',
-      });
+      expect(result).toEqual({ size: 0, contentType: 'application/octet-stream' });
     });
 
     it('should return size=0 when contentLength is undefined', async () => {
@@ -302,10 +289,7 @@ describe('FileStorageService', () => {
         contentType: 'image/png',
       });
 
-      const result = await service.getFileMetadata(
-        'container',
-        'folder/file.png',
-      );
+      const result = await service.getFileMetadata('container', 'folder/file.png');
 
       expect(result.size).toBe(0);
       expect(result.contentType).toBe('image/png');
@@ -343,10 +327,7 @@ describe('FileStorageService', () => {
 
     it('should return default values for files that fail', async () => {
       mockBlockBlobClient.getProperties
-        .mockResolvedValueOnce({
-          contentLength: 1024,
-          contentType: 'image/jpeg',
-        })
+        .mockResolvedValueOnce({ contentLength: 1024, contentType: 'image/jpeg' })
         .mockRejectedValueOnce(new Error('Blob not found'));
 
       const result = await service.getMultipleFileMetadata('container', [
@@ -371,10 +352,7 @@ describe('FileStorageService', () => {
     it('should process all files in parallel and return correct length', async () => {
       const fileNames = ['a.jpg', 'b.jpg', 'c.jpg'];
 
-      const result = await service.getMultipleFileMetadata(
-        'container',
-        fileNames,
-      );
+      const result = await service.getMultipleFileMetadata('container', fileNames);
 
       expect(result).toHaveLength(3);
       expect(mockBlockBlobClient.getProperties).toHaveBeenCalledTimes(3);
