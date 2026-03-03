@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   ForbiddenException,
@@ -7,6 +8,7 @@ import {
 import { DataSource } from 'typeorm';
 import { CommunityService } from '../core/community.service';
 import { FileStorageService } from '../../file-storage/file-storage.service';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 function extractUrls(text: string): string[] {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -29,6 +31,7 @@ export class CommunityPostService {
     private dataSource: DataSource,
     private communityService: CommunityService,
     private fileStorageService: FileStorageService,
+    private readonly logger: AppLogger,
   ) {}
 
   async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
@@ -121,10 +124,44 @@ export class CommunityPostService {
 
       await queryRunner.commitTransaction();
 
+      const fullPost = await this.dataSource.query(
+        `
+  SELECT
+    cp.post_commu_id,
+    cp.community_id,
+    cp.user_sys_id,
+    cp.content,
+    cp.created_at,
+    u.first_name,
+    u.last_name,
+    u.profile_pic,
+    COALESCE(
+      (
+        SELECT json_agg(
+          json_build_object(
+            'url', ca.file_url,
+            'type', ca.file_type,
+            'original_name', ca.original_name
+          )
+        )
+        FROM community_attachment ca
+        WHERE ca.post_commu_id = cp.post_commu_id
+          AND ca.flag_valid = true
+      ),
+      '[]'
+    ) AS attachments
+  FROM post_in_community cp
+  JOIN user_sys u
+    ON u.user_sys_id = cp.user_sys_id
+  WHERE cp.post_commu_id = $1
+  `,
+        [postId],
+      );
+
       return {
         success: true,
-        data: { post_id: postId },
-        message: 'Post created successfully!',
+        data: fullPost[0],
+        message: 'Post updated successfully',
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -149,6 +186,8 @@ export class CommunityPostService {
       `
     SELECT
       cp.post_commu_id,
+      cp.community_id, 
+      cp.user_sys_id,
       cp.content,
       cp.created_at,
       u.first_name,
@@ -190,7 +229,7 @@ COALESCE(
     };
   }
   catch(error) {
-    console.log('Error fetching posts', error);
+    this.logger.error(error?.message, error?.stack, 'GetPostCommu');
     throw new InternalServerErrorException('Error fetching posts');
   }
 
@@ -202,7 +241,7 @@ COALESCE(
     try {
       const post = await queryRunner.query(
         `
-      SELECT user_sys_id
+      SELECT user_sys_id, community_id
       FROM post_in_community
       WHERE post_commu_id=$1
       AND flag_valid=true
@@ -212,8 +251,28 @@ COALESCE(
 
       if (!post.length) throw new BadRequestException('Post not found');
 
-      if (post[0].user_sys_id !== userId)
-        throw new ForbiddenException('Not allowed');
+      // if (post[0].user_sys_id !== userId)
+      //   throw new ForbiddenException('Not allowed');
+      // ถ้าไม่ใช่เจ้าของโพสต์
+      if (Number(post[0].user_sys_id) !== Number(userId)) {
+        // เช็คว่าเป็น owner ของ community ไหม
+        const owner = await queryRunner.query(
+          `
+    SELECT 1
+    FROM community_member
+    WHERE community_id=$1
+      AND user_sys_id=$2
+      AND role='owner'
+      AND status='active'
+      AND flag_valid=true
+  `,
+          [post[0].community_id, userId],
+        );
+
+        if (!owner.length) {
+          throw new ForbiddenException('Not allowed');
+        }
+      }
 
       // 1. delete comment_path
       await queryRunner.query(
@@ -283,22 +342,24 @@ COALESCE(
   async deletePost(userId: number, postId: number) {
     return this.hardDeletePost(userId, postId);
   }
+
   async updatePost(
     userId: number,
     postId: number,
     dto: any,
     files?: Express.Multer.File[],
   ) {
-    if (!dto?.content && !files?.length) {
-      throw new BadRequestException('Nothing to update');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // check permission
+      // 🔹 parse keep_attachments ถ้าส่งมาเป็น string
+      if (typeof dto.keep_attachments === 'string') {
+        dto.keep_attachments = JSON.parse(dto.keep_attachments);
+      }
+
+      // 🔹 ตรวจสอบโพสต์
       const post = await queryRunner.query(
         `
       SELECT user_sys_id, community_id
@@ -312,6 +373,7 @@ COALESCE(
       if (!post.length) {
         throw new BadRequestException('Post not found');
       }
+
       await this.communityService.checkReadPermission(
         userId,
         post[0].community_id,
@@ -321,25 +383,7 @@ COALESCE(
         throw new ForbiddenException('Not allowed');
       }
 
-      // check community status
-      const community = await queryRunner.query(
-        `
-      SELECT status
-      FROM community
-      WHERE community_id=$1
-      `,
-        [post[0].community_id],
-      );
-
-      if (!community.length) {
-        throw new BadRequestException('Community not found');
-      }
-
-      if (community[0].status !== 'active') {
-        throw new ForbiddenException('Community is inactive');
-      }
-
-      // update content if provided
+      // 🔹 update content ถ้ามี
       if (dto.content !== undefined) {
         await queryRunner.query(
           `
@@ -351,14 +395,31 @@ COALESCE(
           [dto.content.trim(), postId],
         );
       }
+
+      // 🔥 ลบ attachment ทั้งหมดก่อน
       await queryRunner.query(
         `
-          DELETE FROM community_attachment
-          WHERE post_commu_id=$1
-            AND file_type='link'
-          `,
+      DELETE FROM community_attachment
+      WHERE post_commu_id=$1
+      `,
         [postId],
       );
+
+      // 🔹 ใส่ attachment เดิมที่ user เลือกเก็บไว้
+      if (dto.keep_attachments?.length) {
+        for (const file of dto.keep_attachments) {
+          await queryRunner.query(
+            `
+          INSERT INTO community_attachment
+          (post_commu_id,file_url,file_type,original_name,flag_valid)
+          VALUES ($1,$2,$3,$4,true)
+          `,
+            [postId, file.url, file.type, file.original_name],
+          );
+        }
+      }
+
+      // 🔹 ใส่ link ใหม่จาก content
       if (dto.content !== undefined) {
         const detectedUrls = extractUrls(dto.content.trim());
 
@@ -367,25 +428,17 @@ COALESCE(
 
           await queryRunner.query(
             `
-      INSERT INTO community_attachment
-      (post_commu_id,file_url,file_type,original_name,flag_valid)
-      VALUES ($1,$2,'link',$3,true)
-      `,
+          INSERT INTO community_attachment
+          (post_commu_id,file_url,file_type,original_name,flag_valid)
+          VALUES ($1,$2,'link',$3,true)
+          `,
             [postId, url, domainName],
           );
         }
       }
 
-      // files update: delete old ones and add new ones
+      // 🔹 ใส่ไฟล์ใหม่ที่ upload มา
       if (files?.length) {
-        await queryRunner.query(
-          `
-        DELETE FROM community_attachment
-        WHERE post_commu_id=$1
-        `,
-          [postId],
-        );
-
         const uploadResult = await this.fileStorageService.uploadFiles(
           'community',
           'post',
@@ -416,9 +469,44 @@ COALESCE(
 
       await queryRunner.commitTransaction();
 
+      // 🔹 return full post
+      const fullPost = await this.dataSource.query(
+        `
+      SELECT
+        cp.post_commu_id,
+        cp.community_id,
+        cp.user_sys_id,
+        cp.content,
+        cp.created_at,
+        u.first_name,
+        u.last_name,
+        u.profile_pic,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'url', ca.file_url,
+                'type', ca.file_type,
+                'original_name', ca.original_name
+              )
+            )
+            FROM community_attachment ca
+            WHERE ca.post_commu_id = cp.post_commu_id
+              AND ca.flag_valid = true
+          ),
+          '[]'
+        ) AS attachments
+      FROM post_in_community cp
+      JOIN user_sys u
+        ON u.user_sys_id = cp.user_sys_id
+      WHERE cp.post_commu_id = $1
+      `,
+        [postId],
+      );
+
       return {
         success: true,
-        data: { post_id: postId },
+        data: fullPost[0],
         message: 'Post updated successfully',
       };
     } catch (err) {
@@ -442,6 +530,7 @@ COALESCE(
         `
     SELECT
       cp.post_commu_id,
+      cp.community_id,
       cp.content,
       cp.created_at,
       u.first_name,
@@ -482,7 +571,11 @@ COALESCE(
         message: 'Search completed successfully!',
       };
     } catch (error) {
-      console.log('Error searching posts', error);
+      this.logger.error(
+        `SEARCH POSTS ERROR: ${error?.message}`,
+        error?.stack,
+        'SearchPostCommu',
+      );
       throw new InternalServerErrorException('Error searching posts');
     }
   }

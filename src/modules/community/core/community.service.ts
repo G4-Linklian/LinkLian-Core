@@ -11,6 +11,7 @@ import { CommunityEntity } from './entities/community.entity';
 import { CommunityMemberEntity } from '../member/entities/community-member.entity';
 import { CommunityTagNormalizeEntity } from './entities/community-tag-normalize.entity';
 import { CommunityTagEntity } from './entities/community-tag.entity';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class CommunityService {
@@ -24,6 +25,7 @@ export class CommunityService {
     private readonly tagRepo: Repository<CommunityTagEntity>,
     @InjectRepository(CommunityTagNormalizeEntity)
     private readonly tagNormalizeRepo: Repository<CommunityTagNormalizeEntity>,
+    private readonly logger: AppLogger,
   ) {}
 
   async createCommunity(userId: number, dto: any) {
@@ -250,7 +252,7 @@ export class CommunityService {
         message: 'Communities fetched successfully!',
       };
     } catch (error) {
-      console.log('Error fetching communities', error);
+      this.logger.log('Error fetching communities', 'ListCommunity', error);
       throw new InternalServerErrorException('Error fetching communities');
     }
   }
@@ -458,7 +460,7 @@ export class CommunityService {
         message: 'Tags fetched successfully!',
       };
     } catch (error) {
-      console.log('Error fetching tags', error);
+      this.logger.log('Error fetching tags', 'SearchTag', error);
       throw new InternalServerErrorException('Error searching tag');
     }
   }
