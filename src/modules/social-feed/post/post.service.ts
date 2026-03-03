@@ -35,6 +35,7 @@ export class PostService {
 
     private dataSource: DataSource,
     private readonly logger: AppLogger,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -246,7 +247,7 @@ export class PostService {
         data: posts,
       };
     } catch (error) {
-      console.error('Error getting posts in class:', error);
+      this.logger.error('Error getting posts in class:', error);
       throw new InternalServerErrorException('Error fetching posts');
     }
   }
@@ -296,7 +297,7 @@ export class PostService {
         );
 
         if (invalidAttachments.length > 0) {
-          console.error(
+          this.logger.error(
             `[CreatePost] Found ${invalidAttachments.length} invalid attachments`,
           );
           throw new BadRequestException(
@@ -308,7 +309,7 @@ export class PostService {
         const urls = dto.attachments.map((a) => a.file_url);
         const uniqueUrls = new Set(urls);
         if (urls.length !== uniqueUrls.size) {
-          console.error(`[CreatePost] Found duplicate file URLs`);
+          this.logger.error(`[CreatePost] Found duplicate file URLs`);
           throw new BadRequestException('พบไฟล์ซ้ำ กรุณาตรวจสอบไฟล์แนบ');
         }
 
@@ -562,7 +563,7 @@ export class PostService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error('Error creating post:', error);
+      this.logger.error('Error creating post:', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
@@ -740,6 +741,7 @@ export class PostService {
                 this.logger.debug(
                   `[UpdatePost] Skipping invalid attachment:`,
                   'UpdatePost',
+                  'UpdatePost',
                   attachment,
                 );
                 continue;
@@ -830,7 +832,7 @@ export class PostService {
       ) {
         throw error;
       }
-      console.error('Error updating post:', error);
+      this.logger.error('Error updating post:', error);
       throw new InternalServerErrorException('Error updating post');
     }
   }
@@ -1138,7 +1140,7 @@ export class PostService {
       ) {
         throw error;
       }
-      console.error('Error deleting post:', error);
+      this.logger.error('Error deleting post:', error);
       throw new InternalServerErrorException('Error deleting post');
     }
   }
@@ -1268,7 +1270,7 @@ a.is_group,
         data: final_result,
       };
     } catch (error) {
-      console.error('Error searching posts:', error);
+      this.logger.error('Error searching posts:', error);
       throw new InternalServerErrorException('Error searching posts');
     }
   }

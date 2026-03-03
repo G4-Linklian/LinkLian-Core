@@ -18,7 +18,7 @@ import {
   CommentNode,
 } from './dto/post-comment.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
-
+import { AppLogger } from 'src/common/logger/app-logger.service';
 @Injectable()
 export class PostCommentService {
   constructor(
@@ -27,6 +27,7 @@ export class PostCommentService {
     @InjectRepository(PostCommentPath)
     private postCommentPathRepo: Repository<PostCommentPath>,
     private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -176,7 +177,7 @@ export class PostCommentService {
         hasMore: offset + limit < total,
       };
     } catch (error) {
-      console.error('getPostComments error:', error);
+      this.logger.error('getPostComments error:', error);
       throw new InternalServerErrorException('Error fetching comments');
     }
   }
@@ -340,7 +341,7 @@ export class PostCommentService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error('createPostComment error:', error);
+      this.logger.error('createPostComment error:', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
@@ -410,7 +411,7 @@ export class PostCommentService {
       ) {
         throw error;
       }
-      console.error('updatePostComment error:', error);
+      this.logger.error('updatePostComment error:', error);
       throw new InternalServerErrorException('Error updating comment');
     }
   }
@@ -513,7 +514,7 @@ export class PostCommentService {
       ) {
         throw error;
       }
-      console.error('deletePostComment error:', error);
+      this.logger.error('deletePostComment error:', error);
       throw new InternalServerErrorException('Error deleting comment');
     }
   }

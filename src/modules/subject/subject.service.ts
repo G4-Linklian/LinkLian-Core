@@ -14,8 +14,8 @@ import {
   CreateSubjectDto,
   UpdateSubjectDto,
 } from './dto/subject.dto';
-import { subjectFields } from 'src/common/interface/subject.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { subjectFields } from '../../common/interface/subject.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class SubjectService {
@@ -202,9 +202,7 @@ export class SubjectService {
         'code' in error &&
         error.code === '23505'
       ) {
-        throw new ConflictException(
-          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
-        );
+        throw new ConflictException('รหัสวิชานี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error creating subject:', 'CreateSubject', error);
       throw new InternalServerErrorException('เกิดข้อผิดพลาดในการสร้างวิชา');
@@ -291,9 +289,7 @@ export class SubjectService {
         'code' in error &&
         error.code === '23505'
       ) {
-        throw new ConflictException(
-          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
-        );
+        throw new ConflictException('รหัสวิชานี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error updating subject:', 'UpdateSubject', error);
       throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตวิชา');

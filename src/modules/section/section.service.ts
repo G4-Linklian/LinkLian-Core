@@ -30,8 +30,8 @@ import {
   DeleteSectionEducatorDto,
   DeleteEnrollmentDto,
 } from './dto/section.dto';
-import { sectionFields } from 'src/common/interface/section.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { sectionFields } from '../../common/interface/section.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class SectionService {
@@ -1228,11 +1228,7 @@ export class SectionService {
       };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      this.logger.error(
-        'Error deleting section:',
-        'DeleteSection',
-        error,
-      );
+      this.logger.error('Error deleting section:', 'DeleteSection', error);
       throw new InternalServerErrorException('Server Error');
     }
   }

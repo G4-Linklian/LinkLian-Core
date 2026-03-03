@@ -6,11 +6,14 @@ import {
   StudentClassFeedResponse,
   TeacherClassFeedResponse,
 } from './dto/feed.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class FeedService {
-  constructor(private dataSource: DataSource) {}
-
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
   /**
    * Get student class feed with schedules
    * Returns all enrolled classes for a student in a semester
@@ -118,7 +121,7 @@ export class FeedService {
         data: result_feed,
       };
     } catch (error) {
-      console.error('Error fetching student class feed:', error);
+      this.logger.error('Error fetching student class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }
@@ -232,7 +235,7 @@ export class FeedService {
         data: result_feed,
       };
     } catch (error) {
-      console.error('Error fetching teacher class feed:', error);
+      this.logger.error('Error fetching teacher class feed:', error);
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }

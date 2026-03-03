@@ -17,12 +17,22 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AssignmentService } from './assignment.service';
-import { GetClassAssignmentsDto, GetPostAssignmentDto, CreateGroupDto, GetGroupDto , UpdateGroupDto, SearchAssignmentsDto, CreateSubmissionDto, UpdateSubmissionDto, GetSubmissionDto, GradeSubmissionDto } from './dto/assignment.dto';
-
+import {
+  GetClassAssignmentsDto,
+  GetPostAssignmentDto,
+  CreateGroupDto,
+  GetGroupDto,
+  UpdateGroupDto,
+  SearchAssignmentsDto,
+} from './dto/assignment.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 @ApiTags('Assignment')
 @Controller('assignment')
 export class AssignmentController {
-  constructor(private readonly assignmentService: AssignmentService) {}
+  constructor(
+    private readonly assignmentService: AssignmentService,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get assignments for a section
@@ -73,7 +83,11 @@ export class AssignmentController {
 
       return await this.assignmentService.createGroup(parsedUserId, dto);
     } catch (error) {
-      console.error('[Controller] createGroup error:', error);
+      this.logger.error(
+        '[Controller] createGroup error:',
+        'Error creating group',
+        error,
+      );
 
       if (error.message === 'You must be a member of the group you create') {
         throw new BadRequestException(error.message);
@@ -97,7 +111,7 @@ export class AssignmentController {
     }
 
     try {
-      console.log('[Controller] updateGroup called:', {
+      this.logger.log('[Controller] updateGroup called:', 'Update Group', {
         userId: parsedUserId,
         dto,
       });
@@ -107,11 +121,19 @@ export class AssignmentController {
         dto,
       );
 
-      console.log('[Controller] updateGroup result:', result);
+      this.logger.log(
+        '[Controller] updateGroup result:',
+        'Update Group',
+        result,
+      );
 
       return result;
     } catch (error) {
-      console.error('[Controller] updateGroup error:', error);
+      this.logger.error(
+        '[Controller] updateGroup error:',
+        'Update Group',
+        error,
+      );
 
       if (error.message === 'You cannot remove yourself from the group') {
         throw new BadRequestException(error.message);
@@ -140,29 +162,29 @@ export class AssignmentController {
     return this.assignmentService.getAllGroups(dto.assignment_id);
   }
 
-@Get('search')
-@ApiOperation({ summary: 'Search assignments by keyword' })
-@ApiHeader({ name: 'x-user-id', required: true })
-@ApiQuery({ name: 'section_id', required: true })
-@ApiQuery({ name: 'keyword', required: true })
-@ApiQuery({ name: 'role', required: false })
-@ApiQuery({ name: 'limit', required: false })
-searchAssignments(
-  @Headers('x-user-id') userId: string,
-  @Query() dto: SearchAssignmentsDto,
-) {
-  const parsedUserId = parseInt(userId, 10);
-  if (isNaN(parsedUserId)) {
-    throw new BadRequestException('Invalid user ID');
+  @Get('search')
+  @ApiOperation({ summary: 'Search assignments by keyword' })
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiQuery({ name: 'section_id', required: true })
+  @ApiQuery({ name: 'keyword', required: true })
+  @ApiQuery({ name: 'role', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  searchAssignments(
+    @Headers('x-user-id') userId: string,
+    @Query() dto: SearchAssignmentsDto,
+  ) {
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+    return this.assignmentService.searchAssignments(
+      parsedUserId,
+      dto.section_id,
+      dto.keyword,
+      dto.role || 'student',
+      dto.limit || 50,
+    );
   }
-  return this.assignmentService.searchAssignments(
-    parsedUserId,
-    dto.section_id,
-    dto.keyword,
-    dto.role || 'student',
-    dto.limit || 50,
-  );
-}
 
   /**
    * Get single assignment post (for assignment submission page)

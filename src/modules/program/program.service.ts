@@ -18,7 +18,7 @@ import {
   UpdateProgramUserSysDto,
   DeleteProgramUserSysDto,
 } from './dto/program.dto';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class ProgramService {

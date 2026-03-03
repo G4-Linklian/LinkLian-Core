@@ -2,6 +2,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ClassInfoService {
@@ -36,7 +37,7 @@ export class ClassInfoService {
       const result = await this.dataSource.query(query, [sectionId]);
       return result;
     } catch (error) {
-      console.error('Error fetching section educators:', error);
+      this.logger.error('Error fetching section educators:', error);
       throw new InternalServerErrorException(
         'Error fetching section educators',
       );
@@ -152,7 +153,7 @@ export class ClassInfoService {
         data: final_result,
       };
     } catch (error) {
-      console.error('Error fetching class info:', error);
+      this.logger.error('Error fetching class info:', error);
       throw new InternalServerErrorException('Error fetching class info');
     }
   }

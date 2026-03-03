@@ -25,7 +25,7 @@ import {
   IMPORT_BATCH_SIZE,
   IMPORT_MAX_CONCURRENT_BATCHES,
 } from '../shared';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class ImportProgramService {

@@ -903,9 +903,7 @@ LIMIT 1
     role: string,
     limit: number = 50,
   ) {
-    const isStudent =
-      role === 'high school student' ||
-      role === 'uni student';
+    const isStudent = role === 'high school student' || role === 'uni student';
 
     this.logger.log(`[SearchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`);
 
@@ -922,7 +920,9 @@ LIMIT 1
           a.is_group,
           a.due_date,
 
-          ${isStudent ? `
+          ${
+            isStudent
+              ? `
           (
             SELECT sb.submitted_at
             FROM submission sb
@@ -936,7 +936,9 @@ LIMIT 1
             ORDER BY sb.submitted_at DESC
             LIMIT 1
           ) AS submitted_at,
-          ` : ''}
+          `
+              : ''
+          }
 
           (
             SELECT COUNT(*)::int
