@@ -4,11 +4,15 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityMemberService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   async joinCommunity(userId: number, communityId: number) {
     try {
@@ -165,14 +169,14 @@ export class CommunityMemberService {
       `,
         [communityId, targetUserId],
       );
-      console.log('APPROVE RESULT:', result);
+      this.logger.log('APPROVE RESULT:', 'ApproveMember', result);
       if (!result.length) {
         throw new BadRequestException('Invalid member status');
       }
 
       return {
         success: true,
-        ddata: result[0][0],
+        data: result[0][0],
         message: 'Member approved successfully!',
       };
     } catch (error) {
@@ -302,6 +306,7 @@ export class CommunityMemberService {
   WHERE cm.community_id = $1
     AND cm.flag_valid = true
     AND cm.role = 'member'
+    AND cm.status = 'pending'
   ORDER BY 
     CASE 
       WHEN cm.status = 'pending' THEN 1

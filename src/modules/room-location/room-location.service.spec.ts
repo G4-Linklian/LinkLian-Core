@@ -41,12 +41,19 @@ const buildQueryRunnerMock = (queryResult: any = []) => ({
 describe('RoomLocationService', () => {
   let service: RoomLocationService;
 
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn().mockResolvedValue(null),
+  };
+
   const mockRepo = {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
   };
 
   const mockDataSource = {
