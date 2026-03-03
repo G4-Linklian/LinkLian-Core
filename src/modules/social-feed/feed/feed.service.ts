@@ -120,8 +120,8 @@ export class FeedService {
         message: 'Student class feed retrieved successfully',
         data: result_feed,
       };
-    } catch (error) {
-      this.logger.error('Error fetching student class feed:', error);
+    } catch (error : any) {
+      this.logger.error('Error fetching student class feed', 'GetStudentClassFeed', error);
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }
@@ -234,8 +234,8 @@ export class FeedService {
         message: 'Teacher class feed retrieved successfully',
         data: result_feed,
       };
-    } catch (error) {
-      this.logger.error('Error fetching teacher class feed:', error);
+    } catch (error : any) {
+      this.logger.error('Error fetching teacher class feed', 'GetTeacherClassFeed', error);
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }
