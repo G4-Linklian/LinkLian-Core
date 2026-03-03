@@ -33,6 +33,7 @@
     "@nestjs/swagger": "^11.2.5",
     "@nestjs/typeorm": "^11.0.0",
     "@types/nodemailer": "^7.0.5",
+    "@types/multer": "^2.0.0",
     "amqplib": "^0.10.9",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
