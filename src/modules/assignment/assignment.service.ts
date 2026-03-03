@@ -48,6 +48,7 @@ export class AssignmentService {
         a.assignment_id,
         pic.post_id,
         pc.title,
+        pc.created_at,  
         sub.name_th AS subject_name_th,
         sub.name_en AS subject_name_en,
         CASE WHEN a.is_group = true THEN 'งานกลุ่ม' ELSE 'งานเดี่ยว' END AS assignment_type,
@@ -141,6 +142,7 @@ LIMIT $3 OFFSET $4
       assignment_id: row.assignment_id,
       post_id: row.post_id,
       title: row.title,
+      created_at: row.created_at,
       subject_name_th: row.subject_name_th,
       subject_name_en: row.subject_name_en,
       assignment_type: row.assignment_type,
@@ -165,6 +167,7 @@ LIMIT $3 OFFSET $4
       a.assignment_id,
       pic.post_id,
       pc.title,
+      pc.created_at,
       sub.name_th AS subject_name_th,
       sub.name_en AS subject_name_en,
       CASE WHEN a.is_group = true THEN 'งานกลุ่ม' ELSE 'งานเดี่ยว' END AS assignment_type,
@@ -258,6 +261,7 @@ LIMIT $3 OFFSET $4
       assignment_id: row.assignment_id,
       post_id: row.post_id,
       title: row.title,
+      created_at: row.created_at,
       subject_name_th: row.subject_name_th,
       subject_name_en: row.subject_name_en,
       assignment_type: row.assignment_type,
@@ -823,5 +827,145 @@ LIMIT 1
       message: 'Groups retrieved successfully',
       data: result,
     };
+  }
+
+  async searchAssignments(
+    userId: number,
+    sectionId: number,
+    keyword: string,
+    role: string,
+    limit: number = 50,
+  ) {
+    const isStudent =
+      role === 'high school student' ||
+      role === 'uni student';
+
+    console.log(`[searchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`);
+
+    try {
+      const query = `
+        SELECT
+          a.assignment_id,
+          pic.post_id,
+          pc.title,
+          pc.created_at,
+          sub.name_th AS subject_name_th,
+          sub.name_en AS subject_name_en,
+          CASE WHEN a.is_group = true THEN 'งานกลุ่ม' ELSE 'งานเดี่ยว' END AS assignment_type,
+          a.is_group,
+          a.due_date,
+
+          ${isStudent ? `
+          (
+            SELECT sb.submitted_at
+            FROM submission sb
+            JOIN student_group sg ON sb.group_id = sg.group_id
+            JOIN group_member gm ON sg.group_id = gm.group_id
+            WHERE sb.assignment_id = a.assignment_id
+              AND gm.user_sys_id = $2
+              AND sb.flag_valid = true
+              AND sg.flag_valid = true
+              AND gm.flag_valid = true
+            ORDER BY sb.submitted_at DESC
+            LIMIT 1
+          ) AS submitted_at,
+          ` : ''}
+
+          (
+            SELECT COUNT(*)::int
+            FROM enrollment e
+            WHERE e.section_id = $1
+              AND e.flag_valid = true
+          ) AS total_students,
+
+          (
+            SELECT COUNT(*)::int
+            FROM submission sb
+            WHERE sb.assignment_id = a.assignment_id
+              AND sb.flag_valid = true
+          ) AS submitted_count,
+
+          COALESCE(
+            (
+              SELECT json_agg(
+                jsonb_build_object(
+                  'educator_id', u.user_sys_id,
+                  'educator_name', CONCAT(u.first_name, ' ', u.last_name),
+                  'position', se.position
+                )
+                ORDER BY 
+                  CASE se.position
+                    WHEN 'main' THEN 1
+                    WHEN 'co' THEN 2
+                    ELSE 3
+                  END
+              )
+              FROM section_educator se
+              JOIN user_sys u ON se.educator_id = u.user_sys_id
+              WHERE se.section_id = s.section_id
+                AND se.flag_valid = true
+                AND u.flag_valid = true
+            ),
+            '[]'::json
+          ) AS educators
+
+        FROM assignment a
+        JOIN post_in_class pic
+          ON a.post_id = pic.post_id
+         AND pic.flag_valid = true
+        JOIN post_content pc
+          ON pic.post_content_id = pc.post_content_id
+         AND pc.flag_valid = true
+        JOIN section s
+          ON pic.section_id = s.section_id
+        JOIN subject sub
+          ON s.subject_id = sub.subject_id
+
+        WHERE pic.section_id = $1
+          AND a.flag_valid = true
+          AND pc.post_type = 'assignment'
+          AND (
+            pc.title ILIKE $${isStudent ? '3' : '2'}
+            OR pc.content ILIKE $${isStudent ? '3' : '2'}
+          )
+
+        ORDER BY a.due_date DESC NULLS LAST
+        LIMIT $${isStudent ? '4' : '3'}
+      `;
+
+      const searchPattern = `%${keyword}%`;
+      const params = isStudent
+        ? [sectionId, userId, searchPattern, limit]
+        : [sectionId, searchPattern, limit];
+
+      const result = await this.dataSource.query(query, params);
+
+      console.log(`[searchAssignments] Found ${result.length} assignments`);
+
+      const final_result = result.map((row: any) => ({
+        assignment_id: row.assignment_id,
+        post_id: row.post_id,
+        title: row.title,
+        created_at: row.created_at,
+        subject_name_th: row.subject_name_th,
+        subject_name_en: row.subject_name_en,
+        assignment_type: row.assignment_type,
+        is_group: row.is_group,
+        due_date: row.due_date,
+        submitted_at: row.submitted_at || null,
+        total_students: Number(row.total_students),
+        submitted_count: Number(row.submitted_count),
+        educators: row.educators || [],
+      }));
+
+      return { 
+        success: true, 
+        message: 'Assignments retrieved successfully', 
+        data: final_result 
+      };
+    } catch (error) {
+      console.error('[searchAssignments] Error:', error);
+      throw new InternalServerErrorException('Error searching assignments');
+    }
   }
 }

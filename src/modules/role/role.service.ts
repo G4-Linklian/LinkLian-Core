@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto, SearchRoleDto, UpdateRoleDto } from './dto/role.dto';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class RoleService {

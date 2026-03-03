@@ -12,7 +12,7 @@ import {
   RegisSummaryRegistrationDto,
 } from './dto/regis.summary.dto';
 import { regisSummaryFields } from './interface/regis.summary.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class RegisSummaryService {

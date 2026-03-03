@@ -18,9 +18,6 @@ export class Building {
   @Column({ name: 'remark', type: 'text', nullable: true })
   remark?: string | null;
 
-  @Column({ name: 'room_format', type: 'varchar', nullable: true })
-  room_format?: string | null;
-
   @Column({ name: 'flag_valid', default: true })
   flag_valid!: boolean;
 }

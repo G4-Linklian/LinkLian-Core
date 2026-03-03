@@ -53,7 +53,7 @@ export interface ScheduleInfo {
     building_id: number | null;
     building_name: string | null;
     building_no: string | null;
-    room_format: string | null;
+    // room_format: string | null;
   };
 }
 

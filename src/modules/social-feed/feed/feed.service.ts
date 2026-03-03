@@ -53,8 +53,7 @@ export class FeedService {
                 'building', jsonb_build_object(
                   'building_id', COALESCE(b.building_id::integer, 0),
                   'building_name', COALESCE(b.building_name::text, ''),
-                  'building_no', COALESCE(b.building_no::text, ''),
-                  'room_format', COALESCE(b.room_format::text, '')
+                  'building_no', COALESCE(b.building_no::text, '')
                 )
               )
               ORDER BY sch.day_of_week ASC, sch.start_time ASC
@@ -167,8 +166,7 @@ export class FeedService {
                 'building', jsonb_build_object(
                   'building_id', COALESCE(b.building_id::integer, 0),
                   'building_name', COALESCE(b.building_name::text, ''),
-                  'building_no', COALESCE(b.building_no::text, ''),
-                  'room_format', COALESCE(b.room_format::text, '')
+                  'building_no', COALESCE(b.building_no::text, '')
                 )
               )
               ORDER BY sch.day_of_week ASC, sch.start_time ASC

@@ -39,10 +39,10 @@ export class SearchRoomLocationDto {
   @IsString()
   room_remark?: string;
 
-  @ApiPropertyOptional({ description: 'Floor', example: '1' })
-  @IsOptional()
-  @IsString()
-  floor?: string;
+  // @ApiPropertyOptional({ description: 'Floor', example: '1' })
+  // @IsOptional()
+  // @IsString()
+  // floor?: string;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()
@@ -97,9 +97,9 @@ export class CreateRoomLocationDto {
   @IsString()
   room_remark?: string;
 
-  @ApiProperty({ description: 'Floor', example: '1' })
-  @IsString()
-  floor!: string;
+  // @ApiProperty({ description: 'Floor', example: '1' })
+  // @IsString()
+  // floor!: string;
 }
 
 /**
@@ -110,11 +110,11 @@ export class CreateRoomLocationBatchDto {
     description: 'Array of room locations to create',
     type: [CreateRoomLocationDto],
     example: [
-      { building_id: 1, room_number: '101', floor: '1', room_remark: 'Office' },
+      // { building_id: 1, room_number: '101', floor: '1', room_remark: 'Office' },
       {
         building_id: 1,
         room_number: '102',
-        floor: '1',
+        // floor: '1',
         room_remark: 'Meeting room',
       },
     ],
@@ -147,10 +147,10 @@ export class UpdateRoomLocationDto {
   @IsString()
   room_remark?: string;
 
-  @ApiPropertyOptional({ description: 'Floor', example: '1' })
-  @IsOptional()
-  @IsString()
-  floor?: string;
+  // @ApiPropertyOptional({ description: 'Floor', example: '1' })
+  // @IsOptional()
+  // @IsString()
+  // floor?: string;
 
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   @IsOptional()

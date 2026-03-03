@@ -21,8 +21,8 @@ import {
   hashPassword,
 } from '../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
-import { UserSysFields } from 'src/common/interface/user.interface';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { UserSysFields } from '../../common/interface/user.interface';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class UsersService {
@@ -206,8 +206,19 @@ export class UsersService {
         values,
       );
       // Remove password from results
-      return result.map((user: any) => {
+      const finalResult = result.map((user: any) => {
         const { password: _password, ...rest } = user;
+        return rest as UserSysFields;
+      });
+      return { success: true, data: finalResult };
+    } catch (error: unknown) {
+      this.logger.error('Error fetching users:', 'SearchUser', error);
+      throw new InternalServerErrorException('Server Error');
+    }
+  }
+
+  /**
+   * Create a new user with auto-generated password and email notification
         return rest as UserSysFields;
       });
     } catch (error: unknown) {
@@ -240,7 +251,15 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException('This email is already in use');
+      throw new ConflictException('อีเมลนี้มีอยู่ในระบบแล้ว');
+    }
+
+    const existingCodeUser = await this.userSysRepo.findOne({
+      where: { inst_id: dto.inst_id, code: dto.code },
+    });
+
+    if (existingCodeUser) {
+      throw new ConflictException('รหัสผู้ใช้นี้มีอยู่ในระบบแล้ว');
     }
 
     // Generate initial password and hash it
@@ -325,7 +344,7 @@ export class UsersService {
         'code' in error &&
         (error as { code?: unknown }).code === '23505'
       ) {
-        throw new ConflictException('This email or code is already in use');
+        throw new ConflictException('อีเมลหรือรหัสผู้ใช้นี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error creating user:', 'CreateUser', error);
       throw new InternalServerErrorException('Server Error');
@@ -344,7 +363,23 @@ export class UsersService {
     });
 
     if (!existingUser) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('ไม่มีผู้ใช้นี้ในระบบ');
+    }
+
+    const existingEmailUser = await this.userSysRepo.findOne({
+      where: { email: dto.email },
+    });
+
+    if (existingEmailUser && existingEmailUser.user_sys_id !== id) {
+      throw new ConflictException('อีเมลนี้มีอยู่ในระบบแล้ว');
+    }
+
+    const existingCodeUser = await this.userSysRepo.findOne({
+      where: { inst_id: dto.inst_id, code: dto.code },
+    });
+
+    if (existingCodeUser && existingCodeUser.user_sys_id !== id) {
+      throw new ConflictException('รหัสผู้ใช้นี้มีอยู่ในระบบแล้ว');
     }
 
     // Build update fields
@@ -418,7 +453,7 @@ export class UsersService {
       dto.learning_area_id === undefined &&
       dto.program_id === undefined
     ) {
-      throw new BadRequestException('No fields to update!');
+      throw new BadRequestException('ไม่มีข้อมูลที่จะอัปเดต!');
     }
 
     try {
@@ -461,7 +496,7 @@ export class UsersService {
       return {
         success: true,
         data: userData,
-        message: 'User updated successfully',
+        message: 'อัปเดตผู้ใช้สำเร็จ',
       };
     } catch (error: unknown) {
       if (
@@ -469,10 +504,10 @@ export class UsersService {
         error !== null &&
         (error as any).code === '23505'
       ) {
-        throw new ConflictException('This email or code is already in use');
+        throw new ConflictException('อีเมลหรือรหัสผู้ใช้นี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error updating user:', 'UpdateUser', error);
-      throw new InternalServerErrorException('Server Error');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตผู้ใช้');
     }
   }
 
@@ -486,7 +521,7 @@ export class UsersService {
     });
 
     if (!existingUser) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('ไม่มีผู้ใช้นี้ในระบบ');
     }
 
     try {
@@ -495,11 +530,11 @@ export class UsersService {
       return {
         success: true,
         data: userData,
-        message: 'User deleted successfully',
+        message: 'ลบผู้ใช้สำเร็จ',
       };
     } catch (error: unknown) {
       this.logger.error('Error deleting user:', 'DeleteUser', error);
-      throw new InternalServerErrorException('Error deleting user');
+      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการลบผู้ใช้');
     }
   }
 }

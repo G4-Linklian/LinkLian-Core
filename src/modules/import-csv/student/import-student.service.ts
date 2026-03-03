@@ -33,7 +33,7 @@ import {
   USER_STATUS_MAP,
 } from '../shared';
 
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 type StudentDtoType = ImportSchoolStudentDto | ImportUniStudentDto;
 // type StudentDtoClass =
