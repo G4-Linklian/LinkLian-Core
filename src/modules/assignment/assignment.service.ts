@@ -6,7 +6,7 @@ import {
   UpdateGroupDto,
 } from './dto/assignment.dto';
 import { generateAnonymousName } from '../../common/utils/anonymous.util';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 @Injectable()
 export class AssignmentService {
   constructor(
