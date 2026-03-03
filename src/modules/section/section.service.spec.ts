@@ -427,9 +427,9 @@ describe('SectionService', () => {
     it('should throw InternalServerErrorException on query error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(
-        service.searchEducator({ section_id: 1 }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.searchEducator({ section_id: 1 })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -487,9 +487,9 @@ describe('SectionService', () => {
     it('should throw InternalServerErrorException on query error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(
-        service.searchEnrollment({ section_id: 1 }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.searchEnrollment({ section_id: 1 })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -658,9 +658,9 @@ describe('SectionService', () => {
       qr.query.mockRejectedValue(new Error('DB error'));
       mockDataSource.createQueryRunner.mockReturnValue(qr);
 
-      await expect(
-        service.createSectionSchedule(validDto),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.createSectionSchedule(validDto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(qr.rollbackTransaction).toHaveBeenCalled();
       expect(qr.release).toHaveBeenCalled();
     });
@@ -669,23 +669,39 @@ describe('SectionService', () => {
   // ─── createEducator ────────────────────────────────────────────────────────
 
   describe('createEducator', () => {
-    const validDto = { section_id: 1, user_sys_id: 20, position: 'main_teacher' };
+    const validDto = {
+      section_id: 1,
+      user_sys_id: 20,
+      position: 'main_teacher',
+    };
 
     it('should throw BadRequestException when section_id is missing', async () => {
       await expect(
-        service.createEducator({ section_id: 0, user_sys_id: 20, position: 'main_teacher' }),
+        service.createEducator({
+          section_id: 0,
+          user_sys_id: 20,
+          position: 'main_teacher',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when user_sys_id is missing', async () => {
       await expect(
-        service.createEducator({ section_id: 1, user_sys_id: 0, position: 'main_teacher' }),
+        service.createEducator({
+          section_id: 1,
+          user_sys_id: 0,
+          position: 'main_teacher',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when position is missing', async () => {
       await expect(
-        service.createEducator({ section_id: 1, user_sys_id: 20, position: '' }),
+        service.createEducator({
+          section_id: 1,
+          user_sys_id: 20,
+          position: '',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -916,7 +932,11 @@ describe('SectionService', () => {
       mockDataSource.query.mockResolvedValue([]);
 
       await expect(
-        service.updateEducator({ section_id: 1, user_sys_id: 20, flag_valid: false }),
+        service.updateEducator({
+          section_id: 1,
+          user_sys_id: 20,
+          flag_valid: false,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -1080,9 +1100,9 @@ describe('SectionService', () => {
     it('should throw InternalServerErrorException on query error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(
-        service.deleteEducator({ section_id: 1 }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.deleteEducator({ section_id: 1 })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -1119,9 +1139,9 @@ describe('SectionService', () => {
     it('should throw InternalServerErrorException on query error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(
-        service.deleteEnrollment({ section_id: 1 }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.deleteEnrollment({ section_id: 1 })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });

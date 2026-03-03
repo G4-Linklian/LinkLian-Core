@@ -25,7 +25,10 @@ jest.mock('../../common/utils/mailer.utils', () => ({
   sendInitialPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { generateInitialPassword, hashPassword } from '../../common/utils/auth.util';
+import {
+  generateInitialPassword,
+  hashPassword,
+} from '../../common/utils/auth.util';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -312,7 +315,11 @@ describe('UsersService', () => {
     it('should apply sort DESC order', async () => {
       mockDataSource.query.mockResolvedValue([]);
 
-      await service.search({ inst_id: 1, sort_by: 'first_name', sort_order: 'DESC' });
+      await service.search({
+        inst_id: 1,
+        sort_by: 'first_name',
+        sort_order: 'DESC',
+      });
 
       const [queryStr] = mockDataSource.query.mock.calls[0];
       expect(queryStr).toContain('ORDER BY u.first_name DESC');
@@ -361,9 +368,9 @@ describe('UsersService', () => {
     };
 
     it('should throw BadRequestException when email is missing', async () => {
-      await expect(
-        service.create({ ...createDto, email: '' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create({ ...createDto, email: '' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when first_name is missing', async () => {
@@ -385,9 +392,9 @@ describe('UsersService', () => {
     });
 
     it('should throw BadRequestException when code is missing', async () => {
-      await expect(
-        service.create({ ...createDto, code: '' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create({ ...createDto, code: '' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when inst_id is missing', async () => {
@@ -503,9 +510,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       mockUserSysRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.update(999, { first_name: 'X' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { first_name: 'X' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException when email belongs to different user', async () => {
@@ -561,7 +568,9 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
 
-      mockDataSource.query.mockResolvedValue([mockUserSys({ email: 'upd@example.com' })]);
+      mockDataSource.query.mockResolvedValue([
+        mockUserSys({ email: 'upd@example.com' }),
+      ]);
 
       await service.update(1, { email: 'upd@example.com' });
 
@@ -576,7 +585,9 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
 
-      mockDataSource.query.mockResolvedValue([mockUserSys({ flag_valid: false })]);
+      mockDataSource.query.mockResolvedValue([
+        mockUserSys({ flag_valid: false }),
+      ]);
 
       await service.update(1, { flag_valid: false });
 
@@ -595,7 +606,9 @@ describe('UsersService', () => {
 
       await service.update(1, { learning_area_id: 10 });
 
-      expect(mockLearningAreaService.updateUserSysNormalize).toHaveBeenCalledWith({
+      expect(
+        mockLearningAreaService.updateUserSysNormalize,
+      ).toHaveBeenCalledWith({
         user_sys_id: 1,
         learning_area_id: 10,
       });
@@ -652,9 +665,9 @@ describe('UsersService', () => {
 
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(
-        service.update(1, { first_name: 'err' }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.update(1, { first_name: 'err' })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 

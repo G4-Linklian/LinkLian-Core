@@ -19,17 +19,20 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size)
+      chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-    const results: any[] = [];
-    for (const batch of batches) {
-      const res = await fn(batch);
-      results.push(...res);
-    }
-    return results;
-  }),
+  processBatchesParallel: jest
+    .fn()
+    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+      const results: any[] = [];
+      for (const batch of batches) {
+        const res = await fn(batch);
+        results.push(...res);
+      }
+      return results;
+    }),
   createValidationToken: jest.fn().mockReturnValue('mock-enrollment-token'),
   verifyValidationToken: jest.fn().mockReturnValue({
     type: 'enrollment',
@@ -102,7 +105,7 @@ describe('ImportEnrollmentService', () => {
   let userRepo: ReturnType<typeof mockUserRepo>;
 
   const mockBuffer = Buffer.from('mock-excel');
-  const mockRawRow = { 'รหัสนักเรียน': 'S001' };
+  const mockRawRow = { รหัสนักเรียน: 'S001' };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -114,9 +117,15 @@ describe('ImportEnrollmentService', () => {
       providers: [
         ImportEnrollmentService,
         { provide: getRepositoryToken(Section), useValue: sectionRepo },
-        { provide: getRepositoryToken(Enrollment), useValue: mockEnrollmentRepo() },
+        {
+          provide: getRepositoryToken(Enrollment),
+          useValue: mockEnrollmentRepo(),
+        },
         { provide: getRepositoryToken(UserSys), useValue: userRepo },
-        { provide: getRepositoryToken(Institution), useValue: mockInstitutionRepo() },
+        {
+          provide: getRepositoryToken(Institution),
+          useValue: mockInstitutionRepo(),
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: JwtService, useValue: mockJwtService },
         { provide: AppLogger, useValue: mockLogger },
@@ -131,7 +140,13 @@ describe('ImportEnrollmentService', () => {
       mockParseExcelFile.mockResolvedValue([mockRawRow]);
 
       userRepo.find.mockResolvedValue([
-        { user_sys_id: 10, code: 'S001', role_id: 2, flag_valid: true, inst_id: 1 },
+        {
+          user_sys_id: 10,
+          code: 'S001',
+          role_id: 2,
+          flag_valid: true,
+          inst_id: 1,
+        },
       ]);
       mockDataSource.query
         .mockResolvedValueOnce([{ section_id: 5 }]) // section existence check
@@ -170,7 +185,11 @@ describe('ImportEnrollmentService', () => {
     it('should throw NotFoundException if institution not found', async () => {
       mockParseExcelFile.mockResolvedValue([mockRawRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'enrollment', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
+        type: 'enrollment',
+        instId: 1,
+        dataHash: 'mock-hash',
+        validCount: 1,
+        duplicateCount: 0,
       });
       mockQueryRunner.manager.findOne.mockResolvedValue(null); // no institution
 
@@ -184,24 +203,42 @@ describe('ImportEnrollmentService', () => {
     it('should save data and return success', async () => {
       mockParseExcelFile.mockResolvedValue([mockRawRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'enrollment', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
+        type: 'enrollment',
+        instId: 1,
+        dataHash: 'mock-hash',
+        validCount: 1,
+        duplicateCount: 0,
       });
 
       // Institution found
-      mockQueryRunner.manager.findOne
-        .mockResolvedValueOnce({ inst_id: 1, inst_name: 'Test School' });
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce({
+        inst_id: 1,
+        inst_name: 'Test School',
+      });
 
       // preFetchData: userRepo.find and dataSource.query
       userRepo.find.mockResolvedValue([
-        { user_sys_id: 10, code: 'S001', role_id: 2, inst_id: 1, flag_valid: true },
+        {
+          user_sys_id: 10,
+          code: 'S001',
+          role_id: 2,
+          inst_id: 1,
+          flag_valid: true,
+        },
       ]);
       mockDataSource.query.mockResolvedValue([]); // preFetchData: existing enrollments
 
       // saveBatch: queryRunner.manager.query for INSERT enrollment
-      mockQueryRunner.manager.query
-        .mockResolvedValueOnce([{ enrollment_id: 99 }]); // insert enrollment
+      mockQueryRunner.manager.query.mockResolvedValueOnce([
+        { enrollment_id: 99 },
+      ]); // insert enrollment
 
-      const result = await service.saveEnrollmentData(1, 5, mockBuffer, 'mock-token');
+      const result = await service.saveEnrollmentData(
+        1,
+        5,
+        mockBuffer,
+        'mock-token',
+      );
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('สำเร็จ');
@@ -211,7 +248,11 @@ describe('ImportEnrollmentService', () => {
     it('should rollback on error during save', async () => {
       mockParseExcelFile.mockResolvedValue([mockRawRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'enrollment', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
+        type: 'enrollment',
+        instId: 1,
+        dataHash: 'mock-hash',
+        validCount: 1,
+        duplicateCount: 0,
       });
 
       mockQueryRunner.manager.findOne.mockRejectedValue(new Error('DB error'));

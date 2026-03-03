@@ -15,17 +15,20 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size)
+      chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-    const results: any[] = [];
-    for (const batch of batches) {
-      const res = await fn(batch);
-      results.push(...res);
-    }
-    return results;
-  }),
+  processBatchesParallel: jest
+    .fn()
+    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+      const results: any[] = [];
+      for (const batch of batches) {
+        const res = await fn(batch);
+        results.push(...res);
+      }
+      return results;
+    }),
   createValidationToken: jest.fn().mockReturnValue('mock-subject-token'),
   IMPORT_BATCH_SIZE: 100,
   IMPORT_MAX_CONCURRENT_BATCHES: 3,
@@ -68,12 +71,12 @@ describe('ImportSubjectService', () => {
 
   const mockBuffer = Buffer.from('mock-excel');
   const mockRow = {
-    'รหัสวิชา': 'MAT001',
+    รหัสวิชา: 'MAT001',
     'ชื่อวิชา (ภาษาไทย)': 'คณิตศาสตร์พื้นฐาน',
     'ชื่อวิชา (ภาษาอังกฤษ)': 'Basic Mathematics',
-    'กลุ่มการเรียนรู้': 'คณิตศาสตร์',
-    'หน่วยกิต': '1.5',
-    'ชั่วโมงต่อสัปดาห์': '3',
+    กลุ่มการเรียนรู้: 'คณิตศาสตร์',
+    หน่วยกิต: '1.5',
+    ชั่วโมงต่อสัปดาห์: '3',
   };
   const mockLearningArea = {
     learning_area_id: 1,
@@ -90,7 +93,10 @@ describe('ImportSubjectService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ImportSubjectService,
-        { provide: getRepositoryToken(LearningArea), useValue: learningAreaRepo },
+        {
+          provide: getRepositoryToken(LearningArea),
+          useValue: learningAreaRepo,
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: JwtService, useValue: mockJwtService },
       ],
@@ -176,7 +182,7 @@ describe('ImportSubjectService', () => {
     });
 
     it('should auto-create new learning area if not found', async () => {
-      const rowWithNewArea = { ...mockRow, 'กลุ่มการเรียนรู้': 'ศิลปะ' };
+      const rowWithNewArea = { ...mockRow, กลุ่มการเรียนรู้: 'ศิลปะ' };
       mockParseExcelFile.mockResolvedValue([rowWithNewArea]);
       mockQueryRunner.manager.findOne.mockResolvedValue({ inst_id: 1 });
 
@@ -185,8 +191,8 @@ describe('ImportSubjectService', () => {
 
       // INSERT learning_area → INSERT subject
       mockQueryRunner.manager.query
-        .mockResolvedValueOnce([{ learning_area_id: 99 }])  // new learning area
-        .mockResolvedValueOnce([{ subject_id: 11 }]);       // new subject
+        .mockResolvedValueOnce([{ learning_area_id: 99 }]) // new learning area
+        .mockResolvedValueOnce([{ subject_id: 11 }]); // new subject
 
       const result = await service.saveSubjectData(1, mockBuffer, 'mock-token');
 

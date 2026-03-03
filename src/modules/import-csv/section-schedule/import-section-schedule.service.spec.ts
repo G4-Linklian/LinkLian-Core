@@ -24,17 +24,20 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size)
+      chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-    const results: any[] = [];
-    for (const batch of batches) {
-      const res = await fn(batch);
-      results.push(...res);
-    }
-    return results;
-  }),
+  processBatchesParallel: jest
+    .fn()
+    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+      const results: any[] = [];
+      for (const batch of batches) {
+        const res = await fn(batch);
+        results.push(...res);
+      }
+      return results;
+    }),
   createValidationToken: jest.fn().mockReturnValue('mock-section-token'),
   IMPORT_BATCH_SIZE: 100,
   IMPORT_MAX_CONCURRENT_BATCHES: 3,
@@ -88,15 +91,15 @@ describe('ImportSectionScheduleService', () => {
   const mockBuffer = Buffer.from('mock-excel');
 
   const mockRow = {
-    'รหัสวิชา': 'MAT001',
-    'กลุ่มเรียน': '1',
-    'วัน': 'จันทร์',
-    'เวลาเริ่มเรียน': '08:00',
-    'เวลาสิ้นสุด': '09:00',
-    'ตึก': 'อาคาร A',
-    'หมายเลขตึก': 'A',
-    'ห้องเรียน': '101',
-    'รหัสผู้สอนหลัก': 'T001',
+    รหัสวิชา: 'MAT001',
+    กลุ่มเรียน: '1',
+    วัน: 'จันทร์',
+    เวลาเริ่มเรียน: '08:00',
+    เวลาสิ้นสุด: '09:00',
+    ตึก: 'อาคาร A',
+    หมายเลขตึก: 'A',
+    ห้องเรียน: '101',
+    รหัสผู้สอนหลัก: 'T001',
   };
 
   const mockSemester = {
@@ -120,19 +123,33 @@ describe('ImportSectionScheduleService', () => {
         { provide: getRepositoryToken(UserSys), useValue: userRepo },
         { provide: getRepositoryToken(Subject), useValue: mockRepoFactory() },
         { provide: getRepositoryToken(Section), useValue: mockRepoFactory() },
-        { provide: getRepositoryToken(SectionSchedule), useValue: mockRepoFactory() },
-        { provide: getRepositoryToken(SectionEducator), useValue: mockRepoFactory() },
-        { provide: getRepositoryToken(Institution), useValue: mockRepoFactory() },
+        {
+          provide: getRepositoryToken(SectionSchedule),
+          useValue: mockRepoFactory(),
+        },
+        {
+          provide: getRepositoryToken(SectionEducator),
+          useValue: mockRepoFactory(),
+        },
+        {
+          provide: getRepositoryToken(Institution),
+          useValue: mockRepoFactory(),
+        },
         { provide: getRepositoryToken(Semester), useValue: semesterRepo },
         { provide: getRepositoryToken(Building), useValue: buildingRepo },
-        { provide: getRepositoryToken(RoomLocation), useValue: mockRepoFactory() },
+        {
+          provide: getRepositoryToken(RoomLocation),
+          useValue: mockRepoFactory(),
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: JwtService, useValue: mockJwtService },
         { provide: AppLogger, useValue: mockLogger },
       ],
     }).compile();
 
-    service = module.get<ImportSectionScheduleService>(ImportSectionScheduleService);
+    service = module.get<ImportSectionScheduleService>(
+      ImportSectionScheduleService,
+    );
   });
 
   /**
@@ -145,11 +162,14 @@ describe('ImportSectionScheduleService', () => {
   // 3. dataSource.query  → rooms
   // 4. userRepo.find     → users      (repo, NOT dataSource.query)
   // 5. dataSource.query  → existingSections
-  function setupPreFetchMocks(opts?: { existingSections?: any[]; users?: any[] }) {
+  function setupPreFetchMocks(opts?: {
+    existingSections?: any[];
+    users?: any[];
+  }) {
     mockDataSource.query
       .mockResolvedValueOnce([{ subject_code: 'MAT001', subject_id: 10 }]) // subjects
-      .mockResolvedValueOnce([])                                            // rooms
-      .mockResolvedValueOnce(opts?.existingSections ?? []);                 // existing sections
+      .mockResolvedValueOnce([]) // rooms
+      .mockResolvedValueOnce(opts?.existingSections ?? []); // existing sections
     buildingRepo.find.mockResolvedValue([]);
     userRepo.find.mockResolvedValue(opts?.users ?? []);
   }
@@ -169,7 +189,11 @@ describe('ImportSectionScheduleService', () => {
       semesterRepo.findOne.mockResolvedValue(mockSemester);
       setupPreFetchMocks();
 
-      const result = await service.validateSectionScheduleData(1, 5, mockBuffer);
+      const result = await service.validateSectionScheduleData(
+        1,
+        5,
+        mockBuffer,
+      );
 
       expect(mockParseExcelFile).toHaveBeenCalledWith(mockBuffer);
       expect(result.success).toBe(true);
@@ -187,7 +211,11 @@ describe('ImportSectionScheduleService', () => {
         existingSections: [{ subject_code: 'MAT001', section_name: '1' }],
       });
 
-      const result = await service.validateSectionScheduleData(1, 5, mockBuffer);
+      const result = await service.validateSectionScheduleData(
+        1,
+        5,
+        mockBuffer,
+      );
 
       expect(result.success).toBe(true);
       expect(result.data.summary.duplicateCount).toBeGreaterThanOrEqual(1);
@@ -225,13 +253,18 @@ describe('ImportSectionScheduleService', () => {
 
       // saveBatch queries: building insert, room insert, section insert, schedule insert, educator insert
       mockQueryRunner.manager.query
-        .mockResolvedValueOnce([{ building_id: 1 }])     // INSERT building
+        .mockResolvedValueOnce([{ building_id: 1 }]) // INSERT building
         .mockResolvedValueOnce([{ room_location_id: 2 }]) // INSERT room
-        .mockResolvedValueOnce([{ section_id: 3 }])       // INSERT section
-        .mockResolvedValueOnce([])                         // INSERT schedule
-        .mockResolvedValueOnce([]);                        // INSERT main educator
+        .mockResolvedValueOnce([{ section_id: 3 }]) // INSERT section
+        .mockResolvedValueOnce([]) // INSERT schedule
+        .mockResolvedValueOnce([]); // INSERT main educator
 
-      const result = await service.saveSectionScheduleData(1, 5, mockBuffer, 'mock-token');
+      const result = await service.saveSectionScheduleData(
+        1,
+        5,
+        mockBuffer,
+        'mock-token',
+      );
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('สำเร็จ');

@@ -184,9 +184,7 @@ export class LearningAreaService {
         'code' in error &&
         (error as { code?: unknown }).code === '23505'
       ) {
-        throw new ConflictException(
-          'กลุ่มการเรียนรู้นี้มีอยู่ในระบบแล้ว',
-        );
+        throw new ConflictException('กลุ่มการเรียนรู้นี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error(
         'Error creating learning area:',
@@ -250,7 +248,9 @@ export class LearningAreaService {
         'UpdateLearningArea',
         error,
       );
-      throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตกลุ่มการเรียนรู้');
+      throw new InternalServerErrorException(
+        'เกิดข้อผิดพลาดในการอัปเดตกลุ่มการเรียนรู้',
+      );
     }
   }
 

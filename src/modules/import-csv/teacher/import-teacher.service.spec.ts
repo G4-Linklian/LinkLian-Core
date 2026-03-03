@@ -26,17 +26,20 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size)
+      chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-    const results: any[] = [];
-    for (const batch of batches) {
-      const res = await fn(batch);
-      results.push(...res);
-    }
-    return results;
-  }),
+  processBatchesParallel: jest
+    .fn()
+    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+      const results: any[] = [];
+      for (const batch of batches) {
+        const res = await fn(batch);
+        results.push(...res);
+      }
+      return results;
+    }),
   createValidationToken: jest.fn().mockReturnValue('mock-teacher-token'),
   IMPORT_BATCH_SIZE: 100,
   IMPORT_MAX_CONCURRENT_BATCHES: 3,
@@ -92,12 +95,12 @@ describe('ImportTeacherService', () => {
 
   const mockBuffer = Buffer.from('mock-excel');
   const mockRow = {
-    'รหัสบุคลากร': 'T001',
-    'ชื่อจริง': 'สมชาย',
-    'นามสกุล': 'ใจดี',
-    'อีเมล': 'teacher@test.com',
-    'กลุ่มการเรียนรู้': 'คณิตศาสตร์',
-    'สถานะผู้ใช้': 'active',
+    รหัสบุคลากร: 'T001',
+    ชื่อจริง: 'สมชาย',
+    นามสกุล: 'ใจดี',
+    อีเมล: 'teacher@test.com',
+    กลุ่มการเรียนรู้: 'คณิตศาสตร์',
+    สถานะผู้ใช้: 'active',
   };
   const mockLearningArea = {
     learning_area_id: 1,
@@ -116,7 +119,10 @@ describe('ImportTeacherService', () => {
       providers: [
         ImportTeacherService,
         { provide: getRepositoryToken(UserSys), useValue: userSysRepo },
-        { provide: getRepositoryToken(LearningArea), useValue: learningAreaRepo },
+        {
+          provide: getRepositoryToken(LearningArea),
+          useValue: learningAreaRepo,
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: JwtService, useValue: mockJwtService },
         { provide: AppLogger, useValue: mockLogger },
@@ -132,7 +138,11 @@ describe('ImportTeacherService', () => {
       learningAreaRepo.find.mockResolvedValue([mockLearningArea]);
       userSysRepo.find.mockResolvedValue([]);
 
-      const result = await service.validateTeacherData(1, 'unknown', mockBuffer);
+      const result = await service.validateTeacherData(
+        1,
+        'unknown',
+        mockBuffer,
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('summary');
@@ -156,7 +166,11 @@ describe('ImportTeacherService', () => {
       learningAreaRepo.find.mockResolvedValue([mockLearningArea]);
       userSysRepo.find.mockResolvedValue([]);
 
-      const result = await service.validateTeacherData(1, 'university', mockBuffer);
+      const result = await service.validateTeacherData(
+        1,
+        'university',
+        mockBuffer,
+      );
 
       expect(result.success).toBe(true);
     });
@@ -201,7 +215,12 @@ describe('ImportTeacherService', () => {
         .mockResolvedValueOnce([{ user_sys_id: 50 }]) // INSERT user_sys
         .mockResolvedValueOnce([]); // INSERT user_sys_learning_area_normalize
 
-      const result = await service.saveTeacherData(1, 'school', mockBuffer, 'mock-token');
+      const result = await service.saveTeacherData(
+        1,
+        'school',
+        mockBuffer,
+        'mock-token',
+      );
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('สำเร็จ');
@@ -217,7 +236,12 @@ describe('ImportTeacherService', () => {
         { email: 'teacher@test.com', code: 'T001' },
       ]);
 
-      const result = await service.saveTeacherData(1, 'school', mockBuffer, 'mock-token');
+      const result = await service.saveTeacherData(
+        1,
+        'school',
+        mockBuffer,
+        'mock-token',
+      );
 
       expect(result.success).toBe(true);
       expect(result.data.skippedCount).toBeGreaterThanOrEqual(1);

@@ -430,9 +430,7 @@ describe('ProgramService', () => {
 
     it('should update parent_id', async () => {
       mockProgramRepo.findOne.mockResolvedValue(mockProgram());
-      mockDataSource.query.mockResolvedValue([
-        mockProgram({ parent_id: 3 }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockProgram({ parent_id: 3 })]);
 
       const result = await service.update(1, { parent_id: 3 });
 
@@ -649,9 +647,7 @@ describe('ProgramService', () => {
 
       expect(result).toEqual(deleted);
       expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'DELETE FROM user_sys_program_normalize',
-        ),
+        expect.stringContaining('DELETE FROM user_sys_program_normalize'),
         [1, 10],
       );
     });

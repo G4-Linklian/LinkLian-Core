@@ -1,10 +1,14 @@
 // filepath: /Users/thunyatorn/Desktop/LinkLian-Core/src/modules/social-feed/class-info/class-info.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ClassInfoService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get section educators with user info
@@ -32,7 +36,7 @@ export class ClassInfoService {
       const result = await this.dataSource.query(query, [sectionId]);
       return result;
     } catch (error) {
-      console.error('Error fetching section educators:', error);
+      this.logger.error('Error fetching section educators:', error);
       throw new InternalServerErrorException(
         'Error fetching section educators',
       );
@@ -132,7 +136,7 @@ export class ClassInfoService {
       const educators = await this.dataSource.query(educatorsQuery, [
         sectionId,
       ]);
-      console.log(
+      this.logger.log(
         `[GetClassInfo] Educators query returned ${educators.length} educators`,
       );
       const final_result = {
@@ -147,7 +151,7 @@ export class ClassInfoService {
         data: final_result,
       };
     } catch (error) {
-      console.error('Error fetching class info:', error);
+      this.logger.error('Error fetching class info:', error);
       throw new InternalServerErrorException('Error fetching class info');
     }
   }

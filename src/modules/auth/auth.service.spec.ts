@@ -87,9 +87,13 @@ describe('AuthService', () => {
       otp_verified: true,
     });
     (authUtil.hashPassword as jest.Mock).mockResolvedValue('new_hashed');
-    (authUtil.generateInitialPassword as jest.Mock).mockReturnValue('Temp@1234');
+    (authUtil.generateInitialPassword as jest.Mock).mockReturnValue(
+      'Temp@1234',
+    );
     (mailerUtil.sendOTPEmail as jest.Mock).mockResolvedValue(undefined);
-    (mailerUtil.sendTempPasswordEmail as jest.Mock).mockResolvedValue(undefined);
+    (mailerUtil.sendTempPasswordEmail as jest.Mock).mockResolvedValue(
+      undefined,
+    );
     userRepo.query.mockResolvedValue([{ role_name: 'teacher', access: {} }]);
   });
 
@@ -210,7 +214,10 @@ describe('AuthService', () => {
 
       const result = (await service.login(loginDto)) as any;
 
-      expect(result).toMatchObject({ success: true, otp_session_id: expect.any(String) });
+      expect(result).toMatchObject({
+        success: true,
+        otp_session_id: expect.any(String),
+      });
     });
   });
 

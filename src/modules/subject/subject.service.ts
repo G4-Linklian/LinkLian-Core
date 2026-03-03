@@ -202,9 +202,7 @@ export class SubjectService {
         'code' in error &&
         error.code === '23505'
       ) {
-        throw new ConflictException(
-          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
-        );
+        throw new ConflictException('รหัสวิชานี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error creating subject:', 'CreateSubject', error);
       throw new InternalServerErrorException('เกิดข้อผิดพลาดในการสร้างวิชา');
@@ -291,9 +289,7 @@ export class SubjectService {
         'code' in error &&
         error.code === '23505'
       ) {
-        throw new ConflictException(
-          'รหัสวิชานี้มีอยู่ในระบบแล้ว',
-        );
+        throw new ConflictException('รหัสวิชานี้มีอยู่ในระบบแล้ว');
       }
       this.logger.error('Error updating subject:', 'UpdateSubject', error);
       throw new InternalServerErrorException('เกิดข้อผิดพลาดในการอัปเดตวิชา');

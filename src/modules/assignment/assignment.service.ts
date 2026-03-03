@@ -6,17 +6,20 @@ import {
   UpdateGroupDto,
 } from './dto/assignment.dto';
 import { generateAnonymousName } from '../../common/utils/anonymous.util';
-
+import { AppLogger } from 'src/common/logger/app-logger.service';
 @Injectable()
 export class AssignmentService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   async getClassAssignments(userId: number, dto: GetClassAssignmentsDto) {
     const { section_id, role, offset = 0, limit = 10 } = dto;
 
     const isStudent = role === 'high school student' || role === 'uni student';
 
-    console.log(
+    this.logger.log(
       `[GetClassAssignments] section_id=${section_id}, role=${role}, userId=${userId}, offset=${offset}, limit=${limit}`,
     );
 
@@ -32,7 +35,7 @@ export class AssignmentService {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
     } catch (error) {
-      console.error('[GetClassAssignments] Error:', error);
+      this.logger.error('[GetClassAssignments] Error:', error);
       throw new InternalServerErrorException('Error fetching assignments');
     }
   }
@@ -134,7 +137,7 @@ LIMIT $3 OFFSET $4
       limit,
       offset,
     ]);
-    console.log(
+    this.logger.log(
       `[GetClassAssignments] Student query returned ${result.length} assignments`,
     );
 
@@ -253,7 +256,7 @@ LIMIT $3 OFFSET $4
       limit,
       offset,
     ]);
-    console.log(
+    this.logger.log(
       `[GetClassAssignments] Teacher query returned ${result.length} assignments`,
     );
 
@@ -334,7 +337,7 @@ LIMIT 1
 
       const postResult = await this.dataSource.query(postQuery, [postId]);
 
-      console.log(`[getPostAssignment] Post query result:`, postResult);
+      this.logger.log(`[getPostAssignment] Post query result:`, postResult);
 
       if (!postResult.length) {
         return null;
@@ -519,7 +522,7 @@ LIMIT 1
         data: final_result,
       };
     } catch (error) {
-      console.error('[getPostAssignment] error:', error);
+      this.logger.error('[getPostAssignment] error:', error);
       throw new InternalServerErrorException('Error fetching assignment post');
     }
   }
@@ -527,7 +530,7 @@ LIMIT 1
   async createGroup(userId: number, dto: CreateGroupDto) {
     const { assignment_id, group_name, member_ids } = dto;
 
-    console.log('[createGroup] Input:', {
+    this.logger.log('[createGroup] Input:', 'Create Group', {
       userId,
       assignment_id,
       group_name,
@@ -536,7 +539,7 @@ LIMIT 1
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
-      console.error('[createGroup] User must be included in group members');
+      this.logger.error('[createGroup] User must be included in group members');
       throw new Error('You must be a member of the group you create');
     }
 
@@ -590,7 +593,7 @@ LIMIT 1
       );
 
       const groupId = groupResult[0].group_id;
-      console.log('[createGroup] Created group with ID:', groupId);
+      this.logger.log('[createGroup] Created group with ID:', groupId);
 
       /**
        * 4. เพิ่มสมาชิก
@@ -607,7 +610,7 @@ LIMIT 1
         [groupId, ...member_ids],
       );
 
-      console.log('[createGroup] Inserted group members:', insertResult);
+      this.logger.log('[createGroup] Inserted group members:', insertResult);
       /**
        * 5. response
        */
@@ -617,7 +620,11 @@ LIMIT 1
         group_name,
         members: member_ids.map((id) => ({ user_sys_id: id })),
       };
-      console.log('[createGroup] Successfully created group:', group);
+      this.logger.log(
+        '[createGroup] Successfully created group:',
+        'Create Group',
+        group,
+      );
 
       return {
         success: true,
@@ -630,7 +637,7 @@ LIMIT 1
   async updateGroup(userId: number, dto: UpdateGroupDto) {
     const { assignment_id, group_id, group_name, member_ids } = dto;
 
-    console.log('[updateGroup] Input:', {
+    this.logger.log('[updateGroup] Input:', 'Update Group', {
       userId,
       assignment_id,
       group_id,
@@ -640,7 +647,7 @@ LIMIT 1
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
-      console.error('[updateGroup] Cannot remove yourself from the group');
+      this.logger.error('[updateGroup] Cannot remove yourself from the group');
       throw new Error('You cannot remove yourself from the group');
     }
 
@@ -662,10 +669,10 @@ LIMIT 1
         [group_id, assignment_id, userId],
       );
 
-      console.log('[updateGroup] Found group:', group);
+      this.logger.log('[updateGroup] Found group:', group);
 
       if (!group.length) {
-        console.error(
+        this.logger.error(
           '[updateGroup] Invalid group - not found or user not a member',
         );
         throw new Error('Group not found or you are not a member');
@@ -683,7 +690,7 @@ LIMIT 1
         [group_name, group_id],
       );
 
-      console.log('[updateGroup] Updated group name:', updateResult);
+      this.logger.log('[updateGroup] Updated group name:', updateResult);
 
       /**
        * 3. ลบสมาชิกเก่าทั้งหมด (DELETE แทน soft delete)
@@ -696,7 +703,7 @@ LIMIT 1
         [group_id],
       );
 
-      console.log('[updateGroup] Deleted old members:', deleteResult);
+      this.logger.log('[updateGroup] Deleted old members:', deleteResult);
 
       /**
        * 4. เพิ่มสมาชิกใหม่
@@ -714,7 +721,7 @@ LIMIT 1
           [group_id, ...member_ids],
         );
 
-        console.log('[updateGroup] Inserted new members:', insertResult);
+        this.logger.log('[updateGroup] Inserted new members:', insertResult);
       }
 
       /**
@@ -733,7 +740,7 @@ LIMIT 1
         group: groupResponse,
       };
 
-      console.log('[updateGroup] Response:', response);
+      this.logger.log('[updateGroup] Response:', 'Update Group', response);
 
       return response;
     });
@@ -818,7 +825,7 @@ LIMIT 1
       [assignmentId],
     );
 
-    console.log(
+    this.logger.log(
       `[getAllGroups] Found ${result.length} groups for assignment ${assignmentId}`,
     );
 
@@ -836,11 +843,11 @@ LIMIT 1
     role: string,
     limit: number = 50,
   ) {
-    const isStudent =
-      role === 'high school student' ||
-      role === 'uni student';
+    const isStudent = role === 'high school student' || role === 'uni student';
 
-    console.log(`[searchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`);
+    this.logger.log(
+      `[searchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`,
+    );
 
     try {
       const query = `
@@ -855,7 +862,9 @@ LIMIT 1
           a.is_group,
           a.due_date,
 
-          ${isStudent ? `
+          ${
+            isStudent
+              ? `
           (
             SELECT sb.submitted_at
             FROM submission sb
@@ -869,7 +878,9 @@ LIMIT 1
             ORDER BY sb.submitted_at DESC
             LIMIT 1
           ) AS submitted_at,
-          ` : ''}
+          `
+              : ''
+          }
 
           (
             SELECT COUNT(*)::int
@@ -940,7 +951,7 @@ LIMIT 1
 
       const result = await this.dataSource.query(query, params);
 
-      console.log(`[searchAssignments] Found ${result.length} assignments`);
+      this.logger.log(`[searchAssignments] Found ${result.length} assignments`);
 
       const final_result = result.map((row: any) => ({
         assignment_id: row.assignment_id,
@@ -958,13 +969,13 @@ LIMIT 1
         educators: row.educators || [],
       }));
 
-      return { 
-        success: true, 
-        message: 'Assignments retrieved successfully', 
-        data: final_result 
+      return {
+        success: true,
+        message: 'Assignments retrieved successfully',
+        data: final_result,
       };
     } catch (error) {
-      console.error('[searchAssignments] Error:', error);
+      this.logger.error('[searchAssignments] Error:', error);
       throw new InternalServerErrorException('Error searching assignments');
     }
   }

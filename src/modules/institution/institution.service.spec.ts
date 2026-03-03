@@ -149,7 +149,9 @@ describe('InstitutionService', () => {
       const qb = buildQbMock(undefined);
       mockRepo.createQueryBuilder.mockReturnValue(qb);
 
-      await expect(service.findDetailById(1)).rejects.toThrow(NotFoundException);
+      await expect(service.findDetailById(1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return detail data on success', async () => {
@@ -212,7 +214,9 @@ describe('InstitutionService', () => {
       const qb = buildQbMock([mockInstitution()]);
       mockRepo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.searchInstitution({ inst_type: 'high school' });
+      const result = await service.searchInstitution({
+        inst_type: 'high school',
+      });
 
       expect(result.success).toBe(true);
     });
@@ -269,9 +273,9 @@ describe('InstitutionService', () => {
       qb.getRawMany = jest.fn().mockRejectedValue(new Error('DB error'));
       mockRepo.createQueryBuilder.mockReturnValue(qb);
 
-      await expect(
-        service.searchInstitution({ inst_id: 1 }),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.searchInstitution({ inst_id: 1 })).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -305,7 +309,9 @@ describe('InstitutionService', () => {
         success: true,
         message: 'Institution created successfully!',
       });
-      expect(authUtil.hashPassword).toHaveBeenCalledWith(createDto.inst_password);
+      expect(authUtil.hashPassword).toHaveBeenCalledWith(
+        createDto.inst_password,
+      );
       expect(mockRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ approve_status: 'pending' }),
       );
