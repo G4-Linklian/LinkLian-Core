@@ -24,6 +24,10 @@ import {
   GetGroupDto,
   UpdateGroupDto,
   SearchAssignmentsDto,
+  GetSubmissionDto,
+  CreateSubmissionDto,
+  UpdateSubmissionDto,
+  GradeSubmissionDto,
 } from './dto/assignment.dto';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 @ApiTags('Assignment')

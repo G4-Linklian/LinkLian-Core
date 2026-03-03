@@ -2,7 +2,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
-import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ClassInfoService {

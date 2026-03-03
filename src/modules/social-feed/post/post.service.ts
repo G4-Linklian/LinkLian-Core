@@ -35,7 +35,6 @@ export class PostService {
 
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -740,7 +739,6 @@ export class PostService {
               if (!attachment.file_url || !attachment.file_type) {
                 this.logger.debug(
                   `[UpdatePost] Skipping invalid attachment:`,
-                  'UpdatePost',
                   'UpdatePost',
                   attachment,
                 );
