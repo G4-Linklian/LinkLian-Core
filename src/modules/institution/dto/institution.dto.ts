@@ -119,9 +119,9 @@ export class CreateInstitutionDto {
   @IsEmail()
   inst_email!: string;
 
-  @ApiProperty({ description: 'รหัสผ่าน', example: 'password123' })
-  @IsString()
-  inst_password!: string;
+  // @ApiProperty({ description: 'รหัสผ่าน', example: 'password123' })
+  // @IsString()
+  // inst_password!: string;
 
   @ApiProperty({
     description: 'ชื่อสถาบัน (ภาษาไทย)',
@@ -335,10 +335,4 @@ export class LoginInstitutionDto {
   @ApiProperty({ description: 'รหัสผ่าน', example: 'password123' })
   @IsString()
   inst_password!: string;
-}
-
-export class CheckInstitutionEmailDto {
-  @ApiProperty({ description: 'อีเมลสถาบัน', example: 'info@university.ac.th' })
-  @IsEmail()
-  inst_email!: string;
 }

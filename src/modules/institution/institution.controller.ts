@@ -24,7 +24,6 @@ import {
   SearchInstitutionDto,
   UpdateInstitutionDto,
   LoginInstitutionDto,
-  CheckInstitutionEmailDto,
 } from './dto/institution.dto';
 
 @ApiTags('Institution')
@@ -125,16 +124,5 @@ export class InstitutionController {
   async loginInstitution(@Body() dto: LoginInstitutionDto) {
     const result = await this.institutionService.loginInstitution(dto);
     return result;
-  }
-
-  @Get('check-email')
-  @ApiOperation({
-    summary: 'ตรวจสอบ Email สถาบัน',
-    description: 'ตรวจสอบว่า Email ของสถาบันมีอยู่ในระบบหรือไม่',
-  })
-  @ApiResponse({ status: 200, description: 'สำเร็จ' })
-  async checkInstitutionEmail(@Query() dto: CheckInstitutionEmailDto) {
-    const data = await this.institutionService.checkInstitutionEmail(dto);
-    return data;
   }
 }

@@ -15,12 +15,12 @@ import {
   SearchInstitutionDto,
   UpdateInstitutionDto,
   LoginInstitutionDto,
-  CheckInstitutionEmailDto,
 } from './dto/institution.dto';
-import { hashPassword, generateJwtToken } from 'src/common/utils/auth.util';
+import { hashPassword, generateJwtToken, generateInitialPassword } from 'src/common/utils/auth.util';
 import { verifyPassword } from 'src/common/utils/auth.util';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { institutionFields } from 'src/common/interface/institution.interface';
+import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 @Injectable()
 export class InstitutionService {
@@ -236,7 +236,8 @@ export class InstitutionService {
     }
 
     try {
-      const hashedPassword: string = await hashPassword(dto.inst_password);
+      const initialPassword = generateInitialPassword();
+      const hashedPassword: string = await hashPassword(initialPassword);
 
       const newInstitution = this.institutionRepo.create({
         ...dto,
@@ -245,6 +246,15 @@ export class InstitutionService {
       });
 
       await this.institutionRepo.save(newInstitution);
+
+      sendInitialPasswordEmail(dto.inst_email, initialPassword).catch((err) => {
+        this.logger.error(
+          'Error sending initial password email:',
+          'CreateInstitution',
+          err,
+        );
+      });
+
       return { success: true, message: 'Institution created successfully!' };
     } catch (error: unknown) {
       if (
@@ -362,37 +372,6 @@ export class InstitutionService {
         error,
       );
       throw new InternalServerErrorException('Error verifying institution');
-    }
-  }
-
-  async checkInstitutionEmail(dto: CheckInstitutionEmailDto) {
-    if (!dto.inst_email) {
-      throw new BadRequestException(
-        'Institution email is required for verification!',
-      );
-    }
-
-    try {
-      const institution = await this.institutionRepo.findOne({
-        where: { inst_email: dto.inst_email },
-        // ดึงข้อมูลที่ต้องใช้ใน Step ถัดไปออกมาด้วย
-        select: [
-          'inst_id',
-          'inst_email',
-          'inst_name_th',
-          'approve_status',
-          'flag_valid'
-        ],
-      });
-
-      return {
-        success: true,
-        message: institution ? 'Email exists' : 'Email does not exist',
-        data: institution || null
-      };
-    } catch (error) {
-      this.logger.error('Error checking email:', 'CheckEmailExists', error);
-      throw new InternalServerErrorException('ไม่สามารถตรวจสอบข้อมูลได้');
     }
   }
 }
