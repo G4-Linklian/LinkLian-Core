@@ -29,6 +29,12 @@ export class SearchSectionMasterDto {
   @IsInt()
   semester_id?: number;
 
+  @ApiPropertyOptional({ description: 'Learning Area ID', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  learning_area_id?: number;
+
   @ApiPropertyOptional({ description: 'Subject ID', example: 1 })
   @IsOptional()
   @Type(() => Number)

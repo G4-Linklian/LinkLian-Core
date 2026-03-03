@@ -1,5 +1,11 @@
 // assignment.dto.ts
-import { IsInt, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsNumber,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -11,7 +17,7 @@ export class GetClassAssignmentsDto {
   @ApiProperty({ description: 'Section ID', example: 1 })
   @Type(() => Number)
   @IsInt()
-  section_id: number;
+  section_id!: number;
 
   @ApiPropertyOptional({
     description: 'Role of user (student / teacher)',
@@ -41,7 +47,7 @@ export class GetPostAssignmentDto {
   })
   @Type(() => Number)
   @IsInt()
-  post_id: number;
+  post_id?: number;
 
   @ApiPropertyOptional({
     description: 'Role ของผู้ใช้ (student / teacher)',
@@ -54,14 +60,14 @@ export class GetPostAssignmentDto {
 
 export class CreateGroupDto {
   @IsInt()
-  assignment_id: number;
+  assignment_id?: number;
 
   @IsString()
-  group_name: string;
+  group_name?: string;
 
   @IsArray()
   @IsInt({ each: true })
-  member_ids: number[];
+  member_ids!: number[];
 }
 
 export class GetGroupDto {
@@ -71,23 +77,23 @@ export class GetGroupDto {
   })
   @Type(() => Number)
   @IsInt()
-  assignment_id: number;
+  assignment_id!: number;
 }
 
 // assignment.dto.ts
 export class UpdateGroupDto {
   @IsInt()
-  assignment_id: number;
+  assignment_id?: number;
 
   @IsInt()
-  group_id: number;
+  group_id?: number;
 
   @IsString()
-  group_name: string;
+  group_name?: string;
 
   @IsArray()
   @IsInt({ each: true })
-  member_ids: number[];
+  member_ids!: number[];
 }
 
 /**
@@ -118,4 +124,22 @@ export interface TeacherAssignmentResponse {
   due_date: string | null;
   total_students: number;
   submitted_count: number;
+}
+
+export class SearchAssignmentsDto {
+  @IsNumber()
+  @Type(() => Number)
+  section_id!: number;
+
+  @IsString()
+  keyword!: string;
+
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number = 50;
 }

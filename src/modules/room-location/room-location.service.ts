@@ -15,7 +15,7 @@ import {
   CreateRoomLocationBatchDto,
   UpdateRoomLocationDto,
 } from './dto/room-location.dto';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class RoomLocationService {
@@ -52,7 +52,6 @@ export class RoomLocationService {
       dto.building_id ||
       dto.room_number ||
       dto.room_remark ||
-      dto.floor ||
       typeof dto.flag_valid === 'boolean';
 
     if (!hasInput) {
@@ -84,10 +83,10 @@ export class RoomLocationService {
       values.push(dto.room_number);
     }
 
-    if (dto.floor) {
-      query += ` AND rl.floor = $${index++}`;
-      values.push(dto.floor);
-    }
+    // if (dto.floor) {
+    //   query += ` AND rl.floor = $${index++}`;
+    //   values.push(dto.floor);
+    // }
 
     if (dto.room_remark) {
       query += ` AND rl.room_remark = $${index++}`;
@@ -99,10 +98,10 @@ export class RoomLocationService {
       values.push(dto.flag_valid);
     }
 
-    // Sort - by floor (as integer) first, then by specified field
+    // Sort - by room number first, then by specified field
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY rl.floor::integer, rl.${dto.sort_by} ${order}`;
+      query += ` ORDER BY rl.room_number::varchar, rl.${dto.sort_by} ${order}`;
     }
 
     // Pagination
@@ -133,16 +132,32 @@ export class RoomLocationService {
    * Create a new room location
    */
   async create(dto: CreateRoomLocationDto) {
-    if (!dto.building_id || !dto.room_number || !dto.floor) {
+    if (!dto.building_id || !dto.room_number) {
       throw new BadRequestException('Missing required fields!');
+    }
+
+    // Normalize room_number: trim whitespace and convert to uppercase for comparison
+    const normalizedRoomNumber = dto.room_number.trim().toUpperCase();
+
+    // Check for existing room with case-insensitive comparison
+    const existingRoom = await this.roomLocationRepo
+      .createQueryBuilder('rl')
+      .where('rl.building_id = :buildingId', { buildingId: dto.building_id })
+      .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: normalizedRoomNumber })
+      .getOne();
+
+    if (existingRoom) {
+      throw new ConflictException(
+        'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
+      );
     }
 
     try {
       const newRoomLocation = this.roomLocationRepo.create({
         building_id: dto.building_id,
-        room_number: dto.room_number,
+        room_number: dto.room_number.trim(), // Store trimmed value
         room_remark: dto.room_remark || null,
-        floor: dto.floor,
+        // floor: dto.floor,
         flag_valid: true,
       });
 
@@ -153,7 +168,7 @@ export class RoomLocationService {
       // Handle unique constraint violation
       if (error.code === '23505') {
         throw new ConflictException(
-          'Duplicate room number in the same building',
+          'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
         );
       }
       this.logger.error(
@@ -180,23 +195,39 @@ export class RoomLocationService {
     // Validate required fields for each room
     const isValid = rooms.every(
       (room) =>
-        room.building_id && room.room_number && room.floor !== undefined,
+        room.building_id && room.room_number !== undefined,
     );
 
     if (!isValid) {
       throw new BadRequestException('Missing required fields in some items!');
     }
 
-    // Check for duplicates within the payload
+    // Check for duplicates within the payload (case-insensitive)
     const seen = new Set<string>();
     for (const room of rooms) {
-      const key = `${room.building_id}-${room.floor}-${room.room_number}`;
-      if (seen.has(key)) {
+      const normalizedKey = `${room.building_id}-${room.room_number.trim().toUpperCase()}`;
+      if (seen.has(normalizedKey)) {
         throw new ConflictException(
-          `Duplicate room found in payload: Building ${room.building_id}, Floor ${room.floor}, Room ${room.room_number}`,
+          `ห้อง ${room.room_number} มีอยู่ในอาคารนี้แล้ว`,
         );
       }
-      seen.add(key);
+      seen.add(normalizedKey);
+    }
+
+    // Check for duplicates against existing records in database
+    for (const room of rooms) {
+      const normalizedRoomNumber = room.room_number.trim().toUpperCase();
+      const existingRoom = await this.roomLocationRepo
+        .createQueryBuilder('rl')
+        .where('rl.building_id = :buildingId', { buildingId: room.building_id })
+        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: normalizedRoomNumber })
+        .getOne();
+
+      if (existingRoom) {
+        throw new ConflictException(
+          `ห้อง ${room.room_number} มีอยู่ในอาคารนี้แล้ว`,
+        );
+      }
     }
 
     // Use transaction for batch insert
@@ -213,22 +244,22 @@ export class RoomLocationService {
       rooms.forEach((room) => {
         valueList.push(
           room.building_id,
-          room.room_number,
+          room.room_number.trim(), // Store trimmed value
           room.room_remark || '',
-          room.floor,
+          // room.floor,
           true,
         );
 
         placeholders.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`,
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`,
         );
 
-        paramIndex += 5;
+        paramIndex += 4;
       });
 
       const query = `
         INSERT INTO room_location 
-        (building_id, room_number, room_remark, floor, flag_valid)
+        (building_id, room_number, room_remark, flag_valid)
         VALUES ${placeholders.join(', ')}
         RETURNING *;
       `;
@@ -278,12 +309,32 @@ export class RoomLocationService {
       throw new NotFoundException('Room location not found');
     }
 
+    // Check for duplicate only if building_id or room_number is being changed
+    if (dto.building_id !== undefined || dto.room_number !== undefined) {
+      // Use existing values if not provided in DTO
+      const targetBuildingId = dto.building_id ?? existingRoom.building_id;
+      const targetRoomNumber = (dto.room_number ?? existingRoom.room_number).trim().toUpperCase();
+
+      // Check for existing room with case-insensitive comparison
+      const existingRoomLocation = await this.roomLocationRepo
+        .createQueryBuilder('rl')
+        .where('rl.building_id = :buildingId', { buildingId: targetBuildingId })
+        .andWhere('UPPER(TRIM(rl.room_number)) = :roomNumber', { roomNumber: targetRoomNumber })
+        .getOne();
+
+      if (existingRoomLocation && existingRoomLocation.room_location_id !== id) {
+        throw new ConflictException(
+          'ห้องเรียนนี้มีอยู่แล้วในอาคารนี้',
+        );
+      }
+    }
+
     // Build update object dynamically
     const updates: Partial<RoomLocation> = {};
 
     if (dto.building_id !== undefined) updates.building_id = dto.building_id;
-    if (dto.room_number !== undefined) updates.room_number = dto.room_number;
-    if (dto.floor !== undefined) updates.floor = dto.floor;
+    if (dto.room_number !== undefined) updates.room_number = dto.room_number.trim(); // Store trimmed value
+    // if (dto.floor !== undefined) updates.floor = dto.floor;
     if (dto.room_remark !== undefined) updates.room_remark = dto.room_remark;
     if (typeof dto.flag_valid === 'boolean')
       updates.flag_valid = dto.flag_valid;
@@ -304,7 +355,7 @@ export class RoomLocationService {
       // Handle unique constraint violation
       if (error.code === '23505') {
         throw new ConflictException(
-          'Duplicate room number in the same building',
+          'ห้องเรียนนี้มีอยู่ในอาคารนี้แล้ว',
         );
       }
       this.logger.error(

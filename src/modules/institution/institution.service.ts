@@ -16,10 +16,10 @@ import {
   UpdateInstitutionDto,
   LoginInstitutionDto,
 } from './dto/institution.dto';
-import { hashPassword, generateJwtToken, generateInitialPassword } from 'src/common/utils/auth.util';
-import { verifyPassword } from 'src/common/utils/auth.util';
-import { AppLogger } from 'src/common/logger/app-logger.service';
-import { institutionFields } from 'src/common/interface/institution.interface';
+import { hashPassword, generateJwtToken, generateInitialPassword } from '../../common/utils/auth.util';
+import { verifyPassword } from '../../common/utils/auth.util';
+import { AppLogger } from '../../common/logger/app-logger.service';
+import { institutionFields } from '../../common/interface/institution.interface';
 import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 @Injectable()

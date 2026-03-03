@@ -12,7 +12,7 @@ import {
   UploadResultResponse,
   DeleteResultResponse,
 } from './dto/file-storage.dto';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class FileStorageService {

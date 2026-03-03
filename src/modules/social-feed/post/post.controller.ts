@@ -189,4 +189,8 @@ export class PostController {
       body.post_content_id,
     );
   }
+  @Get(':postId')
+  getPostById(@Param('postId') postId: number) {
+    return this.postService.getPostById(Number(postId));
+  }
 }
