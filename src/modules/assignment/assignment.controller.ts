@@ -14,9 +14,10 @@ import {
   ApiResponse,
   ApiHeader,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AssignmentService } from './assignment.service';
-import { GetClassAssignmentsDto, GetPostAssignmentDto, CreateGroupDto, GetGroupDto , UpdateGroupDto, SearchAssignmentsDto } from './dto/assignment.dto';
+import { GetClassAssignmentsDto, GetPostAssignmentDto, CreateGroupDto, GetGroupDto , UpdateGroupDto, SearchAssignmentsDto, CreateSubmissionDto, UpdateSubmissionDto, GetSubmissionDto, GradeSubmissionDto } from './dto/assignment.dto';
 
 @ApiTags('Assignment')
 @Controller('assignment')
@@ -212,5 +213,90 @@ searchAssignments(
       parsedUserId,
       dto.role,
     );
+  }
+
+  /**
+   * Create a new submission for an assignment
+   */
+  @Get('submission')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get submission detail by submission_id' })
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiQuery({ name: 'submission_id', description: 'Submission ID', required: true })
+  @ApiResponse({ status: 200, description: 'Submission retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Submission not found' })
+  async getSubmission(
+    @Headers('x-user-id') userId: string,
+    @Query() dto: GetSubmissionDto,
+  ) {
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    return this.assignmentService.getSubmission(parsedUserId, dto.submission_id);
+  }
+
+  /**
+   * Create a new submission for an assignment (POST)
+   */
+  @Post('create-submission')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Submit an assignment' })
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiResponse({ status: 201, description: 'Submission created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or already submitted' })
+  async createSubmission(
+    @Headers('x-user-id') userId: string,
+    @Body() dto: CreateSubmissionDto,
+  ) {
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    return this.assignmentService.createSubmission(parsedUserId, dto);
+  }
+
+  /**
+   * Update an existing submission (before due date)
+   */
+  @Post('update-submission')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update an existing submission (before due date)' })
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiResponse({ status: 200, description: 'Submission updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or past due date' })
+  async updateSubmission(
+    @Headers('x-user-id') userId: string,
+    @Body() dto: UpdateSubmissionDto,
+  ) {
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    return this.assignmentService.updateSubmission(parsedUserId, dto);
+  }
+
+  /**
+   * Grade a submission (teacher only)
+   */
+  @Post('grade-submission')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Grade a submission (score + feedback)' })
+  @ApiHeader({ name: 'x-user-id', required: true })
+  @ApiResponse({ status: 200, description: 'Submission graded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  async gradeSubmission(
+    @Headers('x-user-id') userId: string,
+    @Body() dto: GradeSubmissionDto,
+  ) {
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    return this.assignmentService.gradeSubmission(parsedUserId, dto);
   }
 }

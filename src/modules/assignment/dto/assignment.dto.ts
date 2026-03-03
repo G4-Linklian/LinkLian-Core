@@ -137,3 +137,102 @@ export class SearchAssignmentsDto {
   @Type(() => Number)
   limit?: number = 50;
 }
+
+export class CreateSubmissionDto {
+  @ApiProperty({ description: 'Assignment ID', example: 123 })
+  @IsInt()
+  @Type(() => Number)
+  assignment_id!: number;
+
+  @ApiProperty({ description: 'Group ID (student_group)', example: 67 })
+  @IsInt()
+  @Type(() => Number)
+  group_id!: number;
+
+  @ApiPropertyOptional({
+    description: 'Uploaded files (from blob storage)',
+    example: [
+      {
+        file_url: 'https://blob.storage.net/student-submission/uuid-123.pdf',
+        original_name: 'homework1.pdf',
+        file_type: 'pdf',
+      },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  files?: SubmissionFileDto[];
+}
+
+export class SubmissionFileDto {
+  @ApiProperty({
+    description: 'File URL from blob storage',
+    example: 'https://blob.storage.net/student-submission/uuid-123.pdf',
+  })
+  @IsString()
+  file_url!: string;
+
+  @ApiProperty({ description: 'Original file name', example: 'homework1.pdf' })
+  @IsString()
+  original_name!: string;
+
+  @ApiProperty({ description: 'File extension', example: 'pdf' })
+  @IsString()
+  file_type!: string;
+}
+
+export class UpdateSubmissionDto {
+  @ApiProperty({ description: 'Existing submission ID to update', example: 42 })
+  @IsInt()
+  @Type(() => Number)
+  submission_id!: number;
+
+  @ApiProperty({ description: 'Assignment ID', example: 123 })
+  @IsInt()
+  @Type(() => Number)
+  assignment_id!: number;
+
+  @ApiProperty({ description: 'Group ID (student_group)', example: 67 })
+  @IsInt()
+  @Type(() => Number)
+  group_id!: number;
+
+  @ApiPropertyOptional({
+    description: 'New files to replace old attachments',
+    example: [
+      {
+        file_url: 'https://blob.storage.net/student-submission/uuid-456.docx',
+        original_name: 'homework1_v2.docx',
+        file_type: 'docx',
+      },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  files?: SubmissionFileDto[];
+}
+
+export class GetSubmissionDto {
+  @ApiProperty({ description: 'Submission ID', example: 42 })
+  @Type(() => Number)
+  @IsInt()
+  submission_id!: number;
+}
+
+export class GradeSubmissionDto {
+  @ApiProperty({ description: 'Submission ID to grade', example: 42 })
+  @IsInt()
+  @Type(() => Number)
+  submission_id!: number;
+
+  @ApiPropertyOptional({ description: 'Score for the submission', example: 8.5 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  score?: number;
+
+  @ApiPropertyOptional({ description: 'Feedback comment from teacher', example: 'ทำได้ดีมาก แต่ควรเพิ่มรายละเอียด' })
+  @IsOptional()
+  @IsString()
+  feedback?: string;
+}

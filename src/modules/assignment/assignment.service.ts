@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
   GetClassAssignmentsDto,
@@ -6,18 +6,30 @@ import {
   UpdateGroupDto,
 } from './dto/assignment.dto';
 import { generateAnonymousName } from '../../common/utils/anonymous.util';
+import { AppLogger } from '../../common/logger/app-logger.service';
+
 
 @Injectable()
 export class AssignmentService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private readonly logger: AppLogger,
+    private dataSource: DataSource
+  ) { }
 
   async getClassAssignments(userId: number, dto: GetClassAssignmentsDto) {
     const { section_id, role, offset = 0, limit = 10 } = dto;
 
     const isStudent = role === 'high school student' || role === 'uni student';
 
-    console.log(
-      `[GetClassAssignments] section_id=${section_id}, role=${role}, userId=${userId}, offset=${offset}, limit=${limit}`,
+    this.logger.debug(
+      '[GetClassAssignments]', 'Assignment',
+      {
+        section_id: section_id,
+        role: role,
+        userId: userId,
+        offset: offset,
+        limit: limit
+      },
     );
 
     try {
@@ -32,7 +44,10 @@ export class AssignmentService {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
     } catch (error) {
-      console.error('[GetClassAssignments] Error:', error);
+      this.logger.error(
+        '[GetClassAssignments]',
+        'Assignment',
+        error);
       throw new InternalServerErrorException('Error fetching assignments');
     }
   }
@@ -134,8 +149,18 @@ LIMIT $3 OFFSET $4
       limit,
       offset,
     ]);
-    console.log(
-      `[GetClassAssignments] Student query returned ${result.length} assignments`,
+    const assignmentIds = result.map(row => row.assignment_id);
+    this.logger.debug(
+      `[GetClassAssignments]`,
+      'Assignment',
+      {
+        result_length: result.length,
+        assignmentIds: assignmentIds,
+        section_id: sectionId,
+        userId: userId,
+        offset: offset,
+        limit: limit
+      },
     );
 
     const final_result = result.map((row: any) => ({
@@ -253,8 +278,18 @@ LIMIT $3 OFFSET $4
       limit,
       offset,
     ]);
-    console.log(
-      `[GetClassAssignments] Teacher query returned ${result.length} assignments`,
+
+    const assignmentIds = result.map(row => row.assignment_id);
+    this.logger.debug(
+      `[GetClassAssignments]`,
+      'Assignment',
+      {
+        result_length: result.length,
+        assignmentIds: assignmentIds,
+        section_id: sectionId,
+        offset: offset,
+        limit: limit
+      },
     );
 
     const final_result = result.map((row: any) => ({
@@ -333,8 +368,19 @@ LIMIT 1
 `;
 
       const postResult = await this.dataSource.query(postQuery, [postId]);
+      //       this.logger.debug('User found:', 'findUserByEmail', {
+      //   user_sys_id: user.user_sys_id,
+      //   email: user.email,
+      //   role_id: user.role_id,
+      //   has_password: !!user.password,
+      // });
 
-      console.log(`[getPostAssignment] Post query result:`, postResult);
+      this.logger.debug('GetPostAssignment ', 'Post Data Retrieved',
+        {
+          post_id: postId,
+          post_content: postResult[0],
+          postResultLength: postResult.length,
+        });
 
       if (!postResult.length) {
         return null;
@@ -516,10 +562,11 @@ LIMIT 1
        * 4. shape response
        */
       return {
+        success: true,
         data: final_result,
       };
     } catch (error) {
-      console.error('[getPostAssignment] error:', error);
+      this.logger.error('[GetPostAssignment] error:','Assignment Error', error);
       throw new InternalServerErrorException('Error fetching assignment post');
     }
   }
@@ -527,7 +574,8 @@ LIMIT 1
   async createGroup(userId: number, dto: CreateGroupDto) {
     const { assignment_id, group_name, member_ids } = dto;
 
-    console.log('[createGroup] Input:', {
+    this.logger.log('[CreateGroup] Input','Assignment Create Group',
+      {
       userId,
       assignment_id,
       group_name,
@@ -536,7 +584,7 @@ LIMIT 1
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
-      console.error('[createGroup] User must be included in group members');
+      this.logger.error('[CreateGroup] User must be included in group members');
       throw new Error('You must be a member of the group you create');
     }
 
@@ -590,7 +638,7 @@ LIMIT 1
       );
 
       const groupId = groupResult[0].group_id;
-      console.log('[createGroup] Created group with ID:', groupId);
+      this.logger.log('Created group with ID:','Assignment Create Group', groupId);
 
       /**
        * 4. เพิ่มสมาชิก
@@ -607,7 +655,9 @@ LIMIT 1
         [groupId, ...member_ids],
       );
 
-      console.log('[createGroup] Inserted group members:', insertResult);
+      this.logger.log(
+        '[CreateGroup] Inserted group members:',
+        'Assignment Create Group', insertResult);
       /**
        * 5. response
        */
@@ -617,7 +667,11 @@ LIMIT 1
         group_name,
         members: member_ids.map((id) => ({ user_sys_id: id })),
       };
-      console.log('[createGroup] Successfully created group:', group);
+      this.logger.log(
+        '[CreateGroup] Successfully created group:', 
+        'Assignment Create Group',
+        group
+      );
 
       return {
         success: true,
@@ -630,17 +684,19 @@ LIMIT 1
   async updateGroup(userId: number, dto: UpdateGroupDto) {
     const { assignment_id, group_id, group_name, member_ids } = dto;
 
-    console.log('[updateGroup] Input:', {
-      userId,
-      assignment_id,
-      group_id,
-      group_name,
-      member_ids,
-    });
+    this.logger.log('[UpdateGroup] Input:', 'Assignment Update Group',
+      {
+        userId,
+        assignment_id,
+        group_id,
+        group_name,
+        member_ids,
+      });
+
 
     // VALIDATION 1: ต้องมี userId อยู่ใน member_ids
     if (!member_ids.includes(userId)) {
-      console.error('[updateGroup] Cannot remove yourself from the group');
+      this.logger.error('[UpdateGroup] Cannot remove yourself from the group');
       throw new Error('You cannot remove yourself from the group');
     }
 
@@ -662,11 +718,12 @@ LIMIT 1
         [group_id, assignment_id, userId],
       );
 
-      console.log('[updateGroup] Found group:', group);
+      this.logger.log('[UpdateGroup] Found group:', 'Assignment Update Group', group);
 
       if (!group.length) {
-        console.error(
-          '[updateGroup] Invalid group - not found or user not a member',
+        this.logger.error(
+          '[UpdateGroup] Invalid group - not found or user not a member',
+          'Assignment Update Group'
         );
         throw new Error('Group not found or you are not a member');
       }
@@ -683,7 +740,12 @@ LIMIT 1
         [group_name, group_id],
       );
 
-      console.log('[updateGroup] Updated group name:', updateResult);
+      this.logger.log
+      (
+        '[UpdateGroup] Updated group name:', 
+        'Assignment Update Group', 
+        updateResult
+      );
 
       /**
        * 3. ลบสมาชิกเก่าทั้งหมด (DELETE แทน soft delete)
@@ -696,7 +758,11 @@ LIMIT 1
         [group_id],
       );
 
-      console.log('[updateGroup] Deleted old members:', deleteResult);
+      this.logger.log(
+        '[UpdateGroup] Deleted old members:', 
+        'Assignment Update Group',
+        deleteResult
+      );
 
       /**
        * 4. เพิ่มสมาชิกใหม่
@@ -714,7 +780,7 @@ LIMIT 1
           [group_id, ...member_ids],
         );
 
-        console.log('[updateGroup] Inserted new members:', insertResult);
+        this.logger.log('[UpdateGroup] Inserted new members:', 'Assignment Update Group', insertResult);
       }
 
       /**
@@ -733,7 +799,7 @@ LIMIT 1
         group: groupResponse,
       };
 
-      console.log('[updateGroup] Response:', response);
+      this.logger.log('[UpdateGroup] Response:', 'Assignment Update Group', response);
 
       return response;
     });
@@ -818,8 +884,9 @@ LIMIT 1
       [assignmentId],
     );
 
-    console.log(
-      `[getAllGroups] Found ${result.length} groups for assignment ${assignmentId}`,
+    this.logger.log(
+      `All Groups Found ${result.length} groups for assignment ${assignmentId}`,
+      'Assignment Get All Groups'
     );
 
     return {
@@ -840,7 +907,7 @@ LIMIT 1
       role === 'high school student' ||
       role === 'uni student';
 
-    console.log(`[searchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`);
+    this.logger.log(`[SearchAssignments] section_id=${sectionId}, keyword=${keyword}, role=${role}, userId=${userId}`);
 
     try {
       const query = `
@@ -940,7 +1007,7 @@ LIMIT 1
 
       const result = await this.dataSource.query(query, params);
 
-      console.log(`[searchAssignments] Found ${result.length} assignments`);
+      this.logger.log(`[SearchAssignments] Found ${result.length} assignments`);
 
       const final_result = result.map((row: any) => ({
         assignment_id: row.assignment_id,
@@ -958,14 +1025,493 @@ LIMIT 1
         educators: row.educators || [],
       }));
 
-      return { 
-        success: true, 
-        message: 'Assignments retrieved successfully', 
-        data: final_result 
+      return {
+        success: true,
+        message: 'Assignments retrieved successfully',
+        data: final_result
       };
     } catch (error) {
-      console.error('[searchAssignments] Error:', error);
+      this.logger.error('[SearchAssignments] Error:', error);
       throw new InternalServerErrorException('Error searching assignments');
+    }
+  }
+
+  /**
+   * Get submission detail by submission_id (for student)
+   * - Returns submission info + attachments
+   * - Checks if the requesting user is a member of the group (can_edit)
+   */
+  async getSubmission(userId: number, submissionId: number) {
+    this.logger.log('[GetSubmission] Input', 'Assignment Submission', {
+      userId,
+      submissionId,
+    });
+
+    try {
+      // 1. Get submission + group info
+      const submissionQuery = `
+        SELECT
+          sb.submission_id,
+          sb.assignment_id,
+          sb.group_id,
+          sb.submitted_at,
+          sb.marked_at,
+          sb.score,
+          sb.feedback,
+          sg.group_name,
+          a.due_date,
+          a.max_score,
+          a.is_group
+        FROM submission sb
+        JOIN student_group sg ON sb.group_id = sg.group_id AND sg.flag_valid = true
+        JOIN assignment a ON sb.assignment_id = a.assignment_id AND a.flag_valid = true
+        WHERE sb.submission_id = $1
+          AND sb.flag_valid = true
+      `;
+
+      const submissionResult = await this.dataSource.query(submissionQuery, [submissionId]);
+
+      if (!submissionResult.length) {
+        throw new BadRequestException('Submission not found');
+      }
+
+      const submission = submissionResult[0];
+
+      // 2. Get attachments
+      const attachmentQuery = `
+        SELECT
+          attachment_id,
+          file_url,
+          original_name,
+          file_type
+        FROM submission_attachment
+        WHERE submission_id = $1
+          AND flag_valid = true
+        ORDER BY attachment_id
+      `;
+
+      const attachments = await this.dataSource.query(attachmentQuery, [submissionId]);
+
+      // 3. Check if requesting user is a member of this group (can edit)
+      const membershipQuery = `
+        SELECT gm.group_id
+        FROM group_member gm
+        WHERE gm.group_id = $1
+          AND gm.user_sys_id = $2
+          AND gm.flag_valid = true
+      `;
+
+      const membership = await this.dataSource.query(membershipQuery, [
+        submission.group_id,
+        userId,
+      ]);
+
+      const canEdit = membership.length > 0;
+
+      // 4. Check if due date has passed (affects editability)
+      const dueDate = submission.due_date;
+      const isPastDue = dueDate ? new Date(dueDate) < new Date() : false;
+
+      // 5. Get group members
+      const membersQuery = `
+        SELECT
+          u.user_sys_id,
+          u.first_name,
+          u.last_name,
+          u.profile_pic,
+          CONCAT(u.first_name, ' ', u.last_name) AS name
+        FROM group_member gm
+        JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
+        WHERE gm.group_id = $1
+          AND gm.flag_valid = true
+        ORDER BY u.first_name
+      `;
+
+      const members = await this.dataSource.query(membersQuery, [submission.group_id]);
+
+      this.logger.log('[GetSubmission] Result', 'Assignment Submission', {
+        submission_id: submissionId,
+        attachmentCount: attachments.length,
+        canEdit,
+        isPastDue,
+        memberCount: members.length,
+      });
+
+      return {
+        success: true,
+        data: {
+          submission_id: submission.submission_id,
+          assignment_id: submission.assignment_id,
+          group_id: submission.group_id,
+          group_name: submission.group_name,
+          submitted_at: submission.submitted_at,
+          marked_at: submission.marked_at,
+          score: submission.score,
+          feedback: submission.feedback,
+          due_date: submission.due_date,
+          max_score: submission.max_score,
+          is_group: submission.is_group,
+          is_past_due: isPastDue,
+          can_edit: canEdit && !isPastDue,
+          is_member: canEdit,
+          members,
+          attachments,
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('[GetSubmission] Error:', 'Assignment Submission', error);
+      throw new InternalServerErrorException('Error fetching submission');
+    }
+  }
+
+  /**
+   * Create a new submission for an assignment
+   * - Validates assignment exists and is valid
+   * - Validates user is a member of the group
+   * - Checks no existing submission for this group+assignment
+   * - Creates submission record
+   * - Creates submission_attachment records if files provided
+   */
+  async createSubmission(
+    userId: number,
+    dto: { assignment_id: number; group_id: number; files?: { file_url: string; original_name: string; file_type: string }[] },
+  ) {
+    const { assignment_id, group_id, files } = dto;
+
+    this.logger.log('[CreateSubmission] Input', 'Assignment Submission', {
+      userId,
+      assignment_id,
+      group_id,
+      fileCount: files?.length || 0,
+    });
+
+    return this.dataSource.transaction(async (manager) => {
+      // 1. Validate assignment exists
+      const assignment = await manager.query(
+        `SELECT assignment_id, due_date, is_group
+         FROM assignment
+         WHERE assignment_id = $1 AND flag_valid = true`,
+        [assignment_id],
+      );
+
+      if (!assignment.length) {
+        throw new BadRequestException('Assignment not found');
+      }
+
+      // 2. Validate user is a member of the group
+      const membership = await manager.query(
+        `SELECT gm.group_id
+         FROM group_member gm
+         JOIN student_group sg ON gm.group_id = sg.group_id
+         WHERE gm.group_id = $1
+           AND gm.user_sys_id = $2
+           AND gm.flag_valid = true
+           AND sg.assignment_id = $3
+           AND sg.flag_valid = true`,
+        [group_id, userId, assignment_id],
+      );
+
+      if (!membership.length) {
+        throw new BadRequestException('You are not a member of this group');
+      }
+
+      // 3. Check no existing submission for this group + assignment
+      const existingSubmission = await manager.query(
+        `SELECT submission_id
+         FROM submission
+         WHERE assignment_id = $1
+           AND group_id = $2
+           AND flag_valid = true`,
+        [assignment_id, group_id],
+      );
+
+      if (existingSubmission.length) {
+        throw new BadRequestException(
+          'Submission already exists. Use update-submission to modify.',
+        );
+      }
+
+      // 4. Create submission
+      const submissionResult = await manager.query(
+        `INSERT INTO submission (assignment_id, group_id, submitted_at, flag_valid)
+         VALUES ($1, $2, NOW(), true)
+         RETURNING submission_id, submitted_at`,
+        [assignment_id, group_id],
+      );
+
+      const submission = submissionResult[0];
+
+      this.logger.log('[CreateSubmission] Created submission', 'Assignment Submission', {
+        submission_id: submission.submission_id,
+        submitted_at: submission.submitted_at,
+      });
+
+      // 5. Create submission_attachment records if files provided
+      let attachments: any[] = [];
+
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const attachResult = await manager.query(
+            `INSERT INTO submission_attachment (submission_id, file_url, original_name, file_type, flag_valid)
+             VALUES ($1, $2, $3, $4, true)
+             RETURNING attachment_id, file_url, original_name, file_type`,
+            [submission.submission_id, file.file_url, file.original_name, file.file_type],
+          );
+
+          attachments.push(attachResult[0]);
+        }
+
+        this.logger.log('[CreateSubmission] Attached files', 'Assignment Submission', {
+          count: attachments.length,
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Submission created successfully',
+        data: {
+          submission_id: submission.submission_id,
+          assignment_id,
+          group_id,
+          submitted_at: submission.submitted_at,
+          attachments,
+        },
+      };
+    });
+  }
+
+  /**
+   * Update an existing submission
+   * - Validates due_date has not passed
+   * - Validates user is a member of the group
+   * - Soft-deletes old attachments
+   * - Creates new attachment records
+   * - Updates submitted_at timestamp
+   */
+  async updateSubmission(
+    userId: number,
+    dto: { submission_id: number; assignment_id: number; group_id: number; files?: { file_url: string; original_name: string; file_type: string }[] },
+  ) {
+    const { submission_id, assignment_id, group_id, files } = dto;
+
+    this.logger.log('[UpdateSubmission] Input', 'Assignment Submission', {
+      userId,
+      submission_id,
+      assignment_id,
+      group_id,
+      fileCount: files?.length || 0,
+    });
+
+    return this.dataSource.transaction(async (manager) => {
+      // 1. Validate assignment exists and check due_date
+      const assignment = await manager.query(
+        `SELECT assignment_id, due_date, is_group
+         FROM assignment
+         WHERE assignment_id = $1 AND flag_valid = true`,
+        [assignment_id],
+      );
+
+      if (!assignment.length) {
+        throw new BadRequestException('Assignment not found');
+      }
+
+      const dueDate = assignment[0].due_date;
+      if (dueDate && new Date(dueDate) < new Date()) {
+        throw new BadRequestException('Cannot update submission after due date');
+      }
+
+      // 2. Validate user is a member of the group
+      const membership = await manager.query(
+        `SELECT gm.group_id
+         FROM group_member gm
+         JOIN student_group sg ON gm.group_id = sg.group_id
+         WHERE gm.group_id = $1
+           AND gm.user_sys_id = $2
+           AND gm.flag_valid = true
+           AND sg.assignment_id = $3
+           AND sg.flag_valid = true`,
+        [group_id, userId, assignment_id],
+      );
+
+      if (!membership.length) {
+        throw new BadRequestException('You are not a member of this group');
+      }
+
+      // 3. Validate submission exists
+      const existingSubmission = await manager.query(
+        `SELECT submission_id
+         FROM submission
+         WHERE submission_id = $1
+           AND assignment_id = $2
+           AND group_id = $3
+           AND flag_valid = true`,
+        [submission_id, assignment_id, group_id],
+      );
+
+      if (!existingSubmission.length) {
+        throw new BadRequestException('Submission not found');
+      }
+
+      // 4. Hard-delete old attachments
+      await manager.query(
+        `DELETE FROM submission_attachment
+         WHERE submission_id = $1`,
+        [submission_id],
+      );
+
+      this.logger.log('[UpdateSubmission] Old attachments deleted', 'Assignment Submission', {
+        submission_id,
+      });
+
+      // 5. Create new attachment records
+      let attachments: any[] = [];
+
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const attachResult = await manager.query(
+            `INSERT INTO submission_attachment (submission_id, file_url, original_name, file_type, flag_valid)
+             VALUES ($1, $2, $3, $4, true)
+             RETURNING attachment_id, file_url, original_name, file_type`,
+            [submission_id, file.file_url, file.original_name, file.file_type],
+          );
+
+          attachments.push(attachResult[0]);
+        }
+      }
+
+      // 6. Update submitted_at
+      const updateResult = await manager.query(
+        `UPDATE submission
+         SET submitted_at = NOW()
+         WHERE submission_id = $1
+         RETURNING submitted_at`,
+        [submission_id],
+      );
+
+      this.logger.log('[UpdateSubmission] Submission updated', 'Assignment Submission', {
+        submission_id,
+        new_submitted_at: updateResult[0].submitted_at,
+        attachmentCount: attachments.length,
+      });
+
+      return {
+        success: true,
+        message: 'Submission updated successfully',
+        data: {
+          submission_id,
+          assignment_id,
+          group_id,
+          submitted_at: updateResult[0].submitted_at,
+          attachments,
+        },
+      };
+    });
+  }
+
+  /**
+   * Grade a submission (teacher only)
+   * - Sets score, feedback, and marked_at
+   * - At least one of score or feedback must be provided
+   */
+  async gradeSubmission(
+    userId: number,
+    dto: { submission_id: number; score?: number; feedback?: string },
+  ) {
+    const { submission_id, score, feedback } = dto;
+
+    this.logger.log('[GradeSubmission] Input', 'Assignment Grading', {
+      userId,
+      submission_id,
+      score,
+      feedback,
+    });
+
+    if (score === undefined && (feedback === undefined || feedback === null)) {
+      throw new BadRequestException('At least one of score or feedback must be provided');
+    }
+
+    try {
+      // 1. Validate submission exists
+      const submissionResult = await this.dataSource.query(
+        `SELECT sb.submission_id, sb.assignment_id, sb.group_id, a.max_score
+         FROM submission sb
+         JOIN assignment a ON sb.assignment_id = a.assignment_id AND a.flag_valid = true
+         WHERE sb.submission_id = $1
+           AND sb.flag_valid = true`,
+        [submission_id],
+      );
+
+      if (!submissionResult.length) {
+        throw new BadRequestException('Submission not found');
+      }
+
+      const submission = submissionResult[0];
+
+      // 2. Validate score does not exceed max_score
+      if (score !== undefined && submission.max_score !== null && score > submission.max_score) {
+        throw new BadRequestException(
+          `Score (${score}) cannot exceed max score (${submission.max_score})`,
+        );
+      }
+
+      if (score !== undefined && score < 0) {
+        throw new BadRequestException('Score cannot be negative');
+      }
+
+      // 3. Build dynamic SET clause
+      const setClauses: string[] = ['marked_at = NOW()'];
+      const params: any[] = [submission_id];
+      let paramIndex = 2;
+
+      if (score !== undefined) {
+        setClauses.push(`score = $${paramIndex}`);
+        params.push(score);
+        paramIndex++;
+      }
+
+      if (feedback !== undefined && feedback !== null) {
+        setClauses.push(`feedback = $${paramIndex}`);
+        params.push(feedback);
+        paramIndex++;
+      }
+
+      // 4. Update submission
+      const updateQuery = `
+        UPDATE submission
+        SET ${setClauses.join(', ')}
+        WHERE submission_id = $1
+        RETURNING submission_id, score, feedback, marked_at
+      `;
+
+      const updateResult = await this.dataSource.query(updateQuery, params);
+
+      const updated = updateResult[0];
+
+      this.logger.log('[GradeSubmission] Graded successfully', 'Assignment Grading', {
+        submission_id: updated.submission_id,
+        score: updated.score,
+        feedback: updated.feedback,
+        marked_at: updated.marked_at,
+      });
+
+      return {
+        success: true,
+        message: 'Submission graded successfully',
+        data: {
+          submission_id: updated.submission_id,
+          assignment_id: submission.assignment_id,
+          group_id: submission.group_id,
+          score: updated.score,
+          feedback: updated.feedback,
+          marked_at: updated.marked_at,
+          max_score: submission.max_score,
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('[GradeSubmission] Error:', 'Assignment Grading', error);
+      throw new InternalServerErrorException('Error grading submission');
     }
   }
 }

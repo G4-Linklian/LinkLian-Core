@@ -1,10 +1,14 @@
 // filepath: /Users/thunyatorn/Desktop/LinkLian-Core/src/modules/social-feed/class-info/class-info.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ClassInfoService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) { }
 
   /**
    * Get section educators with user info
@@ -132,8 +136,9 @@ export class ClassInfoService {
       const educators = await this.dataSource.query(educatorsQuery, [
         sectionId,
       ]);
-      console.log(
+      this.logger.debug(
         `[GetClassInfo] Educators query returned ${educators.length} educators`,
+        'GetClassInfo',
       );
       const final_result = {
         room_location: roomLocation,
