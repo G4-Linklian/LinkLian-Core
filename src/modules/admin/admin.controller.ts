@@ -56,30 +56,30 @@ export class AdminController {
     return result;
   }
 
-  @Put(':id')
+  @Put(':username')
   @ApiOperation({
     summary: 'อัปเดตข้อมูล Admin',
-    description: 'แก้ไขข้อมูล Admin ตาม ID',
+    description: 'แก้ไขข้อมูล Admin ตาม username',
   })
-  @ApiParam({ name: 'id', description: 'รหัส Admin', type: Number })
+  @ApiParam({ name: 'username', description: 'ชื่อผู้ใช้ Admin', type: String })
   @ApiBody({ type: UpdateAdminDto })
   @ApiResponse({ status: 200, description: 'อัปเดตสำเร็จ' })
   @ApiResponse({ status: 404, description: 'ไม่พบ Admin' })
-  async updateAdmin(@Param('id') id: number, @Body() dto: UpdateAdminDto) {
-    const result = await this.adminService.updateAdmin(id, dto);
+  async updateAdmin(@Param('username') username: string, @Body() dto: UpdateAdminDto) {
+    const result = await this.adminService.updateAdmin(username, dto);
     return result;
   }
 
-  @Delete(':id')
+  @Delete(':username')
   @ApiOperation({
     summary: 'ลบ Admin',
-    description: 'ลบ Admin ออกจากระบบตาม ID',
+    description: 'ลบ Admin ออกจากระบบตาม username',
   })
-  @ApiParam({ name: 'id', description: 'รหัส Admin', type: Number })
+  @ApiParam({ name: 'username', description: 'ชื่อผู้ใช้ Admin', type: String })
   @ApiResponse({ status: 200, description: 'ลบสำเร็จ' })
   @ApiResponse({ status: 404, description: 'ไม่พบ Admin' })
-  async deleteAdmin(@Param('id') id: number) {
-    const result = await this.adminService.deleteAdmin(id);
+  async deleteAdmin(@Param('username') username: string) {
+    const result = await this.adminService.deleteAdmin(username);
     return result;
   }
 

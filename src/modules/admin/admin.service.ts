@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Admin } from './entities/admin.entity';
 import {
   CreateAdminDto,
@@ -28,7 +28,6 @@ export class AdminService {
   constructor(
     @InjectRepository(Admin)
     private adminRepo: Repository<Admin>,
-    private dataSource: DataSource,
     private readonly logger: AppLogger,
   ) {}
 
@@ -36,13 +35,9 @@ export class AdminService {
     const query = this.adminRepo
       .createQueryBuilder('a')
       .select([
-        'a.admin_id',
         'a.username',
         'a.flag_valid',
-        'a.created_at',
-        'a.updated_at',
-      ])
-      .addSelect('COUNT(*) OVER()', 'total_count');
+      ]);
 
     if (dto.username)
       query.andWhere('a.username = :username', { username: dto.username });
@@ -72,12 +67,8 @@ export class AdminService {
   }
 
   async createAdmin(dto: CreateAdminDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      const existingAdmin = await queryRunner.manager.findOne(Admin, {
+      const existingAdmin = await this.adminRepo.findOne({
         where: { username: dto.username },
       });
 
@@ -87,15 +78,13 @@ export class AdminService {
 
       const hashedPassword = await hashPassword(dto.password);
 
-      const newAdmin = queryRunner.manager.create(Admin, {
+      const newAdmin = this.adminRepo.create({
         username: dto.username,
         password: hashedPassword,
         flag_valid: dto.flag_valid ?? true,
       });
 
-      const savedAdmin = await queryRunner.manager.save(newAdmin);
-
-      await queryRunner.commitTransaction();
+      const savedAdmin = await this.adminRepo.save(newAdmin);
 
       const { password: _password, ...result } = savedAdmin;
       return {
@@ -104,8 +93,6 @@ export class AdminService {
         data: result,
       };
     } catch (error: unknown) {
-      await queryRunner.rollbackTransaction();
-
       if (error instanceof ConflictException) {
         throw error;
       }
@@ -121,19 +108,13 @@ export class AdminService {
 
       this.logger.error('Error creating admin:', 'Create Admin', error);
       throw new InternalServerErrorException('Error creating admin');
-    } finally {
-      await queryRunner.release();
     }
   }
 
-  async updateAdmin(id: number, dto: UpdateAdminDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+  async updateAdmin(username: string, dto: UpdateAdminDto) {
     try {
-      const existing = await queryRunner.manager.findOne(Admin, {
-        where: { admin_id: id },
+      const existing = await this.adminRepo.findOne({
+        where: { username },
       });
 
       if (!existing) {
@@ -142,9 +123,6 @@ export class AdminService {
 
       const fieldsToUpdate: Partial<Admin> = {};
 
-      if (dto.username !== undefined) {
-        fieldsToUpdate.username = dto.username;
-      }
       if (dto.password !== undefined) {
         fieldsToUpdate.password = await hashPassword(dto.password);
       }
@@ -156,14 +134,9 @@ export class AdminService {
         throw new BadRequestException('No fields to update!');
       }
 
-      await queryRunner.manager.update(Admin, { admin_id: id }, fieldsToUpdate);
+      await this.adminRepo.update({ username }, fieldsToUpdate);
 
-      // Commit Transaction
-      await queryRunner.commitTransaction();
-
-      const updatedAdmin = await this.adminRepo.findOne({
-        where: { admin_id: id },
-      });
+      const updatedAdmin = await this.adminRepo.findOne({ where: { username } });
       if (!updatedAdmin) {
         throw new NotFoundException('Admin not found after update');
       }
@@ -174,8 +147,6 @@ export class AdminService {
         data: result,
       };
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException
@@ -184,14 +155,12 @@ export class AdminService {
       }
       this.logger.error('Error updating admin:', 'Update Admin', error);
       throw new InternalServerErrorException('Error updating admin');
-    } finally {
-      await queryRunner.release();
     }
   }
 
-  async deleteAdmin(id: number) {
+  async deleteAdmin(username: string) {
     const existing = await this.adminRepo.findOne({
-      where: { admin_id: id },
+      where: { username },
     });
 
     if (!existing) {
@@ -199,7 +168,7 @@ export class AdminService {
     }
 
     try {
-      await this.adminRepo.delete({ admin_id: id });
+      await this.adminRepo.delete({ username });
       return { success: true, message: 'Admin deleted successfully!' };
     } catch (error) {
       this.logger.error('Error deleting admin:', 'Delete Admin', error);
@@ -225,6 +194,10 @@ export class AdminService {
       }
 
       const isMatch = await verifyPassword(dto.password, admin.password);
+
+      this.logger.debug(`Login attempt for admin: ${dto.username}`, 'Login Admin', {
+        isMatch,
+      });
 
       if (!isMatch) {
         throw new UnauthorizedException('Incorrect password');
