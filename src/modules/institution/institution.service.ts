@@ -156,6 +156,8 @@ export class InstitutionService {
       dto.approve_status ||
       dto.from ||
       typeof dto.flag_valid === 'boolean';
+    
+    this.logger.debug('SearchInstitutionDto received:', 'SearchInstitution', dto);
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');

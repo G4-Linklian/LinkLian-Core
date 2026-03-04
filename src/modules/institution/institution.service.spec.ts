@@ -20,6 +20,11 @@ jest.mock('../../common/utils/auth.util', () => ({
   hashPassword: jest.fn(),
   verifyPassword: jest.fn(),
   generateJwtToken: jest.fn(),
+  generateInitialPassword: jest.fn(),
+}));
+
+jest.mock('../../common/utils/mailer.utils', () => ({
+  sendInitialPasswordEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -103,6 +108,7 @@ describe('InstitutionService', () => {
     (authUtil.hashPassword as jest.Mock).mockResolvedValue('hashed_password');
     (authUtil.verifyPassword as jest.Mock).mockResolvedValue(true);
     (authUtil.generateJwtToken as jest.Mock).mockReturnValue('mock.jwt.token');
+    (authUtil.generateInitialPassword as jest.Mock).mockReturnValue('InitPass@123');
   });
 
   afterEach(() => {
@@ -305,7 +311,7 @@ describe('InstitutionService', () => {
         success: true,
         message: 'Institution created successfully!',
       });
-      expect(authUtil.hashPassword).toHaveBeenCalledWith(createDto.inst_password);
+      expect(authUtil.hashPassword).toHaveBeenCalledWith('InitPass@123');
       expect(mockRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ approve_status: 'pending' }),
       );
