@@ -17,9 +17,16 @@ export class CreateCommunityDto {
   is_private: boolean;
 
   @Transform(({ value }) => {
+    if (!value) return [];
+
     if (typeof value === 'string') {
-      return value.split(',').map((v) => v.trim());
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [value];
+      }
     }
+
     return value;
   })
   @IsArray()
@@ -28,9 +35,16 @@ export class CreateCommunityDto {
   rules: string[];
 
   @Transform(({ value }) => {
+    if (!value) return [];
+
     if (typeof value === 'string') {
-      return value.split(',').map((tag) => tag.trim());
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [value];
+      }
     }
+
     return value;
   })
   @IsArray()

@@ -19,9 +19,34 @@ export class UpdateCommunityDto {
 
   @IsOptional()
   @Transform(({ value }) => {
+    if (!value) return [];
+
     if (typeof value === 'string') {
-      return value.split(',').map((v) => v.trim());
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [value];
+      }
     }
+
+    return value;
+  })
+  @IsArray()
+  @IsString({ each: true })
+  rules?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return [];
+
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [value];
+      }
+    }
+
     return value;
   })
   @IsArray()

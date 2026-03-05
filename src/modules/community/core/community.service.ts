@@ -26,7 +26,7 @@ export class CommunityService {
     @InjectRepository(CommunityTagNormalizeEntity)
     private readonly tagNormalizeRepo: Repository<CommunityTagNormalizeEntity>,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   async createCommunity(userId: number, dto: any) {
     if (!dto?.name?.trim()) {
@@ -53,14 +53,15 @@ export class CommunityService {
       if (![2, 3].includes(Number(user[0].role_id))) {
         throw new ForbiddenException('Only students can create community');
       }
-      //const isPrivate = dto.is_private;
 
       const community = this.repo.create({
         community_name: dto.name,
         description: dto.description || null,
         is_private: dto.is_private,
         image_banner: dto.image_banner,
-        rule: dto.rules && dto.rules.length > 0 ? dto.rules : null,
+        rule: dto.rules && dto.rules.length > 0
+          ? JSON.stringify(dto.rules)
+          : null,
         status: 'active',
         flag_valid: true,
       });
@@ -169,7 +170,14 @@ export class CommunityService {
           ),
           '{}'
         ) AS tags  ,
-
+           EXISTS (
+            SELECT 1
+            FROM community_member cm
+            WHERE cm.community_id = c.community_id
+              AND cm.user_sys_id = $1
+              AND cm.role = 'owner'
+              AND cm.flag_valid = true
+          ) AS is_owner,
           COALESCE(
             (
               SELECT cm.status
@@ -219,7 +227,14 @@ export class CommunityService {
           ),
           '{}'
       ) AS tags,
-
+         EXISTS (
+          SELECT 1
+          FROM community_member cm
+          WHERE cm.community_id = c.community_id
+            AND cm.user_sys_id = $1
+            AND cm.role = 'owner'
+            AND cm.flag_valid = true
+        ) AS is_owner,
         COALESCE(
           (
             SELECT cm.status
@@ -233,14 +248,13 @@ export class CommunityService {
         ) AS membership_status
 
       FROM community c
-      JOIN community_member m
+      LEFT JOIN community_member m
         ON m.community_id = c.community_id
       AND m.user_sys_id = $1
-       AND m.status = 'active' 
       AND m.flag_valid = true
+      AND m.status IN ('active','pending')
 
-      WHERE c.status = 'active'
-        AND c.status = 'active'
+      WHERE c.flag_valid = true
       ORDER BY c.created_at DESC
     `,
           [userId],
@@ -444,16 +458,16 @@ export class CommunityService {
       const tags =
         clean === ''
           ? await this.tagRepo.find({
-              where: { flag_valid: true },
-              order: { tag_name: 'ASC' },
-            })
+            where: { flag_valid: true },
+            order: { tag_name: 'ASC' },
+          })
           : await this.tagRepo.find({
-              where: {
-                tag_name: ILike(`%${clean}%`),
-                flag_valid: true,
-              },
-              order: { tag_name: 'ASC' },
-            });
+            where: {
+              tag_name: ILike(`%${clean}%`),
+              flag_valid: true,
+            },
+            order: { tag_name: 'ASC' },
+          });
       return {
         success: true,
         data: { tags },
@@ -473,7 +487,7 @@ export class CommunityService {
       c.community_id,
       c.community_name,
       c.description,
-      c.rule,
+      c.rule AS rules,
       c.is_private,
       c.image_banner,
       c.status,
@@ -579,16 +593,16 @@ export class CommunityService {
     await queryRunner.startTransaction();
     try {
       // check owner
-      const owner = await this.dataSource.query(
+      const owner = await queryRunner.manager.query(
         `
-    SELECT 1
-    FROM community_member
-    WHERE community_id=$1
-      AND user_sys_id=$2
-      AND role='owner'
-      AND status='active'
-      AND flag_valid=true
-    `,
+        SELECT 1
+        FROM community_member
+        WHERE community_id=$1
+          AND user_sys_id=$2
+          AND role='owner'
+          AND status='active'
+          AND flag_valid=true
+        `,
         [communityId, userId],
       );
 
@@ -596,7 +610,8 @@ export class CommunityService {
         throw new ForbiddenException('Only owner can update community');
       }
 
-      const old = await this.dataSource.query(
+      // const old = await this.dataSource.query(
+      const old = await queryRunner.manager.query(
         `
     SELECT image_banner
     FROM community
@@ -623,6 +638,32 @@ export class CommunityService {
         values.push(dto.description);
       }
 
+      if (dto.is_private !== undefined) {
+        fields.push(`is_private=$${index++}`);
+        values.push(dto.is_private);
+      }
+
+
+      if (dto.rules !== undefined) {
+        fields.push(`rule=$${index++}`);
+
+        let parsedRules = dto.rules;
+
+        if (typeof dto.rules === 'string') {
+          try {
+            parsedRules = JSON.parse(dto.rules);
+          } catch {
+            parsedRules = [];
+          }
+        }
+
+        if (!Array.isArray(parsedRules)) {
+          parsedRules = [];
+        }
+
+        values.push(parsedRules.length ? JSON.stringify(parsedRules) : null);
+      }
+
       const banner = dto.image_banner ?? old[0].image_banner;
       fields.push(`image_banner=$${index++}`);
       values.push(banner);
@@ -633,13 +674,14 @@ export class CommunityService {
 
       values.push(communityId);
 
-      await this.dataSource.query(
+      // await this.dataSource.query(
+      await queryRunner.manager.query(
         `
-    UPDATE community
-    SET ${fields.join(', ')},
-        updated_at=now()
-    WHERE community_id=$${index}
-    `,
+      UPDATE community
+      SET ${fields.join(', ')},
+          updated_at=now()
+      WHERE community_id=$${index}
+      `,
         values,
       );
 
