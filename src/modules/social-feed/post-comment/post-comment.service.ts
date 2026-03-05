@@ -18,7 +18,7 @@ import {
   CommentNode,
 } from './dto/post-comment.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
-import { AppLogger } from 'src/common/logger/app-logger.service';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 @Injectable()
 export class PostCommentService {
   constructor(

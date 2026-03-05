@@ -19,8 +19,7 @@ import {
 } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
-import { AppLogger } from 'src/common/logger/app-logger.service';
-
+import { AppLogger } from '../../../common/logger/app-logger.service';
 @Injectable()
 export class PostService {
   constructor(

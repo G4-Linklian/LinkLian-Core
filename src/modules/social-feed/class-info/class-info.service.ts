@@ -1,7 +1,7 @@
 // filepath: /Users/thunyatorn/Desktop/LinkLian-Core/src/modules/social-feed/class-info/class-info.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class ClassInfoService {

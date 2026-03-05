@@ -7,8 +7,6 @@ import {
 } from './dto/assignment.dto';
 import { generateAnonymousName } from '../../common/utils/anonymous.util';
 import { AppLogger } from '../../common/logger/app-logger.service';
-
-
 @Injectable()
 export class AssignmentService {
   constructor(
