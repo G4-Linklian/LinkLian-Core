@@ -66,15 +66,15 @@ describe('PostCommentService', () => {
 
   describe('getPostComments', () => {
     it('should throw BadRequestException if post_id is missing', async () => {
-      await expect(
-        service.getPostComments({ post_id: 0 }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.getPostComments({ post_id: 0 })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should return empty data when no comments', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ total: '0' }])  // count
-        .mockResolvedValueOnce([])                  // root comments
+        .mockResolvedValueOnce([{ total: '0' }]) // count
+        .mockResolvedValueOnce([]) // root comments
         .mockResolvedValueOnce([{ section_id: 1 }]); // section
 
       const result = await service.getPostComments({ post_id: 10 });
@@ -85,12 +85,16 @@ describe('PostCommentService', () => {
 
     it('should return comments with correct total and hasMore=false', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ total: '1' }])       // count
-        .mockResolvedValueOnce([mockCommentRow])         // root comments
-        .mockResolvedValueOnce([{ section_id: 1 }])     // section
-        .mockResolvedValueOnce([]);                      // children recursive
+        .mockResolvedValueOnce([{ total: '1' }]) // count
+        .mockResolvedValueOnce([mockCommentRow]) // root comments
+        .mockResolvedValueOnce([{ section_id: 1 }]) // section
+        .mockResolvedValueOnce([]); // children recursive
 
-      const result = await service.getPostComments({ post_id: 10, limit: 10, offset: 0 });
+      const result = await service.getPostComments({
+        post_id: 10,
+        limit: 10,
+        offset: 0,
+      });
       expect(result.total).toBe(1);
       expect(result.hasMore).toBe(false);
       expect(result.data).toHaveLength(1);
@@ -98,12 +102,16 @@ describe('PostCommentService', () => {
 
     it('should return hasMore=true when more pages exist', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ total: '20' }])      // count
-        .mockResolvedValueOnce([mockCommentRow])         // root comments
-        .mockResolvedValueOnce([{ section_id: 1 }])     // section
-        .mockResolvedValueOnce([]);                      // children recursive
+        .mockResolvedValueOnce([{ total: '20' }]) // count
+        .mockResolvedValueOnce([mockCommentRow]) // root comments
+        .mockResolvedValueOnce([{ section_id: 1 }]) // section
+        .mockResolvedValueOnce([]); // children recursive
 
-      const result = await service.getPostComments({ post_id: 10, limit: 10, offset: 0 });
+      const result = await service.getPostComments({
+        post_id: 10,
+        limit: 10,
+        offset: 0,
+      });
       expect(result.hasMore).toBe(true);
     });
 
@@ -119,7 +127,11 @@ describe('PostCommentService', () => {
     });
 
     it('should generate anonymous display_name for anonymous comments', async () => {
-      const anonComment = { ...mockCommentRow, is_anonymous: true, display_name: null };
+      const anonComment = {
+        ...mockCommentRow,
+        is_anonymous: true,
+        display_name: null,
+      };
       mockQuery
         .mockResolvedValueOnce([{ total: '1' }])
         .mockResolvedValueOnce([anonComment])
@@ -135,8 +147,8 @@ describe('PostCommentService', () => {
       mockQuery
         .mockResolvedValueOnce([{ total: '1' }])
         .mockResolvedValueOnce([mockCommentRow])
-        .mockResolvedValueOnce([])   // no section found
-        .mockResolvedValueOnce([]);  // children
+        .mockResolvedValueOnce([]) // no section found
+        .mockResolvedValueOnce([]); // children
 
       const result = await service.getPostComments({ post_id: 10 });
       expect(result.data).toHaveLength(1);
@@ -167,8 +179,8 @@ describe('PostCommentService', () => {
 
     it('should create a root comment successfully', async () => {
       mockQueryRunner.query
-        .mockResolvedValueOnce([{ comment_id: 1 }])  // insert comment
-        .mockResolvedValueOnce([]);                    // insert self path
+        .mockResolvedValueOnce([{ comment_id: 1 }]) // insert comment
+        .mockResolvedValueOnce([]); // insert self path
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -183,9 +195,9 @@ describe('PostCommentService', () => {
 
     it('should create a reply comment with parent_id', async () => {
       mockQueryRunner.query
-        .mockResolvedValueOnce([{ comment_id: 2 }])  // insert comment
-        .mockResolvedValueOnce([])                    // insert self path
-        .mockResolvedValueOnce([]);                   // insert reply paths
+        .mockResolvedValueOnce([{ comment_id: 2 }]) // insert comment
+        .mockResolvedValueOnce([]) // insert self path
+        .mockResolvedValueOnce([]); // insert reply paths
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -240,7 +252,9 @@ describe('PostCommentService', () => {
     });
 
     it('should update comment_text successfully', async () => {
-      mockQuery.mockResolvedValueOnce([{ ...mockCommentRow, comment_text: 'Updated' }]);
+      mockQuery.mockResolvedValueOnce([
+        { ...mockCommentRow, comment_text: 'Updated' },
+      ]);
 
       const result = await service.updatePostComment(1, {
         comment_id: 1,
@@ -252,7 +266,9 @@ describe('PostCommentService', () => {
     });
 
     it('should update flag_valid successfully', async () => {
-      mockQuery.mockResolvedValueOnce([{ ...mockCommentRow, flag_valid: false }]);
+      mockQuery.mockResolvedValueOnce([
+        { ...mockCommentRow, flag_valid: false },
+      ]);
 
       const result = await service.updatePostComment(1, {
         comment_id: 1,
@@ -308,13 +324,15 @@ describe('PostCommentService', () => {
       mockQuery.mockResolvedValueOnce([{ comment_id: 1, flag_valid: true }]); // permission check
 
       mockQueryRunner.query
-        .mockResolvedValueOnce([{ comment_id: 1 }, { comment_id: 2 }])  // soft delete comments
-        .mockResolvedValueOnce([]);                                        // mark paths invalid
+        .mockResolvedValueOnce([{ comment_id: 1 }, { comment_id: 2 }]) // soft delete comments
+        .mockResolvedValueOnce([]); // mark paths invalid
 
       const result = await service.deletePostComment(1, { comment_id: 1 });
 
       expect(result.success).toBe(true);
-      expect(result.message).toBe('Comment and its replies deleted successfully');
+      expect(result.message).toBe(
+        'Comment and its replies deleted successfully',
+      );
       expect(result.data.deleted_count).toBe(2);
       expect(result.data.deleted_comment_ids).toEqual([1, 2]);
     });

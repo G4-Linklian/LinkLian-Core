@@ -248,8 +248,15 @@ export class AssignmentController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get submission detail by submission_id' })
   @ApiHeader({ name: 'x-user-id', required: true })
-  @ApiQuery({ name: 'submission_id', description: 'Submission ID', required: true })
-  @ApiResponse({ status: 200, description: 'Submission retrieved successfully' })
+  @ApiQuery({
+    name: 'submission_id',
+    description: 'Submission ID',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Submission retrieved successfully',
+  })
   @ApiResponse({ status: 400, description: 'Submission not found' })
   async getSubmission(
     @Headers('x-user-id') userId: string,
@@ -260,7 +267,10 @@ export class AssignmentController {
       throw new BadRequestException('Invalid user ID');
     }
 
-    return this.assignmentService.getSubmission(parsedUserId, dto.submission_id);
+    return this.assignmentService.getSubmission(
+      parsedUserId,
+      dto.submission_id,
+    );
   }
 
   /**
@@ -271,7 +281,10 @@ export class AssignmentController {
   @ApiOperation({ summary: 'Submit an assignment' })
   @ApiHeader({ name: 'x-user-id', required: true })
   @ApiResponse({ status: 201, description: 'Submission created successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid input or already submitted' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or already submitted',
+  })
   async createSubmission(
     @Headers('x-user-id') userId: string,
     @Body() dto: CreateSubmissionDto,

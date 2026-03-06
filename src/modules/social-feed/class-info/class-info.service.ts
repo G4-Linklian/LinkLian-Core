@@ -8,7 +8,7 @@ export class ClassInfoService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) { }
+  ) {}
 
   /**
    * Get section educators with user info

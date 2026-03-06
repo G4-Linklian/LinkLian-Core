@@ -23,14 +23,14 @@ import { AppLogger } from '../../../common/logger/app-logger.service';
 @Injectable()
 export class PostService {
   constructor(
-      @InjectRepository(PostContent)
-  private readonly postContentRepo: Repository<PostContent>,
+    @InjectRepository(PostContent)
+    private readonly postContentRepo: Repository<PostContent>,
 
-  @InjectRepository(PostInClass)
-  private readonly postInClassRepo: Repository<PostInClass>,
+    @InjectRepository(PostInClass)
+    private readonly postInClassRepo: Repository<PostInClass>,
 
-  @InjectRepository(PostAttachment)
-  private readonly postAttachmentRepo: Repository<PostAttachment>,
+    @InjectRepository(PostAttachment)
+    private readonly postAttachmentRepo: Repository<PostAttachment>,
 
     private dataSource: DataSource,
     private readonly logger: AppLogger,
@@ -185,7 +185,10 @@ export class PostService {
     try {
       const result = await this.dataSource.query(query, values);
 
-      (`[GetPostsInClass] Query returned ${result.length} posts`);
+      this.logger.debug(
+        `[GetPostsInClass] Query returned ${result.length} posts`,
+        'GetPostsInClass',
+      );
 
       // Log first post's attachments for debugging
       if (result.length > 0 && result[0].attachments) {
@@ -382,12 +385,16 @@ export class PostService {
             RETURNING attachment_id, file_url, file_type, original_name
           `;
 
-          this.logger.debug(`[CreatePost] Inserting attachment with params:`, 'CreatePost', {
-            post_content_id: postContent.post_content_id,
-            file_url: attachment.file_url,
-            file_type: attachment.file_type,
-            original_name: attachment.original_name || null,
-          });
+          this.logger.debug(
+            `[CreatePost] Inserting attachment with params:`,
+            'CreatePost',
+            {
+              post_content_id: postContent.post_content_id,
+              file_url: attachment.file_url,
+              file_type: attachment.file_type,
+              original_name: attachment.original_name || null,
+            },
+          );
 
           const attachmentResult = await queryRunner.query(attachmentQuery, [
             postContent.post_content_id,
@@ -396,7 +403,11 @@ export class PostService {
             attachment.original_name || null,
           ]);
 
-          this.logger.debug(`[CreatePost] Attachment inserted successfully:`, 'CreatePost', attachmentResult[0]);
+          this.logger.debug(
+            `[CreatePost] Attachment inserted successfully:`,
+            'CreatePost',
+            attachmentResult[0],
+          );
           attachments.push(attachmentResult[0]);
         }
 
@@ -405,7 +416,10 @@ export class PostService {
           'CreatePost',
         );
       } else {
-        this.logger.debug(`[CreatePost] No attachments to process`, 'CreatePost');
+        this.logger.debug(
+          `[CreatePost] No attachments to process`,
+          'CreatePost',
+        );
       }
 
       // 4. Handle assignment-specific logic if post_type is 'assignment'
@@ -413,7 +427,7 @@ export class PostService {
       const createdGroups: any[] = [];
 
       if (dto.post_type === 'assignment') {
-        (`[CreatePost] Processing assignment creation`);
+        this.logger.debug(`[CreatePost] Processing assignment creation`);
 
         // Validate assignment fields
         if (!dto.due_date) {
@@ -444,7 +458,11 @@ export class PostService {
           const assignment = assignmentResult[0];
           assignmentIds.push(assignment.assignment_id);
 
-          this.logger.debug(`[CreatePost] Assignment created:`, 'CreatePost', assignment);
+          this.logger.debug(
+            `[CreatePost] Assignment created:`,
+            'CreatePost',
+            assignment,
+          );
 
           // Handle group creation based on is_group flag
           if (!dto.is_group) {
@@ -522,7 +540,10 @@ export class PostService {
           }
         }
 
-        this.logger.debug(`[CreatePost] Assignment processing completed`, 'CreatePost');
+        this.logger.debug(
+          `[CreatePost] Assignment processing completed`,
+          'CreatePost',
+        );
       }
 
       await queryRunner.commitTransaction();
@@ -549,8 +570,9 @@ export class PostService {
         warnings: warnings.length > 0 ? warnings : null,
       };
 
-      this.logger.debug (
-        `[CreatePost] Post created successfully with data:`, 'CreatePost',
+      this.logger.debug(
+        `[CreatePost] Post created successfully with data:`,
+        'CreatePost',
         responseData,
       );
 
@@ -562,7 +584,11 @@ export class PostService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error('Error creating post:', error);
-      if (error instanceof BadRequestException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Error creating post');
@@ -607,8 +633,9 @@ export class PostService {
       user_sys_id: owner.user_sys_id,
     };
 
-    this.logger.debug (
-      `[FindPostOwner] Found owner for post_id ${postId}:`, 'FindPostOwner',
+    this.logger.debug(
+      `[FindPostOwner] Found owner for post_id ${postId}:`,
+      'FindPostOwner',
       responseData,
     );
 
@@ -729,11 +756,15 @@ export class PostService {
           // Insert new attachments
           if (dto.attachments.length > 0) {
             for (const attachment of dto.attachments) {
-              this.logger.debug(`[UpdatePost] Processing attachment:`, 'UpdatePost', {
-                file_url: attachment.file_url,
-                file_type: attachment.file_type,
-                original_name: attachment.original_name,
-              });
+              this.logger.debug(
+                `[UpdatePost] Processing attachment:`,
+                'UpdatePost',
+                {
+                  file_url: attachment.file_url,
+                  file_type: attachment.file_type,
+                  original_name: attachment.original_name,
+                },
+              );
 
               if (!attachment.file_url || !attachment.file_type) {
                 this.logger.debug(
@@ -762,13 +793,24 @@ export class PostService {
                 ],
               );
 
-              this.logger.debug(`[UpdatePost] Attachment inserted:`, 'UpdatePost', result[0]);
+              this.logger.debug(
+                `[UpdatePost] Attachment inserted:`,
+                'UpdatePost',
+                result[0],
+              );
             }
           }
 
-          this.logger.debug(`[UpdatePost] Attachments updated successfully`, 'UpdatePost');
+          this.logger.debug(
+            `[UpdatePost] Attachments updated successfully`,
+            'UpdatePost',
+          );
         } catch (attachmentError) {
-          this.logger.error(`[UpdatePost] Error updating attachments:`, 'UpdatePost', attachmentError);
+          this.logger.error(
+            `[UpdatePost] Error updating attachments:`,
+            'UpdatePost',
+            attachmentError,
+          );
         }
       }
 
@@ -812,7 +854,10 @@ export class PostService {
           `;
 
           await this.dataSource.query(assignmentQuery, assignmentValues);
-          (`[UpdatePost] Assignment fields updated successfully`);
+          this.logger.debug(
+            `[UpdatePost] Assignment fields updated successfully`,
+            'UpdatePost',
+          );
         }
       }
 
@@ -989,10 +1034,13 @@ export class PostService {
         throw new BadRequestException('post_id or post_content_id is required');
       }
 
-      this.logger.debug (
+      this.logger.debug(
         `[DeletePost] targetPostContentId=${targetPostContentId}, ownerUserId=${ownerUserId}, requesterId=${userId}`,
       );
-      (`[DeletePost] targetPostIds=${targetPostIds}`);
+      this.logger.debug(
+        `[DeletePost] targetPostIds=${targetPostIds}`,
+        'DeletePost',
+      );
 
       // Check ownership
       if (ownerUserId !== userId) {
@@ -1021,7 +1069,10 @@ export class PostService {
           assignmentIds = assignmentIdsResult.map(
             (row: any) => row.assignment_id,
           );
-          (`[DeletePost] Found assignment_ids: ${assignmentIds}`);
+          this.logger.debug(
+            `[DeletePost] Found assignment_ids: ${assignmentIds}`,
+            'DeletePost',
+          );
         }
 
         // 2. Delete group_member for all groups in these assignments
@@ -1112,7 +1163,10 @@ export class PostService {
 
         await queryRunner.commitTransaction();
 
-        this.logger.debug(`[DeletePost] Post hard deleted successfully`, 'DeletePost');
+        this.logger.debug(
+          `[DeletePost] Post hard deleted successfully`,
+          'DeletePost',
+        );
 
         return {
           success: true,
@@ -1125,6 +1179,13 @@ export class PostService {
         };
       } catch (error) {
         await queryRunner.rollbackTransaction();
+        if (
+          error instanceof NotFoundException ||
+          error instanceof ForbiddenException ||
+          error instanceof BadRequestException
+        ) {
+          throw error;
+        }
         throw error;
       } finally {
         await queryRunner.release();

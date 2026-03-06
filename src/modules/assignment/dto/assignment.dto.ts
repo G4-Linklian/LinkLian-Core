@@ -169,9 +169,9 @@ export class CreateSubmissionDto {
   @Type(() => Number)
   assignment_id: number;
 
-  @IsInt()
-  @Type(() => Number)
-  group_id: number;
+  @IsOptional()
+  @IsNumber()
+  group_id?: number;
 
   @IsOptional()
   @ValidateNested({ each: true })
@@ -188,9 +188,9 @@ export class UpdateSubmissionDto {
   @Type(() => Number)
   assignment_id: number;
 
-  @IsInt()
-  @Type(() => Number)
-  group_id: number;
+  @IsOptional()
+  @IsNumber()
+  group_id?: number;
 
   @IsOptional()
   @ValidateNested({ each: true })
