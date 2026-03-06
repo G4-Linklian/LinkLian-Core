@@ -168,6 +168,22 @@ export class SubjectService {
       throw new BadRequestException('Missing required fields!');
     }
 
+    const exitstingSubjectCode = await this.subjectRepo.findOne({
+      where: { subject_code: dto.subject_code, learning_area_id: dto.learning_area_id },
+    });
+
+    if (exitstingSubjectCode) {
+      throw new ConflictException('รหัสวิชานี้มีอยู่ในระบบแล้ว');
+    }
+
+    const existingSubject = await this.subjectRepo.findOne({
+      where: { name_th: dto.name_th, learning_area_id: dto.learning_area_id },
+    });
+
+    if (existingSubject) {
+      throw new ConflictException('ชื่อวิชานี้มีอยู่ในระบบแล้ว');
+    }
+
     try {
       const query = `
         INSERT INTO subject 
