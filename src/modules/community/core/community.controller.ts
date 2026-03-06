@@ -38,7 +38,7 @@ export class CommunityController {
     private readonly service: CommunityService,
     private readonly fileStorageService: FileStorageService,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   // Create Community
   @Access('community', 'create')
@@ -201,12 +201,15 @@ export class CommunityController {
   }
 
   @Access('community', 'update')
+  @Access('community', 'update')
   @Put(':communityId')
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
   @ApiHeader({ name: 'x-user-id', required: true })
-  @ApiBody({ type: UpdateCommunityDto })
   async updateCommunity(
     @Headers('x-user-id') userIdHeader: string,
     @Param('communityId', ParseIntPipe) communityId: number,
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: UpdateCommunityDto,
   ) {
     const userId = parseInt(userIdHeader, 10);
@@ -215,7 +218,29 @@ export class CommunityController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    this.logger.log('DTO:', 'UpdateCommunity', dto);
+    if (file) {
+
+      if (!file.mimetype.startsWith('image/')) {
+        throw new BadRequestException('Only image files are allowed');
+      }
+
+      const uploadResult = await this.fileStorageService.uploadFiles(
+        'community',
+        'banner',
+        [file],
+      );
+
+      dto['image_banner'] = uploadResult.files[0].fileUrl;
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        label: 'UpdateCommunity',
+        communityId,
+        name: dto.name,
+      }),
+
+    );
 
     return this.service.updateCommunity(userId, communityId, dto);
   }
