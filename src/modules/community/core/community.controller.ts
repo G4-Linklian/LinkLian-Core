@@ -233,7 +233,14 @@ export class CommunityController {
       dto['image_banner'] = uploadResult.files[0].fileUrl;
     }
 
-    this.logger.log('DTO:', 'UpdateCommunity', dto);
+    this.logger.log(
+      JSON.stringify({
+        label: 'UpdateCommunity',
+        communityId,
+        name: dto.name,
+      }),
+
+    );
 
     return this.service.updateCommunity(userId, communityId, dto);
   }
