@@ -22,8 +22,8 @@ export class Message {
   @Column({ name: 'reply_id', type: 'int', nullable: true })
   reply_id?: number | null;
 
-  @Column({ name: 'file', type: 'jsonb', nullable: true })
-  file?: object[] | null;
+  @Column({name: 'file', type: 'jsonb', nullable: true})
+  file?: Record<string, any>[] | null;
 
   @Column({ name: 'status', default: 'SENDED' })
   status!: string;
