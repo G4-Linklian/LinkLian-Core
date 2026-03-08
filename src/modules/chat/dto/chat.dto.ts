@@ -1,11 +1,5 @@
 // dto/chat.dto.ts
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsInt,
-  IsArray,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -111,7 +105,6 @@ export class SearchMessageDto {
   @IsString()
   content?: string;
 
-
   @ApiPropertyOptional({ description: 'Reply to message ID', example: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -153,7 +146,6 @@ export class SearchMessageDto {
 
 // ========== RabbitMQ Event Interface ==========
 export class CreateMessageDto {
-
   @ApiProperty({ description: 'Chat ID', example: 1 })
   @Type(() => Number)
   @IsInt()
@@ -190,13 +182,12 @@ export interface ChatSendEvent {
 }
 
 export class SearchUserForChatDto {
-
   @ApiProperty({ example: 8 })
   @Type(() => Number)
   @IsInt()
   user_sys_id!: number;
 
-  @ApiPropertyOptional({ example: "สม" })
+  @ApiPropertyOptional({ example: 'สม' })
   @IsOptional()
   @IsString()
   keyword?: string;
