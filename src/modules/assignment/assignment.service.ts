@@ -171,10 +171,11 @@ LIMIT $3 OFFSET $4
       is_group: row.is_group,
     }));
 
-    return { 
-      success: true ,
-      message : 'Assignments retrieved successfully',
-      data: final_result };
+    return {
+      success: true,
+      message: 'Assignments retrieved successfully',
+      data: final_result,
+    };
   }
 
   private async getTeacherAssignments(
@@ -299,10 +300,10 @@ LIMIT $3 OFFSET $4
       submitted_groups: Number(row.submitted_groups),
       educators: row.educators || [],
     }));
-    return { 
-      success : true ,
-      message : 'Assignments retrieved successfully',
-      data: final_result 
+    return {
+      success: true,
+      message: 'Assignments retrieved successfully',
+      data: final_result,
     };
   }
 
@@ -574,7 +575,7 @@ LIMIT 1
        */
       return {
         success: true,
-        message : 'Assignment post retrieved successfully',
+        message: 'Assignment post retrieved successfully',
         data: final_result,
       };
     } catch (error) {
@@ -696,7 +697,7 @@ LIMIT 1
       return {
         success: true,
         message: 'Group created successfully',
-        data : group
+        data: group,
       };
     });
   }
@@ -882,7 +883,7 @@ LIMIT 1
     return {
       success: true,
       message: 'Group retrieved successfully',
-      data: group
+      data: group,
     };
   }
 
@@ -1182,28 +1183,28 @@ LIMIT 1
         memberCount: members.length,
       });
 
-      const final_result ={
-          submission_id: submission.submission_id,
-          assignment_id: submission.assignment_id,
-          group_id: submission.group_id,
-          group_name: submission.group_name,
-          submitted_at: submission.submitted_at,
-          marked_at: submission.marked_at,
-          score: submission.score,
-          feedback: submission.feedback,
-          due_date: submission.due_date,
-          max_score: submission.max_score,
-          is_group: submission.is_group,
-          is_past_due: isPastDue,
-          can_edit: canEdit && !isPastDue,
-          is_member: canEdit,
-          members,
-          attachments,
-        }
+      const final_result = {
+        submission_id: submission.submission_id,
+        assignment_id: submission.assignment_id,
+        group_id: submission.group_id,
+        group_name: submission.group_name,
+        submitted_at: submission.submitted_at,
+        marked_at: submission.marked_at,
+        score: submission.score,
+        feedback: submission.feedback,
+        due_date: submission.due_date,
+        max_score: submission.max_score,
+        is_group: submission.is_group,
+        is_past_due: isPastDue,
+        can_edit: canEdit && !isPastDue,
+        is_member: canEdit,
+        members,
+        attachments,
+      };
 
       return {
         success: true,
-        message : 'Submission retrieved successfully',
+        message: 'Submission retrieved successfully',
         data: final_result,
       };
     } catch (error) {
@@ -1395,17 +1396,17 @@ LIMIT 1
       }
 
       const final_result = {
-          submission_id: submission.submission_id,
-          assignment_id,
-          group_id,
-          submitted_at: submission.submitted_at,
-          attachments,
-        }
+        submission_id: submission.submission_id,
+        assignment_id,
+        group_id,
+        submitted_at: submission.submitted_at,
+        attachments,
+      };
 
       return {
         success: true,
         message: 'Submission created successfully',
-        data: final_result
+        data: final_result,
       };
     });
   }
@@ -1566,12 +1567,12 @@ LIMIT 1
         },
       );
       const final_result = {
-          submission_id,
-          assignment_id,
-          group_id,
-          submitted_at: updateResult[0].submitted_at,
-          attachments,
-        }
+        submission_id,
+        assignment_id,
+        group_id,
+        submitted_at: updateResult[0].submitted_at,
+        attachments,
+      };
 
       return {
         success: true,
@@ -1600,9 +1601,7 @@ LIMIT 1
     });
 
     if (score === undefined || score === null) {
-      throw new BadRequestException(
-        'Score is required for grading',
-      );
+      throw new BadRequestException('Score is required for grading');
     }
 
     try {
@@ -1678,19 +1677,19 @@ LIMIT 1
       );
 
       const final_result = {
-          submission_id: updated.submission_id,
-          assignment_id: submission.assignment_id,
-          group_id: submission.group_id,
-          score: updated.score,
-          feedback: updated.feedback,
-          marked_at: updated.marked_at,
-          max_score: submission.max_score,
-        }
+        submission_id: updated.submission_id,
+        assignment_id: submission.assignment_id,
+        group_id: submission.group_id,
+        score: updated.score,
+        feedback: updated.feedback,
+        marked_at: updated.marked_at,
+        max_score: submission.max_score,
+      };
 
       return {
         success: true,
         message: 'Submission graded successfully',
-        data : final_result
+        data: final_result,
       };
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
@@ -1722,8 +1721,11 @@ LIMIT 1
         WHERE a.assignment_id = $1 AND a.flag_valid = true
         LIMIT 1
       `;
-      const assignmentResult = await this.dataSource.query(assignmentQuery, [assignmentId]);
-      if (!assignmentResult.length) return { success: false, message: 'Assignment not found', data: [] };
+      const assignmentResult = await this.dataSource.query(assignmentQuery, [
+        assignmentId,
+      ]);
+      if (!assignmentResult.length)
+        return { success: false, message: 'Assignment not found', data: [] };
 
       const sectionId = Number(assignmentResult[0].section_id);
 
@@ -1778,7 +1780,10 @@ LIMIT 1
           u.first_name ASC
       `;
 
-      const result = await this.dataSource.query(query, [assignmentId, sectionId]);
+      const result = await this.dataSource.query(query, [
+        assignmentId,
+        sectionId,
+      ]);
 
       this.logger.log(
         `[GetStudentsSubmissionStatus] Found ${result.length} students`,
@@ -1807,8 +1812,14 @@ LIMIT 1
         data,
       };
     } catch (error) {
-      this.logger.error('[GetStudentsSubmissionStatus] Error:', 'Assignment', error);
-      throw new InternalServerErrorException('Error fetching students submission status');
+      this.logger.error(
+        '[GetStudentsSubmissionStatus] Error:',
+        'Assignment',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching students submission status',
+      );
     }
   }
 
@@ -1817,7 +1828,9 @@ LIMIT 1
    * Returns submission + attachments + group info
    */
   async getSubmissionDetailForTeacher(submissionId: number) {
-    this.logger.log('[GetSubmissionDetail] submissionId:', 'Assignment', { submissionId });
+    this.logger.log('[GetSubmissionDetail] submissionId:', 'Assignment', {
+      submissionId,
+    });
 
     try {
       const query = `
@@ -1841,7 +1854,8 @@ LIMIT 1
       `;
 
       const result = await this.dataSource.query(query, [submissionId]);
-      if (!result.length) return { success: false, message: 'Submission not found', data: null };
+      if (!result.length)
+        return { success: false, message: 'Submission not found', data: null };
 
       const submission = result[0];
 
@@ -1856,32 +1870,34 @@ LIMIT 1
         WHERE submission_id = $1 AND flag_valid = true
         ORDER BY attachment_id
       `;
-      const attachments = await this.dataSource.query(attachmentQuery, [submissionId]);
+      const attachments = await this.dataSource.query(attachmentQuery, [
+        submissionId,
+      ]);
       const data_result = {
         submission_id: Number(submission.submission_id),
-          assignment_id: Number(submission.assignment_id),
-          submitted_at: submission.submitted_at,
-          score: submission.score,
-          feedback: submission.feedback,
-          marked_at: submission.marked_at,
-          group_id: submission.group_id ? Number(submission.group_id) : null,
-          group_name: submission.group_name,
-          max_score: submission.max_score,
-          due_date: submission.due_date,
-          is_group: submission.is_group,
-          attachments
+        assignment_id: Number(submission.assignment_id),
+        submitted_at: submission.submitted_at,
+        score: submission.score,
+        feedback: submission.feedback,
+        marked_at: submission.marked_at,
+        group_id: submission.group_id ? Number(submission.group_id) : null,
+        group_name: submission.group_name,
+        max_score: submission.max_score,
+        due_date: submission.due_date,
+        is_group: submission.is_group,
+        attachments,
       };
 
       return {
         success: true,
         message: 'Submission detail retrieved successfully',
-        data: data_result
+        data: data_result,
       };
     } catch (error) {
       this.logger.error('[GetSubmissionDetail] Error:', 'Assignment', error);
-      throw new InternalServerErrorException('Error fetching submission detail');
+      throw new InternalServerErrorException(
+        'Error fetching submission detail',
+      );
     }
   }
-
-
 }

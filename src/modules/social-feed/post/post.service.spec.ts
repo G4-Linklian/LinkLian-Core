@@ -26,7 +26,13 @@ const mockDataSource = {
   query: mockQuery,
   createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
 };
-const mockLogger = { log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), verbose: jest.fn() };
+const mockLogger = {
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  verbose: jest.fn(),
+};
 const mockRepo = { find: jest.fn(), findOne: jest.fn(), save: jest.fn() };
 
 const mockPostRow = {
@@ -69,11 +75,11 @@ describe('PostService', () => {
 
     // Restore after clearAllMocks
     mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
-    mockLogger.debug.mockImplementation(() => {});
-    mockLogger.error.mockImplementation(() => {});
-    mockLogger.warn.mockImplementation(() => {});
-    mockLogger.log.mockImplementation(() => {});
-    mockLogger.verbose.mockImplementation(() => {});
+    mockLogger.debug.mockImplementation((..._args) => undefined);
+    mockLogger.error.mockImplementation((..._args) => undefined);
+    mockLogger.warn.mockImplementation((..._args) => undefined);
+    mockLogger.log.mockImplementation((..._args) => undefined);
+    mockLogger.verbose.mockImplementation((..._args) => undefined);
 
     // Ensure the service uses our mock logger (override private field)
     (service as any).logger = mockLogger;

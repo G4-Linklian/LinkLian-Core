@@ -39,11 +39,11 @@ describe('AssignmentService', () => {
     jest.clearAllMocks();
 
     // Restore implementations after clearAllMocks
-    mockLogger.log.mockImplementation(() => {});
-    mockLogger.error.mockImplementation(() => {});
-    mockLogger.warn.mockImplementation(() => {});
-    mockLogger.debug.mockImplementation(() => {});
-    mockLogger.verbose.mockImplementation(() => {});
+    mockLogger.log.mockImplementation((..._args) => undefined);
+    mockLogger.error.mockImplementation((..._args) => undefined);
+    mockLogger.warn.mockImplementation((..._args) => undefined);
+    mockLogger.debug.mockImplementation((..._args) => undefined);
+    mockLogger.verbose.mockImplementation((..._args) => undefined);
 
     // Ensure service uses our mock logger
     (service as any).logger = mockLogger;
@@ -239,7 +239,11 @@ describe('AssignmentService', () => {
         .mockResolvedValueOnce([]) // no submission
         .mockResolvedValueOnce([]); // group query
 
-      const result = await service.getPostAssignment(1, 2, 'high school student');
+      const result = await service.getPostAssignment(
+        1,
+        2,
+        'high school student',
+      );
       expect(result!.data.submission).toBeNull();
     });
 
@@ -283,9 +287,9 @@ describe('AssignmentService', () => {
 
     it('should throw InternalServerErrorException on error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
-      await expect(
-        service.getPostAssignment(1, 1, 'teacher'),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.getPostAssignment(1, 1, 'teacher')).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -309,7 +313,9 @@ describe('AssignmentService', () => {
         const manager = { query: jest.fn().mockResolvedValueOnce([]) };
         return cb(manager);
       });
-      await expect(service.createGroup(1, dto)).rejects.toThrow('Invalid assignment');
+      await expect(service.createGroup(1, dto)).rejects.toThrow(
+        'Invalid assignment',
+      );
     });
 
     it('should throw if user is not enrolled', async () => {
@@ -452,7 +458,13 @@ describe('AssignmentService', () => {
           educators: [],
         },
       ]);
-      const result = await service.searchAssignments(1, 1, 'Test', 'uni student', 50);
+      const result = await service.searchAssignments(
+        1,
+        1,
+        'Test',
+        'uni student',
+        50,
+      );
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].total_students).toBe(10);
@@ -460,7 +472,13 @@ describe('AssignmentService', () => {
 
     it('should return search results for teacher', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      const result = await service.searchAssignments(1, 1, 'keyword', 'teacher', 50);
+      const result = await service.searchAssignments(
+        1,
+        1,
+        'keyword',
+        'teacher',
+        50,
+      );
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(0);
     });
@@ -508,7 +526,9 @@ describe('AssignmentService', () => {
 
     it('should throw BadRequestException if submission not found', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      await expect(service.getSubmission(1, 999)).rejects.toThrow(BadRequestException);
+      await expect(service.getSubmission(1, 999)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should return submission with can_edit=true when member and not past due', async () => {
@@ -587,7 +607,9 @@ describe('AssignmentService', () => {
         const manager = { query: jest.fn().mockResolvedValueOnce([]) };
         return cb(manager);
       });
-      await expect(service.createSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if user not a member of group', async () => {
@@ -595,12 +617,16 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([]), // not member
         };
         return cb(manager);
       });
-      await expect(service.createSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if submission already exists', async () => {
@@ -608,13 +634,17 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([{ submission_id: 99 }]), // duplicate
         };
         return cb(manager);
       });
-      await expect(service.createSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should create submission successfully without files', async () => {
@@ -622,10 +652,14 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([{ submission_id: 1, submitted_at: new Date() }]),
+            .mockResolvedValueOnce([
+              { submission_id: 1, submitted_at: new Date() },
+            ]),
         };
         return cb(manager);
       });
@@ -639,18 +673,29 @@ describe('AssignmentService', () => {
     it('should create submission with files', async () => {
       const dtoWithFiles = {
         ...dto,
-        files: [{ file_url: 'f.pdf', original_name: 'f.pdf', file_type: 'pdf' }],
+        files: [
+          { file_url: 'f.pdf', original_name: 'f.pdf', file_type: 'pdf' },
+        ],
       };
       mockTransaction.mockImplementationOnce(async (cb) => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([{ submission_id: 1, submitted_at: new Date() }])
             .mockResolvedValueOnce([
-              { attachment_id: 1, file_url: 'f.pdf', original_name: 'f.pdf', file_type: 'pdf' },
+              { submission_id: 1, submitted_at: new Date() },
+            ])
+            .mockResolvedValueOnce([
+              {
+                attachment_id: 1,
+                file_url: 'f.pdf',
+                original_name: 'f.pdf',
+                file_type: 'pdf',
+              },
             ]),
         };
         return cb(manager);
@@ -666,11 +711,15 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: false }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: false },
+            ])
             .mockResolvedValueOnce([{ group_id: 5 }]) // existing solo group
             .mockResolvedValueOnce([{ group_id: 5 }]) // membership ok
             .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([{ submission_id: 2, submitted_at: new Date() }]),
+            .mockResolvedValueOnce([
+              { submission_id: 2, submitted_at: new Date() },
+            ]),
         };
         return cb(manager);
       });
@@ -691,19 +740,27 @@ describe('AssignmentService', () => {
         const manager = { query: jest.fn().mockResolvedValueOnce([]) };
         return cb(manager);
       });
-      await expect(service.updateSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if past due date', async () => {
       mockTransaction.mockImplementationOnce(async (cb) => {
         const manager = {
           query: jest.fn().mockResolvedValueOnce([
-            { assignment_id: 1, due_date: new Date(Date.now() - 86400000), is_group: true },
+            {
+              assignment_id: 1,
+              due_date: new Date(Date.now() - 86400000),
+              is_group: true,
+            },
           ]),
         };
         return cb(manager);
       });
-      await expect(service.updateSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if user not a member', async () => {
@@ -711,12 +768,16 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([]), // not member
         };
         return cb(manager);
       });
-      await expect(service.updateSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if submission not found', async () => {
@@ -724,13 +785,17 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([]), // not found
         };
         return cb(manager);
       });
-      await expect(service.updateSubmission(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.updateSubmission(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update submission successfully', async () => {
@@ -738,7 +803,9 @@ describe('AssignmentService', () => {
         const manager = {
           query: jest
             .fn()
-            .mockResolvedValueOnce([{ assignment_id: 1, due_date: null, is_group: true }])
+            .mockResolvedValueOnce([
+              { assignment_id: 1, due_date: null, is_group: true },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([{ submission_id: 1 }])
             .mockResolvedValueOnce([]) // delete old attachments
@@ -794,10 +861,18 @@ describe('AssignmentService', () => {
       mockQuery
         .mockResolvedValueOnce([mockSubmissionRow])
         .mockResolvedValueOnce([
-          { submission_id: 1, score: 85, feedback: null, marked_at: new Date() },
+          {
+            submission_id: 1,
+            score: 85,
+            feedback: null,
+            marked_at: new Date(),
+          },
         ]);
 
-      const result = await service.gradeSubmission(1, { submission_id: 1, score: 85 });
+      const result = await service.gradeSubmission(1, {
+        submission_id: 1,
+        score: 85,
+      });
       expect(result.success).toBe(true);
       expect(result.data.score).toBe(85);
       expect(result.data.max_score).toBe(100);
@@ -816,7 +891,12 @@ describe('AssignmentService', () => {
       mockQuery
         .mockResolvedValueOnce([mockSubmissionRow])
         .mockResolvedValueOnce([
-          { submission_id: 1, score: 90, feedback: 'Excellent!', marked_at: new Date() },
+          {
+            submission_id: 1,
+            score: 90,
+            feedback: 'Excellent!',
+            marked_at: new Date(),
+          },
         ]);
 
       const result = await service.gradeSubmission(1, {

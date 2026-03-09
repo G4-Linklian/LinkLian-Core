@@ -931,7 +931,10 @@ export class PostService {
                         VALUES ($1, $2, true)
                         RETURNING group_id::int AS group_id
                       `,
-                      [row.assignment_id, `individual_student_${student.student_id}`],
+                      [
+                        row.assignment_id,
+                        `individual_student_${student.student_id}`,
+                      ],
                     );
                   const groupId = Number(groupRes[0]?.group_id);
                   if (!groupId) continue;
