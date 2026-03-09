@@ -16,7 +16,7 @@ export class AssignmentService {
   constructor(
     private readonly logger: AppLogger,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   async getClassAssignments(userId: number, dto: GetClassAssignmentsDto) {
     const { section_id, role, offset = 0, limit = 10 } = dto;
@@ -25,12 +25,12 @@ export class AssignmentService {
 
     this.logger.log(
       `get assignment function`, 'GetClassAssignments', {
-        section_id,
-        role,
-        userId,
-        offset,
-        limit
-      }
+      section_id,
+      role,
+      userId,
+      offset,
+      limit
+    }
     );
 
     try {
@@ -44,7 +44,7 @@ export class AssignmentService {
       } else {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
-    } catch (error : any) {
+    } catch (error: any) {
       this.logger.error('getStudentAssignments error:', 'GetClassAssignments', error);
       throw new InternalServerErrorException('Error fetching assignments');
     }
@@ -580,7 +580,7 @@ LIMIT 1
         message: 'Assignment post retrieved successfully',
         data: final_result,
       };
-    } catch (error : any) {
+    } catch (error: any) {
       this.logger.error('get post assignment error', 'GetPostAssignment', error);
       throw new InternalServerErrorException('Error fetching assignment post');
     }
@@ -636,6 +636,29 @@ LIMIT 1
 
       if (!enrollment.length) {
         throw new Error('You are not enrolled in this section');
+      }
+
+      // VALIDATION 3: สมาชิกต้อง Active และอยู่ใน section เดียวกัน
+      const validMembers = await manager.query(
+        `
+SELECT u.user_sys_id
+FROM user_sys u
+JOIN enrollment e ON u.user_sys_id = e.student_id
+JOIN assignment a ON a.assignment_id = $1
+JOIN post_in_class pic ON a.post_id = pic.post_id
+WHERE e.section_id = pic.section_id
+  AND u.user_sys_id = ANY($2)
+  AND u.user_status = 'Active'
+  AND e.flag_valid = true
+  AND u.flag_valid = true
+`,
+        [assignment_id, member_ids]
+      );
+
+      if (validMembers.length !== member_ids.length) {
+        throw new BadRequestException(
+          'Some members are inactive or not enrolled in this section'
+        );
       }
 
       /**
@@ -748,6 +771,29 @@ LIMIT 1
         );
         throw new Error('Group not found or you are not a member');
       }
+
+      // VALIDATION: สมาชิกต้อง Active และอยู่ใน section
+const validMembers = await manager.query(
+`
+SELECT u.user_sys_id
+FROM user_sys u
+JOIN enrollment e ON u.user_sys_id = e.student_id
+JOIN assignment a ON a.assignment_id = $1
+JOIN post_in_class pic ON a.post_id = pic.post_id
+WHERE e.section_id = pic.section_id
+  AND u.user_sys_id = ANY($2)
+  AND u.user_status = 'Active'
+  AND e.flag_valid = true
+  AND u.flag_valid = true
+`,
+[assignment_id, member_ids]
+);
+
+if (validMembers.length !== member_ids.length) {
+  throw new BadRequestException(
+    'Some members are inactive or not enrolled in this section'
+  );
+}
 
       /**
        * 2. update ชื่อกลุ่ม
@@ -956,9 +1002,8 @@ LIMIT 1
           a.is_group,
           a.due_date,
 
-          ${
-            isStudent
-              ? `
+          ${isStudent
+          ? `
           (
             SELECT sb.submitted_at
             FROM submission sb
@@ -973,8 +1018,8 @@ LIMIT 1
             LIMIT 1
           ) AS submitted_at,
           `
-              : ''
-          }
+          : ''
+        }
 
           (
             SELECT COUNT(*)::int
@@ -1068,7 +1113,7 @@ LIMIT 1
         message: 'Assignments retrieved successfully',
         data: final_result,
       };
-    } catch (error : any) {
+    } catch (error: any) {
       this.logger.error('searchAssignments error', 'SearchAssignments', error);
       throw new InternalServerErrorException('Error searching assignments');
     }
