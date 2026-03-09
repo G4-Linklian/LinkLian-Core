@@ -554,6 +554,7 @@ LIMIT 1
           due_date: post.due_date,
           max_score: post.max_score,
           is_group: post.is_group,
+          attachments,
         },
         //for submission + group part
         assignment: {
@@ -1598,9 +1599,9 @@ LIMIT 1
       feedback,
     });
 
-    if (score === undefined && (feedback === undefined || feedback === null)) {
+    if (score === undefined || score === null) {
       throw new BadRequestException(
-        'At least one of score or feedback must be provided',
+        'Score is required for grading',
       );
     }
 
@@ -1701,4 +1702,186 @@ LIMIT 1
       throw new InternalServerErrorException('Error grading submission');
     }
   }
+
+  /**
+   * Get all students with their submission status for a given assignment (Teacher view)
+   */
+  async getStudentsSubmissionStatus(assignmentId: number) {
+    this.logger.log(
+      '[GetStudentsSubmissionStatus] assignmentId:',
+      'Assignment',
+      { assignmentId },
+    );
+
+    try {
+      // Get assignment info (to find sectionId)
+      const assignmentQuery = `
+        SELECT a.assignment_id, pic.section_id
+        FROM assignment a
+        JOIN post_in_class pic ON a.post_id = pic.post_id AND pic.flag_valid = true
+        WHERE a.assignment_id = $1 AND a.flag_valid = true
+        LIMIT 1
+      `;
+      const assignmentResult = await this.dataSource.query(assignmentQuery, [assignmentId]);
+      if (!assignmentResult.length) return { success: false, message: 'Assignment not found', data: [] };
+
+      const sectionId = Number(assignmentResult[0].section_id);
+
+      const query = `
+        SELECT
+          u.user_sys_id,
+          u.first_name,
+          u.last_name,
+          u.profile_pic,
+          u.code,
+
+          sb.submission_id,
+          sb.submitted_at,
+          sb.score,
+          sb.feedback,
+          sb.marked_at,
+
+          sb.group_id,
+          sb.group_name,
+
+          CASE
+            WHEN sb.submission_id IS NOT NULL THEN 'submitted'
+            ELSE 'not_submitted'
+          END AS submission_status
+
+        FROM enrollment e
+        JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
+
+        LEFT JOIN (
+          SELECT DISTINCT ON (gm.user_sys_id)
+            gm.user_sys_id,
+            sub.submission_id,
+            sub.submitted_at,
+            sub.score,
+            sub.feedback,
+            sub.marked_at,
+            grp.group_id,
+            grp.group_name
+          FROM submission sub
+          JOIN student_group grp ON sub.group_id = grp.group_id AND grp.flag_valid = true
+          JOIN group_member gm ON grp.group_id = gm.group_id AND gm.flag_valid = true
+          WHERE sub.assignment_id = $1 AND sub.flag_valid = true
+          ORDER BY gm.user_sys_id, sub.submitted_at DESC
+        ) sb ON sb.user_sys_id = u.user_sys_id
+
+        WHERE e.section_id = $2
+          AND e.flag_valid = true
+
+        ORDER BY
+          CASE WHEN sb.submitted_at IS NOT NULL THEN 0 ELSE 1 END,
+          sb.submitted_at DESC NULLS LAST,
+          u.first_name ASC
+      `;
+
+      const result = await this.dataSource.query(query, [assignmentId, sectionId]);
+
+      this.logger.log(
+        `[GetStudentsSubmissionStatus] Found ${result.length} students`,
+        'Assignment',
+      );
+
+      const data = result.map((row: any) => ({
+        user_sys_id: Number(row.user_sys_id),
+        first_name: row.first_name,
+        last_name: row.last_name,
+        profile_pic: row.profile_pic,
+        code: row.code,
+        submission_id: row.submission_id ? Number(row.submission_id) : null,
+        submitted_at: row.submitted_at,
+        score: row.score,
+        feedback: row.feedback,
+        marked_at: row.marked_at,
+        group_id: row.group_id ? Number(row.group_id) : null,
+        group_name: row.group_name,
+        submission_status: row.submission_status,
+      }));
+
+      return {
+        success: true,
+        message: 'Students submission status retrieved successfully',
+        data,
+      };
+    } catch (error) {
+      this.logger.error('[GetStudentsSubmissionStatus] Error:', 'Assignment', error);
+      throw new InternalServerErrorException('Error fetching students submission status');
+    }
+  }
+
+  /**
+   * Get submission detail for teacher (by submission_id) - simple version
+   * Returns submission + attachments + group info
+   */
+  async getSubmissionDetailForTeacher(submissionId: number) {
+    this.logger.log('[GetSubmissionDetail] submissionId:', 'Assignment', { submissionId });
+
+    try {
+      const query = `
+        SELECT
+          sb.submission_id,
+          sb.assignment_id,
+          sb.submitted_at,
+          sb.score,
+          sb.feedback,
+          sb.marked_at,
+          sg.group_id,
+          sg.group_name,
+          a.max_score,
+          a.due_date,
+          a.is_group
+        FROM submission sb
+        JOIN student_group sg ON sb.group_id = sg.group_id AND sg.flag_valid = true
+        JOIN assignment a ON sb.assignment_id = a.assignment_id AND a.flag_valid = true
+        WHERE sb.submission_id = $1
+          AND sb.flag_valid = true
+      `;
+
+      const result = await this.dataSource.query(query, [submissionId]);
+      if (!result.length) return { success: false, message: 'Submission not found', data: null };
+
+      const submission = result[0];
+
+      // Get attachments
+      const attachmentQuery = `
+        SELECT
+          attachment_id,
+          file_url,
+          original_name,
+          file_type
+        FROM submission_attachment
+        WHERE submission_id = $1 AND flag_valid = true
+        ORDER BY attachment_id
+      `;
+      const attachments = await this.dataSource.query(attachmentQuery, [submissionId]);
+      const data_result = {
+        submission_id: Number(submission.submission_id),
+          assignment_id: Number(submission.assignment_id),
+          submitted_at: submission.submitted_at,
+          score: submission.score,
+          feedback: submission.feedback,
+          marked_at: submission.marked_at,
+          group_id: submission.group_id ? Number(submission.group_id) : null,
+          group_name: submission.group_name,
+          max_score: submission.max_score,
+          due_date: submission.due_date,
+          is_group: submission.is_group,
+          attachments
+      };
+
+      return {
+        success: true,
+        message: 'Submission detail retrieved successfully',
+        data: data_result
+      };
+    } catch (error) {
+      this.logger.error('[GetSubmissionDetail] Error:', 'Assignment', error);
+      throw new InternalServerErrorException('Error fetching submission detail');
+    }
+  }
+
+
 }

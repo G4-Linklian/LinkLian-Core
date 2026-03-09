@@ -464,6 +464,9 @@ describe('PostService', () => {
 
       mockQueryRunner.query
         .mockResolvedValueOnce([]) // get assignment_ids (empty → skip group steps)
+        .mockResolvedValueOnce([]) // delete post_comment_path
+        .mockResolvedValueOnce([]) // delete post_comment
+        .mockResolvedValueOnce([]) // delete bookmark
         .mockResolvedValueOnce([]) // delete post_attachment
         .mockResolvedValueOnce([]) // delete post_in_class
         .mockResolvedValueOnce([]); // delete post_content
@@ -471,6 +474,13 @@ describe('PostService', () => {
       const result = await service.deletePost(1, 1);
       expect(result.success).toBe(true);
       expect(result.message).toBe('Post deleted successfully');
+
+      const executedSql = mockQueryRunner.query.mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(executedSql.some((q) => q.includes('DELETE FROM bookmark'))).toBe(
+        true,
+      );
     });
 
     it('should delete post successfully by postContentId', async () => {
@@ -480,12 +490,22 @@ describe('PostService', () => {
 
       mockQueryRunner.query
         .mockResolvedValueOnce([]) // get assignment_ids (empty → skip group steps)
+        .mockResolvedValueOnce([]) // delete post_comment_path
+        .mockResolvedValueOnce([]) // delete post_comment
+        .mockResolvedValueOnce([]) // delete bookmark
         .mockResolvedValueOnce([]) // delete post_attachment
         .mockResolvedValueOnce([]) // delete post_in_class
         .mockResolvedValueOnce([]); // delete post_content
 
       const result = await service.deletePost(1, 0, 10);
       expect(result.success).toBe(true);
+
+      const executedSql = mockQueryRunner.query.mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(executedSql.some((q) => q.includes('DELETE FROM bookmark'))).toBe(
+        true,
+      );
     });
   });
 

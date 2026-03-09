@@ -3,8 +3,14 @@ import {
   Controller,
   Get,
   Post,
-  Query,
+  Put,
+  Delete,
+  Param,
   Body,
+  Query,
+  ParseIntPipe,
+  Req,
+  UseGuards,
   Headers,
   BadRequestException,
 } from '@nestjs/common';
@@ -337,5 +343,19 @@ export class AssignmentController {
     }
 
     return this.assignmentService.gradeSubmission(parsedUserId, dto);
+  }
+
+  @Get('submission/students/:assignment_id')
+  async getStudentsSubmissionStatus(
+    @Param('assignment_id', ParseIntPipe) assignmentId: number,
+  ) {
+    return this.assignmentService.getStudentsSubmissionStatus(assignmentId);
+  }
+
+  @Get('submission/detail/:submission_id')
+  async getSubmissionDetail(
+    @Param('submission_id', ParseIntPipe) submissionId: number,
+  ) {
+    return this.assignmentService.getSubmissionDetailForTeacher(submissionId);
   }
 }

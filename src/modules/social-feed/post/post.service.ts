@@ -843,6 +843,111 @@ export class PostService {
         }
 
         if (setClauses.length > 0) {
+          // Resolve assignment rows for this post_content.
+          const assignmentRows: Array<{
+            assignment_id: number;
+            is_group: boolean;
+            section_id: number;
+          }> = await this.dataSource.query(
+            `
+              SELECT
+                a.assignment_id::int AS assignment_id,
+                a.is_group AS is_group,
+                pic.section_id::int AS section_id
+              FROM assignment a
+              JOIN post_in_class pic
+                ON a.post_id = pic.post_id
+               AND pic.flag_valid = true
+              WHERE pic.post_content_id = $1
+                AND a.flag_valid = true
+            `,
+            [targetPostContentId],
+          );
+
+          const assignmentIds = assignmentRows.map((r) => r.assignment_id);
+          const isChangingType =
+            dto.is_group !== undefined &&
+            assignmentRows.some((r) => r.is_group !== dto.is_group);
+
+          if (assignmentIds.length > 0 && isChangingType) {
+            // Business rule: once there is a submission, assignment type cannot be changed.
+            const submissionCountRows: Array<{ total: string }> =
+              await this.dataSource.query(
+                `
+                  SELECT COUNT(*)::int AS total
+                  FROM submission
+                  WHERE assignment_id = ANY($1)
+                    AND flag_valid = true
+                `,
+                [assignmentIds],
+              );
+
+            const totalSubmissions =
+              Number(submissionCountRows[0]?.total ?? 0) || 0;
+            if (totalSubmissions > 0) {
+              throw new BadRequestException(
+                'ไม่สามารถเปลี่ยนประเภทงานได้ เนื่องจากมีนักเรียนส่งงานแล้ว',
+              );
+            }
+
+            // Clear all old groups/members before rebuilding type-specific groups.
+            await this.dataSource.query(
+              `
+                DELETE FROM group_member
+                WHERE group_id IN (
+                  SELECT group_id FROM student_group
+                  WHERE assignment_id = ANY($1)
+                )
+              `,
+              [assignmentIds],
+            );
+            await this.dataSource.query(
+              `
+                DELETE FROM student_group
+                WHERE assignment_id = ANY($1)
+              `,
+              [assignmentIds],
+            );
+
+            // Switching to individual assignment => recreate one-person groups.
+            if (dto.is_group === false) {
+              for (const row of assignmentRows) {
+                const enrolledStudents: Array<{ student_id: number }> =
+                  await this.dataSource.query(
+                    `
+                      SELECT student_id::int AS student_id
+                      FROM enrollment
+                      WHERE section_id = $1
+                        AND flag_valid = true
+                    `,
+                    [row.section_id],
+                  );
+
+                for (const student of enrolledStudents) {
+                  const groupRes: Array<{ group_id: number }> =
+                    await this.dataSource.query(
+                      `
+                        INSERT INTO student_group (assignment_id, group_name, flag_valid)
+                        VALUES ($1, $2, true)
+                        RETURNING group_id::int AS group_id
+                      `,
+                      [row.assignment_id, `individual_student_${student.student_id}`],
+                    );
+                  const groupId = Number(groupRes[0]?.group_id);
+                  if (!groupId) continue;
+
+                  await this.dataSource.query(
+                    `
+                      INSERT INTO group_member (group_id, user_sys_id, flag_valid)
+                      VALUES ($1, $2, true)
+                    `,
+                    [groupId, student.student_id],
+                  );
+                }
+              }
+            }
+          }
+
           assignmentValues.push(targetPostContentId);
           const assignmentQuery = `
             UPDATE assignment a
@@ -967,7 +1072,7 @@ export class PostService {
   /**
    * Hard delete post and its related data (only owner can delete)
    * Supports both post_id and post_content_id
-   * Deletes: assignment -> post_attachment -> post_in_class -> post_content
+   * Deletes: assignment -> comments -> post_attachment -> post_in_class -> post_content
    */
   async deletePost(userId: number, postId: number, postContentId?: number) {
     try {
@@ -1122,7 +1227,57 @@ export class PostService {
           );
         }
 
-        // 5. Delete attachments
+        // 5. Delete comment closure paths for comments in these posts
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM post_comment_path
+            WHERE ancestor_id IN (
+              SELECT comment_id FROM post_comment WHERE post_id = ANY($1)
+            )
+            OR descendant_id IN (
+              SELECT comment_id FROM post_comment WHERE post_id = ANY($1)
+            )
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted post_comment_path records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 6. Delete comments that reference these post_ids
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM post_comment
+            WHERE post_id = ANY($1)
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted post_comment records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 7. Delete bookmarks that reference these post_ids
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM bookmark
+            WHERE post_id = ANY($1)
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted bookmark records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 8. Delete attachments
         await queryRunner.query(
           `
           DELETE FROM post_attachment
@@ -1135,7 +1290,7 @@ export class PostService {
           'DeletePost',
         );
 
-        // 6. Delete all post_in_class records
+        // 9. Delete all post_in_class records
         await queryRunner.query(
           `
           DELETE FROM post_in_class
@@ -1148,7 +1303,7 @@ export class PostService {
           'DeletePost',
         );
 
-        // 7. Delete post_content
+        // 10. Delete post_content
         await queryRunner.query(
           `
           DELETE FROM post_content

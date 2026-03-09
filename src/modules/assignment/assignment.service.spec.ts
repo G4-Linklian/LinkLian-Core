@@ -60,7 +60,9 @@ describe('AssignmentService', () => {
         ...baseDto,
         role: 'uni student',
       });
-      expect(result).toEqual({ data: [] });
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Assignments retrieved successfully');
+      expect(result.data).toEqual([]);
       expect(mockQuery).toHaveBeenCalledTimes(1);
     });
 
@@ -70,7 +72,9 @@ describe('AssignmentService', () => {
         ...baseDto,
         role: 'high school student',
       });
-      expect(result).toEqual({ data: [] });
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Assignments retrieved successfully');
+      expect(result.data).toEqual([]);
     });
 
     it('should call getTeacherAssignments when role is "teacher"', async () => {
@@ -79,7 +83,9 @@ describe('AssignmentService', () => {
         ...baseDto,
         role: 'teacher',
       });
-      expect(result).toEqual({ data: [] });
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Assignments retrieved successfully');
+      expect(result.data).toEqual([]);
     });
 
     it('should call getTeacherAssignments when role is "instructor"', async () => {
@@ -88,7 +94,9 @@ describe('AssignmentService', () => {
         ...baseDto,
         role: 'instructor',
       });
-      expect(result).toEqual({ data: [] });
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Assignments retrieved successfully');
+      expect(result.data).toEqual([]);
     });
 
     it('should map student assignment rows correctly', async () => {
@@ -249,6 +257,30 @@ describe('AssignmentService', () => {
       expect(result!.data.groups).toHaveLength(2);
     });
 
+    it('should include attachments in both top-level and post payload', async () => {
+      const mockAttachments = [
+        {
+          attachment_id: 101,
+          file_url: 'https://cdn.example.com/a.pdf',
+          file_type: 'pdf',
+          original_name: 'a.pdf',
+        },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([mockPost]) // postQuery
+        .mockResolvedValueOnce(mockAttachments) // attachmentQuery
+        .mockResolvedValueOnce([]); // groupsQuery (teacher)
+
+      const result = await service.getPostAssignment(1, 1, 'teacher');
+      expect(result).not.toBeNull();
+      expect(result!.data.attachments).toHaveLength(1);
+      expect(result!.data.post.attachments).toHaveLength(1);
+      expect(result!.data.post.attachments[0].file_url).toBe(
+        'https://cdn.example.com/a.pdf',
+      );
+    });
+
     it('should throw InternalServerErrorException on error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
       await expect(
@@ -309,9 +341,9 @@ describe('AssignmentService', () => {
       });
       const result = await service.createGroup(1, dto);
       expect(result.success).toBe(true);
-      expect(result.group.group_id).toBe(10);
-      expect(result.group.group_name).toBe('Test Group');
-      expect(result.group.members).toHaveLength(3);
+      expect(result.data.group_id).toBe(10);
+      expect(result.data.group_name).toBe('Test Group');
+      expect(result.data.members).toHaveLength(3);
     });
   });
 
@@ -355,8 +387,8 @@ describe('AssignmentService', () => {
       });
       const result = await service.updateGroup(1, dto);
       expect(result.success).toBe(true);
-      expect(result.group.group_name).toBe('Updated Group');
-      expect(result.group.members).toHaveLength(2);
+      expect(result.data.group_name).toBe('Updated Group');
+      expect(result.data.members).toHaveLength(2);
     });
   });
 
@@ -771,19 +803,13 @@ describe('AssignmentService', () => {
       expect(result.data.max_score).toBe(100);
     });
 
-    it('should grade successfully with feedback only', async () => {
-      mockQuery
-        .mockResolvedValueOnce([mockSubmissionRow])
-        .mockResolvedValueOnce([
-          { submission_id: 1, score: null, feedback: 'Good work!', marked_at: new Date() },
-        ]);
-
-      const result = await service.gradeSubmission(1, {
-        submission_id: 1,
-        feedback: 'Good work!',
-      });
-      expect(result.success).toBe(true);
-      expect(result.data.feedback).toBe('Good work!');
+    it('should throw BadRequestException when score is missing even if feedback is provided', async () => {
+      await expect(
+        service.gradeSubmission(1, {
+          submission_id: 1,
+          feedback: 'Good work!',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should grade successfully with both score and feedback', async () => {
