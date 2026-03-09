@@ -31,6 +31,7 @@ import { ImportSectionScheduleModule } from './modules/import-csv/section-schedu
 import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
 import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
@@ -86,6 +87,7 @@ import { RequestMethod } from '@nestjs/common';
     ImportEnrollmentModule,
     CommunityModule,
     LoggerModule,
+    RabbitMQModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -106,6 +108,10 @@ export class AppModule implements NestModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'institution/(.*)', method: RequestMethod.ALL },
+        { path: 'institution', method: RequestMethod.ALL },
+        { path: 'admin/(.*)', method: RequestMethod.ALL },
+        { path: 'admin', method: RequestMethod.ALL },
+        { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )

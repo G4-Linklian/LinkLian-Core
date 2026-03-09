@@ -361,9 +361,9 @@ describe('SemesterService', () => {
     it('should throw NotFoundException when semester does not exist', async () => {
       mockSemesterRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.update(999, { semester: '2/2567' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(999, { semester: '2/2567' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when no fields are provided', async () => {
@@ -445,18 +445,18 @@ describe('SemesterService', () => {
       mockSemesterRepo.findOne.mockResolvedValue(mockSemester());
       mockSemesterRepo.update.mockRejectedValue({ code: '23505' });
 
-      await expect(service.update(1, { semester: 'dup' })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.update(1, { semester: 'dup' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other update error', async () => {
       mockSemesterRepo.findOne.mockResolvedValue(mockSemester());
       mockSemesterRepo.update.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.update(1, { semester: 'err' })).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.update(1, { semester: 'err' }),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -590,7 +590,9 @@ describe('SemesterService', () => {
       expect(result.data).toEqual(deleted);
       expect(result.message).toContain('deleted');
       expect(mockDataSource.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM semester_subject_normalize'),
+        expect.stringContaining(
+          'DELETE FROM semester_subject_normalize',
+        ),
         [10, 1],
       );
     });
@@ -598,17 +600,17 @@ describe('SemesterService', () => {
     it('should throw NotFoundException when record not found (empty result)', async () => {
       mockDataSource.query.mockResolvedValue([]);
 
-      await expect(service.deleteSemesterSubject(validDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteSemesterSubject(validDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw InternalServerErrorException on query error', async () => {
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.deleteSemesterSubject(validDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.deleteSemesterSubject(validDto),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

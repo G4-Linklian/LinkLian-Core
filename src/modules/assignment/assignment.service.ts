@@ -23,13 +23,15 @@ export class AssignmentService {
 
     const isStudent = role === 'high school student' || role === 'uni student';
 
-    this.logger.debug('[GetClassAssignments]', 'Assignment', {
-      section_id,
-      role,
-      userId,
-      offset,
-      limit,
-    });
+    this.logger.log(
+      `get assignment function`, 'GetClassAssignments', {
+        section_id,
+        role,
+        userId,
+        offset,
+        limit
+      }
+    );
 
     try {
       if (isStudent && userId) {
@@ -42,8 +44,8 @@ export class AssignmentService {
       } else {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
-    } catch (error) {
-      this.logger.error('[GetClassAssignments]', 'Assignment', error);
+    } catch (error : any) {
+      this.logger.error('getStudentAssignments error:', 'GetClassAssignments', error);
       throw new InternalServerErrorException('Error fetching assignments');
     }
   }
@@ -578,12 +580,8 @@ LIMIT 1
         message: 'Assignment post retrieved successfully',
         data: final_result,
       };
-    } catch (error) {
-      this.logger.error(
-        '[GetPostAssignment] error:',
-        'Assignment Error',
-        error,
-      );
+    } catch (error : any) {
+      this.logger.error('get post assignment error', 'GetPostAssignment', error);
       throw new InternalServerErrorException('Error fetching assignment post');
     }
   }
@@ -1070,8 +1068,8 @@ LIMIT 1
         message: 'Assignments retrieved successfully',
         data: final_result,
       };
-    } catch (error) {
-      this.logger.error('[SearchAssignments] Error:', error);
+    } catch (error : any) {
+      this.logger.error('searchAssignments error', 'SearchAssignments', error);
       throw new InternalServerErrorException('Error searching assignments');
     }
   }

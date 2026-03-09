@@ -11,12 +11,14 @@ import {
 import { ApiTags, ApiHeader } from '@nestjs/swagger';
 import { CommunityBookmarkService } from './community-bookmark.service';
 import { ToggleCommunityBookmarkDto } from './dto/bookmark-community.dto';
+import { Access } from 'src/common/decorators/access.decorator';
 
 @ApiTags('Community Bookmark')
 @Controller('community/bookmark')
 export class CommunityBookmarkController {
   constructor(private readonly service: CommunityBookmarkService) {}
 
+  @Access('bookmark', 'create')
   @Post('toggle')
   @ApiHeader({ name: 'x-user-id', required: true })
   async toggle(
@@ -33,6 +35,7 @@ export class CommunityBookmarkController {
   }
 
   // GET MY BOOKMARKS
+  @Access('bookmark', 'read')
   @Get()
   @ApiHeader({ name: 'x-user-id', required: true })
   async myBookmarks(@Headers('x-user-id') userIdHeader: string) {
@@ -44,6 +47,8 @@ export class CommunityBookmarkController {
 
     return this.service.getMyBookmarks(userId);
   }
+
+  @Access('bookmark', 'read')
   @Get('check/:postId')
   @ApiHeader({ name: 'x-user-id', required: true })
   checkBookmark(

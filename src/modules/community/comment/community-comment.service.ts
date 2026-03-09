@@ -4,11 +4,15 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CommunityCommentService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   async getComments(dto: any) {
     const { post_commu_id, limit = 10, offset = 0 } = dto;
@@ -95,7 +99,7 @@ export class CommunityCommentService {
         message: 'Comments fetched successfully!',
       };
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      this.logger.error('Error fetching comments:', 'GetCommentCommu', error);
       throw new InternalServerErrorException('Error fetching comments');
     }
   }
@@ -291,7 +295,7 @@ export class CommunityCommentService {
       };
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
-      console.error('Error updating comment:', error);
+      this.logger.error('Error updating comment:', 'UpdateComment', error);
       throw new InternalServerErrorException('Error updating comment');
     }
   }

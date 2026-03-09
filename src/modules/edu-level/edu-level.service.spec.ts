@@ -106,9 +106,7 @@ describe('EduLevelService', () => {
 
   describe('searchMaster', () => {
     it('should throw BadRequestException when no filter is provided', async () => {
-      await expect(service.searchMaster({})).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.searchMaster({})).rejects.toThrow(BadRequestException);
     });
 
     it('should return results when searching by edu_lev_id', async () => {
@@ -247,9 +245,7 @@ describe('EduLevelService', () => {
       const dbError = Object.assign(new Error('duplicate'), { code: '23505' });
       mockEduLevelRepo.save.mockRejectedValue(dbError);
 
-      await expect(service.create(createDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other DB error', async () => {
@@ -268,9 +264,9 @@ describe('EduLevelService', () => {
     it('should throw NotFoundException when edu level does not exist', async () => {
       mockEduLevelRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.update(999, { level_name: 'ม.2' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(999, { level_name: 'ม.2' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when no fields are provided', async () => {
@@ -300,18 +296,18 @@ describe('EduLevelService', () => {
       const dbError = Object.assign(new Error('duplicate'), { code: '23505' });
       mockEduLevelRepo.update.mockRejectedValue(dbError);
 
-      await expect(service.update(1, { level_name: 'ม.1' })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.update(1, { level_name: 'ม.1' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other DB error', async () => {
       mockEduLevelRepo.findOne.mockResolvedValue(mockEduLevel());
       mockEduLevelRepo.update.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.update(1, { level_name: 'ม.2' })).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.update(1, { level_name: 'ม.2' }),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 

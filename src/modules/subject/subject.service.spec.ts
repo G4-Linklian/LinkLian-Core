@@ -284,9 +284,9 @@ describe('SubjectService', () => {
     });
 
     it('should throw BadRequestException when credit is missing', async () => {
-      await expect(service.create({ ...createDto, credit: 0 })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create({ ...createDto, credit: 0 }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when hour_per_week is missing', async () => {
@@ -375,9 +375,7 @@ describe('SubjectService', () => {
 
     it('should update learning_area_id', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
-      mockDataSource.query.mockResolvedValue([
-        mockSubject({ learning_area_id: 20 }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockSubject({ learning_area_id: 20 })]);
 
       const result = await service.update(1, { learning_area_id: 20 });
 
@@ -389,9 +387,7 @@ describe('SubjectService', () => {
 
     it('should update name_th', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
-      mockDataSource.query.mockResolvedValue([
-        mockSubject({ name_th: 'คณิตศาสตร์' }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockSubject({ name_th: 'คณิตศาสตร์' })]);
 
       await service.update(1, { name_th: 'คณิตศาสตร์' });
 
@@ -402,9 +398,7 @@ describe('SubjectService', () => {
 
     it('should update name_en', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
-      mockDataSource.query.mockResolvedValue([
-        mockSubject({ name_en: 'Mathematics' }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockSubject({ name_en: 'Mathematics' })]);
 
       await service.update(1, { name_en: 'Mathematics' });
 
@@ -425,9 +419,7 @@ describe('SubjectService', () => {
 
     it('should update hour_per_week', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
-      mockDataSource.query.mockResolvedValue([
-        mockSubject({ hour_per_week: 6 }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockSubject({ hour_per_week: 6 })]);
 
       await service.update(1, { hour_per_week: 6 });
 
@@ -437,9 +429,7 @@ describe('SubjectService', () => {
 
     it('should update flag_valid to false', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
-      mockDataSource.query.mockResolvedValue([
-        mockSubject({ flag_valid: false }),
-      ]);
+      mockDataSource.query.mockResolvedValue([mockSubject({ flag_valid: false })]);
 
       await service.update(1, { flag_valid: false });
 
@@ -462,18 +452,18 @@ describe('SubjectService', () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
       mockDataSource.query.mockRejectedValue({ code: '23505' });
 
-      await expect(service.update(1, { subject_code: 'dup' })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.update(1, { subject_code: 'dup' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other error', async () => {
       mockSubjectRepo.findOne.mockResolvedValue(mockSubject());
       mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.update(1, { subject_code: 'err' })).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.update(1, { subject_code: 'err' }),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 

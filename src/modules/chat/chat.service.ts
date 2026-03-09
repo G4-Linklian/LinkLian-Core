@@ -17,8 +17,8 @@ import {
   SearchMessageDto,
   ChatSendEvent,
 } from './dto/chat.dto';
-import { connect } from 'amqplib';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class ChatService {
@@ -31,7 +31,8 @@ export class ChatService {
     private userSysChatNormalizeRepo: Repository<UserSysChatNormalize>,
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+    private readonly rabbitMQService: RabbitMQService,
+  ) { }
 
   // ========== Chat Methods ==========
 
@@ -312,11 +313,12 @@ export class ChatService {
         },
       );
 
-      // Commit transaction before sending to RabbitMQ
-      await queryRunner.commitTransaction();
-
       // Send event to RabbitMQ for real-time delivery
+      // Must succeed before committing — failure will trigger rollback
       await this.sendMessageToRabbitMQ(savedMessage);
+
+      // Commit transaction only after RabbitMQ succeeds
+      await queryRunner.commitTransaction();
 
       return {
         success: true,
@@ -337,40 +339,27 @@ export class ChatService {
    * Send message event to RabbitMQ for socket delivery
    */
   private async sendMessageToRabbitMQ(message: Message): Promise<void> {
-    try {
-      const mqUrl =
-        process.env.RABBITMQ_URL || 'amqp://user:password@localhost:5672/';
-      const connection = await connect(mqUrl);
-      const channel = await connection.createChannel();
-      const queue = 'socket_events';
+    const eventMessage: ChatSendEvent = {
+      type: 'CHAT_DELIVER',
+      payload: {
+        chat_id: message.chat_id,
+        sender_id: message.sender_id,
+        content: message.content,
+        reply_id: message.reply_id ?? null,
+        file_url: (message.file as object[]) ?? [],
+        created_at: message.created_at,
+      },
+    };
 
-      await channel.assertQueue(queue, { durable: true });
+    this.logger.debug(
+      'Publishing message to RabbitMQ:',
+      'ChatService',
+      eventMessage,
+    );
 
-      const eventMessage: ChatSendEvent = {
-        type: 'CHAT_DELIVER',
-        payload: {
-          chat_id: message.chat_id,
-          sender_id: message.sender_id,
-          content: message.content,
-          reply_id: message.reply_id ?? null,
-          file_url: (message.file as object[]) ?? [],
-          created_at: message.created_at,
-        },
-      };
+    // Reuse the shared channel — no new connection per call
+    await this.rabbitMQService.publish('linklian_events', 'chat.deliver', eventMessage);
 
-      channel.sendToQueue(queue, Buffer.from(JSON.stringify(eventMessage)), {
-        persistent: true,
-      });
-
-      await channel.close();
-      await connection.close();
-    } catch (mqError: unknown) {
-      // Log error but don't fail the message creation
-      this.logger.error(
-        'Error sending message to RabbitMQ:',
-        'SendMessageToRabbitMQ',
-        mqError,
-      );
-    }
+    this.logger.debug('Message published to RabbitMQ successfully', 'ChatService');
   }
 }

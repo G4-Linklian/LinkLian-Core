@@ -176,8 +176,8 @@ export class PostCommentService {
         total,
         hasMore: offset + limit < total,
       };
-    } catch (error) {
-      this.logger.error('getPostComments error:', error);
+    } catch (error : any) {
+      this.logger.error('getPostComments error', 'GetPostComments', error);
       throw new InternalServerErrorException('Error fetching comments');
     }
   }
@@ -339,9 +339,9 @@ export class PostCommentService {
           comment_id: newCommentId,
         },
       };
-    } catch (error) {
+    } catch (error : any) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('createPostComment error:', error);
+      this.logger.error('createPostComment error', 'CreatePostComment', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
@@ -404,14 +404,14 @@ export class PostCommentService {
         message: 'Comment updated successfully',
         data: result[0],
       };
-    } catch (error) {
+    } catch (error : any) {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException
       ) {
         throw error;
       }
-      this.logger.error('updatePostComment error:', error);
+      this.logger.error('updatePostComment error', 'UpdatePostComment', error);
       throw new InternalServerErrorException('Error updating comment');
     }
   }
@@ -506,7 +506,7 @@ export class PostCommentService {
       } finally {
         await queryRunner.release();
       }
-    } catch (error) {
+    } catch (error : any) {
       if (
         error instanceof ForbiddenException ||
         error instanceof BadRequestException ||
@@ -514,7 +514,7 @@ export class PostCommentService {
       ) {
         throw error;
       }
-      this.logger.error('deletePostComment error:', error);
+      this.logger.error('deletePostComment error', 'DeletePostComment', error);
       throw new InternalServerErrorException('Error deleting comment');
     }
   }

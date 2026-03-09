@@ -16,10 +16,11 @@ import {
   UpdateInstitutionDto,
   LoginInstitutionDto,
 } from './dto/institution.dto';
-import { hashPassword, generateJwtToken } from '../../common/utils/auth.util';
+import { hashPassword, generateJwtToken, generateInitialPassword } from '../../common/utils/auth.util';
 import { verifyPassword } from '../../common/utils/auth.util';
 import { AppLogger } from '../../common/logger/app-logger.service';
 import { institutionFields } from '../../common/interface/institution.interface';
+import { sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
 
 @Injectable()
 export class InstitutionService {
@@ -27,7 +28,7 @@ export class InstitutionService {
     @InjectRepository(Institution)
     private institutionRepo: Repository<Institution>,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   async findById(id: number) {
     const institution = await this.institutionRepo.findOne({
@@ -155,6 +156,8 @@ export class InstitutionService {
       dto.approve_status ||
       dto.from ||
       typeof dto.flag_valid === 'boolean';
+    
+    this.logger.debug('SearchInstitutionDto received:', 'SearchInstitution', dto);
 
     if (!hasInput) {
       throw new BadRequestException('No value input!');
@@ -235,7 +238,8 @@ export class InstitutionService {
     }
 
     try {
-      const hashedPassword: string = await hashPassword(dto.inst_password);
+      const initialPassword = generateInitialPassword();
+      const hashedPassword: string = await hashPassword(initialPassword);
 
       const newInstitution = this.institutionRepo.create({
         ...dto,
@@ -244,6 +248,15 @@ export class InstitutionService {
       });
 
       await this.institutionRepo.save(newInstitution);
+
+      sendInitialPasswordEmail(dto.inst_email, initialPassword).catch((err) => {
+        this.logger.error(
+          'Error sending initial password email:',
+          'CreateInstitution',
+          err,
+        );
+      });
+
       return { success: true, message: 'Institution created successfully!' };
     } catch (error: unknown) {
       if (

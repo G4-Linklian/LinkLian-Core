@@ -85,7 +85,7 @@ export class BookmarkService {
         data: bookmarks,
       };
     } catch (error) {
-      this.logger.error('Error fetching bookmarks:', error);
+      this.logger.error('Error fetching bookmarks:', 'GetBookmark', error);
       throw new InternalServerErrorException('Failed to fetch bookmarks');
     }
   }
@@ -145,7 +145,7 @@ export class BookmarkService {
         },
       };
     } catch (error) {
-      this.logger.error('Error toggling bookmark:', error);
+      this.logger.error('Error toggling bookmark:', 'ToggleBookmark', error);
       throw new InternalServerErrorException('Failed to toggle bookmark');
     }
   }
@@ -177,7 +177,7 @@ export class BookmarkService {
         deleted: result.length > 0,
       };
     } catch (error) {
-      this.logger.error('Error deleting bookmark:', error);
+      this.logger.error('Error deleting bookmark:', 'DeleteBookmark', error);
       throw new InternalServerErrorException('Failed to delete bookmark');
     }
   }

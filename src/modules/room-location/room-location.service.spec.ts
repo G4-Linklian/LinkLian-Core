@@ -41,12 +41,19 @@ const buildQueryRunnerMock = (queryResult: any = []) => ({
 describe('RoomLocationService', () => {
   let service: RoomLocationService;
 
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn().mockResolvedValue(null),
+  };
+
   const mockRepo = {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
   };
 
   const mockDataSource = {
@@ -353,9 +360,7 @@ describe('RoomLocationService', () => {
       qr.query.mockRejectedValue(new Error('DB error'));
       mockDataSource.createQueryRunner.mockReturnValue(qr);
 
-      await expect(
-        service.createBatch({ rooms: validRooms }),
-      ).rejects.toThrow();
+      await expect(service.createBatch({ rooms: validRooms })).rejects.toThrow();
       expect(qr.release).toHaveBeenCalledTimes(1);
     });
   });
@@ -366,9 +371,9 @@ describe('RoomLocationService', () => {
     it('should throw NotFoundException when room location does not exist', async () => {
       mockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.update(999, { room_number: '202' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(999, { room_number: '202' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when no fields are provided', async () => {
@@ -433,18 +438,18 @@ describe('RoomLocationService', () => {
       mockRepo.findOne.mockResolvedValue(mockRoom());
       mockRepo.update.mockRejectedValue({ code: '23505' });
 
-      await expect(service.update(1, { room_number: 'dup' })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.update(1, { room_number: 'dup' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw InternalServerErrorException on other update error', async () => {
       mockRepo.findOne.mockResolvedValue(mockRoom());
       mockRepo.update.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.update(1, { room_number: 'error' })).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        service.update(1, { room_number: 'error' }),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 

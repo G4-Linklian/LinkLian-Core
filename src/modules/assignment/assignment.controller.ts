@@ -88,10 +88,10 @@ export class AssignmentController {
       }
 
       return await this.assignmentService.createGroup(parsedUserId, dto);
-    } catch (error) {
+    } catch (error : any) {
       this.logger.error(
-        '[Controller] createGroup error:',
-        'Error creating group',
+        'createGroup error:',
+        'CreateGroup',
         error,
       );
 
@@ -134,10 +134,10 @@ export class AssignmentController {
       );
 
       return result;
-    } catch (error) {
+    } catch (error : any) {
       this.logger.error(
-        '[Controller] updateGroup error:',
-        'Update Group',
+        'updateGroup error:',
+        'UpdateGroup',
         error,
       );
 

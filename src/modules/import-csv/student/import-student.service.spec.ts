@@ -27,20 +27,17 @@ jest.mock('../shared', () => ({
   calculateDataHash: jest.fn().mockReturnValue('mock-hash'),
   chunkArray: (arr: any[], size: number) => {
     const chunks: any[][] = [];
-    for (let i = 0; i < arr.length; i += size)
-      chunks.push(arr.slice(i, i + size));
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
     return chunks;
   },
-  processBatchesParallel: jest
-    .fn()
-    .mockImplementation(async (batches: any[], fn: (b: any) => any) => {
-      const results: any[] = [];
-      for (const batch of batches) {
-        const res = await fn(batch);
-        results.push(...res);
-      }
-      return results;
-    }),
+  processBatchesParallel: jest.fn().mockImplementation(async (batches: any[], fn: (b: any) => any) => {
+    const results: any[] = [];
+    for (const batch of batches) {
+      const res = await fn(batch);
+      results.push(...res);
+    }
+    return results;
+  }),
   createValidationToken: jest.fn().mockReturnValue('mock-student-token'),
   verifyValidationToken: jest.fn().mockReturnValue({
     type: 'student',
@@ -51,11 +48,7 @@ jest.mock('../shared', () => ({
   }),
   IMPORT_BATCH_SIZE: 100,
   IMPORT_MAX_CONCURRENT_BATCHES: 3,
-  USER_STATUS_MAP: {
-    active: 'Active',
-    inactive: 'Inactive',
-    graduated: 'Graduated',
-  },
+  USER_STATUS_MAP: { active: 'Active', inactive: 'Inactive', graduated: 'Graduated' },
 }));
 
 import { parseExcelFile } from '../shared/utils/excel.util';
@@ -115,14 +108,14 @@ describe('ImportStudentService', () => {
   const mockBuffer = Buffer.from('mock-excel');
 
   const mockSchoolRow = {
-    รหัสนักเรียน: 'S001',
-    ชื่อจริง: 'สมชาย',
-    นามสกุล: 'ใจดี',
-    อีเมล: 'somchai@test.com',
+    'รหัสนักเรียน': 'S001',
+    'ชื่อจริง': 'สมชาย',
+    'นามสกุล': 'ใจดี',
+    'อีเมล': 'somchai@test.com',
     'ระดับชั้น/ชั้นปี': 'ม.4',
-    สถานะผู้ใช้: 'active',
-    แผนการเรียน: 'วิทย์-คณิต',
-    ห้องเรียน: 'ม.4/1',
+    'สถานะผู้ใช้': 'active',
+    'แผนการเรียน': 'วิทย์-คณิต',
+    'ห้องเรียน': 'ม.4/1',
   };
 
   beforeEach(async () => {
@@ -154,11 +147,7 @@ describe('ImportStudentService', () => {
       eduLevelRepo.find.mockResolvedValue([]);
       programRepo.find.mockResolvedValue([]);
 
-      const result = await service.validateStudentData(
-        1,
-        'unknown',
-        mockBuffer,
-      );
+      const result = await service.validateStudentData(1, 'unknown', mockBuffer);
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('summary');
@@ -183,15 +172,15 @@ describe('ImportStudentService', () => {
 
     it('should validate university student data', async () => {
       const uniRow = {
-        รหัสนักศึกษา: 'U001',
-        ชื่อจริง: 'สมหญิง',
-        นามสกุล: 'รักเรียน',
-        อีเมล: 'somying@test.com',
+        'รหัสนักศึกษา': 'U001',
+        'ชื่อจริง': 'สมหญิง',
+        'นามสกุล': 'รักเรียน',
+        'อีเมล': 'somying@test.com',
         'ระดับชั้น/ชั้นปี': 'ปริญญาตรี',
-        สถานะผู้ใช้: 'active',
-        คณะ: 'วิศวกรรมศาสตร์',
-        ภาค: 'คอมพิวเตอร์',
-        สาขา: 'Software',
+        'สถานะผู้ใช้': 'active',
+        'คณะ': 'วิศวกรรมศาสตร์',
+        'ภาค': 'คอมพิวเตอร์',
+        'สาขา': 'Software',
       };
       mockParseExcelFile.mockResolvedValue([uniRow]);
       userSysRepo.find.mockResolvedValue([]);
@@ -200,11 +189,7 @@ describe('ImportStudentService', () => {
       ]);
       programRepo.find.mockResolvedValue([]);
 
-      const result = await service.validateStudentData(
-        1,
-        'university',
-        mockBuffer,
-      );
+      const result = await service.validateStudentData(1, 'university', mockBuffer);
 
       expect(result.success).toBe(true);
     });
@@ -228,29 +213,17 @@ describe('ImportStudentService', () => {
     it('should save students and return success', async () => {
       mockParseExcelFile.mockResolvedValue([mockSchoolRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'student',
-        instId: 1,
-        dataHash: 'mock-hash',
-        validCount: 1,
-        duplicateCount: 0,
+        type: 'student', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
       });
 
       const mockEduLevel = { edu_lev_id: 1, level_name: 'ม.4' };
       const mockStudyPlan = {
-        program_id: 10,
-        program_name: 'วิทย์-คณิต',
-        program_type: 'study_plan',
-        parent_id: null,
-        flag_valid: true,
-        inst_id: 1,
+        program_id: 10, program_name: 'วิทย์-คณิต', program_type: 'study_plan',
+        parent_id: null, flag_valid: true, inst_id: 1,
       };
       const mockClassroom = {
-        program_id: 11,
-        program_name: 'ม.4/1',
-        program_type: 'class',
-        parent_id: 10,
-        flag_valid: true,
-        inst_id: 1,
+        program_id: 11, program_name: 'ม.4/1', program_type: 'class',
+        parent_id: 10, flag_valid: true, inst_id: 1,
       };
 
       eduLevelRepo.find.mockResolvedValue([mockEduLevel]);
@@ -262,12 +235,7 @@ describe('ImportStudentService', () => {
         .mockResolvedValueOnce([{ user_sys_id: 100 }]) // INSERT user_sys
         .mockResolvedValueOnce([]); // INSERT user_sys_program_normalize
 
-      const result = await service.saveStudentData(
-        1,
-        'school',
-        mockBuffer,
-        'mock-token',
-      );
+      const result = await service.saveStudentData(1, 'school', mockBuffer, 'mock-token');
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('สำเร็จ');
@@ -277,11 +245,7 @@ describe('ImportStudentService', () => {
     it('should rollback and rethrow on error', async () => {
       mockParseExcelFile.mockResolvedValue([mockSchoolRow]);
       mockVerifyValidationToken.mockReturnValue({
-        type: 'student',
-        instId: 1,
-        dataHash: 'mock-hash',
-        validCount: 1,
-        duplicateCount: 0,
+        type: 'student', instId: 1, dataHash: 'mock-hash', validCount: 1, duplicateCount: 0,
       });
 
       eduLevelRepo.find.mockRejectedValue(new Error('DB error'));

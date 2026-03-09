@@ -24,11 +24,12 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-
 import { CommunityService } from './community.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { FileStorageService } from '../../file-storage/file-storage.service';
 import { UpdateCommunityDto } from './dto/update-community.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
+import { Access } from 'src/common/decorators/access.decorator';
 
 @ApiTags('Community')
 @Controller('community')
@@ -36,10 +37,11 @@ export class CommunityController {
   constructor(
     private readonly service: CommunityService,
     private readonly fileStorageService: FileStorageService,
-  ) {}
+    private readonly logger: AppLogger,
+  ) { }
 
   // Create Community
-
+  @Access('community', 'create')
   @Post()
   @ApiOperation({ summary: 'Create new community' })
   @ApiHeader({
@@ -77,14 +79,28 @@ export class CommunityController {
     @Body() dto: CreateCommunityDto,
     @Req() req: any,
   ) {
-    console.log('RAW BODY:', req.body);
-    console.log('DTO is_private:', dto.is_private, typeof dto.is_private);
+    this.logger.log('RAW BODY:', 'CreateCommunity', req.body);
+    this.logger.log(
+      JSON.stringify({
+        label: 'DTO is_private',
+        context: 'CreateCommunity',
+        value: dto.is_private,
+        type: typeof dto.is_private,
+      }),
+    );
     const userId = parseInt(userIdHeader, 10);
 
     if (isNaN(userId)) {
       throw new BadRequestException('Invalid x-user-id');
     }
-    console.log('DTO is_private:', dto.is_private, typeof dto.is_private);
+    this.logger.log(
+      JSON.stringify({
+        label: 'DTO is_private',
+        context: 'CreateCommunity',
+        value: dto.is_private,
+        type: typeof dto.is_private,
+      }),
+    );
 
     if (!file) {
       throw new BadRequestException('Image is required');
@@ -108,6 +124,7 @@ export class CommunityController {
     });
   }
 
+  @Access('community', 'read')
   @Get('tag/search')
   @ApiOperation({ summary: 'Search community tags' })
   @ApiQuery({
@@ -119,6 +136,7 @@ export class CommunityController {
     return this.service.searchTag(keyword);
   }
 
+  @Access('community', 'read')
   @Get()
   @ApiOperation({ summary: 'Get communities (owner or search)' })
   @ApiHeader({
@@ -143,6 +161,7 @@ export class CommunityController {
     return this.service.listCommunity(userId, keyword);
   }
 
+  @Access('community', 'read')
   @Get('detail/:id')
   @ApiOperation({ summary: 'Get community by ID' })
   @ApiHeader({
@@ -164,6 +183,7 @@ export class CommunityController {
     return this.service.getCommunityDetail(userId, id);
   }
 
+  @Access('community', 'read')
   @Get(':id/posts')
   @ApiHeader({ name: 'x-user-id', required: true })
   @ApiOperation({ summary: 'Get posts in community (feed style)' })
@@ -180,12 +200,16 @@ export class CommunityController {
     return this.service.getCommunityFeed(userId, communityId);
   }
 
+  @Access('community', 'update')
+  @Access('community', 'update')
   @Put(':communityId')
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
   @ApiHeader({ name: 'x-user-id', required: true })
-  @ApiBody({ type: UpdateCommunityDto })
   async updateCommunity(
     @Headers('x-user-id') userIdHeader: string,
     @Param('communityId', ParseIntPipe) communityId: number,
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: UpdateCommunityDto,
   ) {
     const userId = parseInt(userIdHeader, 10);
@@ -194,12 +218,35 @@ export class CommunityController {
       throw new BadRequestException('Invalid x-user-id');
     }
 
-    console.log('DTO:', dto);
+    if (file) {
+
+      if (!file.mimetype.startsWith('image/')) {
+        throw new BadRequestException('Only image files are allowed');
+      }
+
+      const uploadResult = await this.fileStorageService.uploadFiles(
+        'community',
+        'banner',
+        [file],
+      );
+
+      dto['image_banner'] = uploadResult.files[0].fileUrl;
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        label: 'UpdateCommunity',
+        communityId,
+        name: dto.name,
+      }),
+
+    );
 
     return this.service.updateCommunity(userId, communityId, dto);
   }
 
   // HARD DELETE COMMUNITY
+  @Access('community', 'delete')
   @Delete(':communityId/hard')
   @ApiHeader({ name: 'x-user-id', required: true })
   async hardDeleteCommunity(
