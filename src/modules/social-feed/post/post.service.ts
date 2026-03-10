@@ -196,7 +196,34 @@ export class PostService {
       }
 
       // Transform result to handle anonymous posts
-      const posts = result.map((row: any) => {
+      const sanitizedRows = result.filter((row: any) => {
+        const postId = Number(row?.post_id);
+        const postContentId = Number(row?.post_content_id);
+        const userSysId = Number(row?._user_sys_id);
+        const isValid =
+          Number.isFinite(postId) &&
+          postId > 0 &&
+          Number.isFinite(postContentId) &&
+          postContentId > 0 &&
+          Number.isFinite(userSysId) &&
+          userSysId > 0;
+
+        if (!isValid) {
+          this.logger.warn(
+            `Skipping invalid post row in GetPostsInClass`,
+            'GetPostsInClass',
+            {
+              post_id: row?.post_id,
+              post_content_id: row?.post_content_id,
+              user_sys_id: row?._user_sys_id,
+            },
+          );
+        }
+
+        return isValid;
+      });
+
+      const posts = sanitizedRows.map((row: any) => {
         const isAnonymous = row.is_anonymous;
         const userSysId = Number(row._user_sys_id);
         const sectionId = dto.section_id;
@@ -1245,6 +1272,16 @@ a.is_group,
   }
 
   async getPostById(postId: number) {
+    const safePostId = Number(postId);
+    if (!Number.isFinite(safePostId) || safePostId <= 0) {
+      this.logger.warn(
+        `Invalid postId received in getPostById`,
+        'GetPostById',
+        { postId },
+      );
+      throw new BadRequestException('invalid post_id');
+    }
+
     const query = `
     SELECT
       pic.post_id,
@@ -1308,7 +1345,7 @@ a.is_group,
       a.is_group
   `;
 
-    const result = await this.dataSource.query(query, [postId]);
+    const result = await this.dataSource.query(query, [safePostId]);
 
     if (!result.length) {
       throw new NotFoundException('Post not found');
