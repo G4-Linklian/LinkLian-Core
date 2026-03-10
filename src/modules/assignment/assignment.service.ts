@@ -16,22 +16,20 @@ export class AssignmentService {
   constructor(
     private readonly logger: AppLogger,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async getClassAssignments(userId: number, dto: GetClassAssignmentsDto) {
     const { section_id, role, offset = 0, limit = 10 } = dto;
 
     const isStudent = role === 'high school student' || role === 'uni student';
 
-    this.logger.log(
-      `get assignment function`, 'GetClassAssignments', {
+    this.logger.log(`get assignment function`, 'GetClassAssignments', {
       section_id,
       role,
       userId,
       offset,
-      limit
-    }
-    );
+      limit,
+    });
 
     try {
       if (isStudent && userId) {
@@ -45,7 +43,11 @@ export class AssignmentService {
         return await this.getTeacherAssignments(section_id, offset, limit);
       }
     } catch (error: any) {
-      this.logger.error('getStudentAssignments error:', 'GetClassAssignments', error);
+      this.logger.error(
+        'getStudentAssignments error:',
+        'GetClassAssignments',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching assignments');
     }
   }
@@ -581,7 +583,11 @@ LIMIT 1
         data: final_result,
       };
     } catch (error: any) {
-      this.logger.error('get post assignment error', 'GetPostAssignment', error);
+      this.logger.error(
+        'get post assignment error',
+        'GetPostAssignment',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching assignment post');
     }
   }
@@ -652,12 +658,12 @@ WHERE e.section_id = pic.section_id
   AND e.flag_valid = true
   AND u.flag_valid = true
 `,
-        [assignment_id, member_ids]
+        [assignment_id, member_ids],
       );
 
       if (validMembers.length !== member_ids.length) {
         throw new BadRequestException(
-          'Some members are inactive or not enrolled in this section'
+          'Some members are inactive or not enrolled in this section',
         );
       }
 
@@ -773,8 +779,8 @@ WHERE e.section_id = pic.section_id
       }
 
       // VALIDATION: สมาชิกต้อง Active และอยู่ใน section
-const validMembers = await manager.query(
-`
+      const validMembers = await manager.query(
+        `
 SELECT u.user_sys_id
 FROM user_sys u
 JOIN enrollment e ON u.user_sys_id = e.student_id
@@ -786,14 +792,14 @@ WHERE e.section_id = pic.section_id
   AND e.flag_valid = true
   AND u.flag_valid = true
 `,
-[assignment_id, member_ids]
-);
+        [assignment_id, member_ids],
+      );
 
-if (validMembers.length !== member_ids.length) {
-  throw new BadRequestException(
-    'Some members are inactive or not enrolled in this section'
-  );
-}
+      if (validMembers.length !== member_ids.length) {
+        throw new BadRequestException(
+          'Some members are inactive or not enrolled in this section',
+        );
+      }
 
       /**
        * 2. update ชื่อกลุ่ม
@@ -1002,8 +1008,9 @@ if (validMembers.length !== member_ids.length) {
           a.is_group,
           a.due_date,
 
-          ${isStudent
-          ? `
+          ${
+            isStudent
+              ? `
           (
             SELECT sb.submitted_at
             FROM submission sb
@@ -1018,8 +1025,8 @@ if (validMembers.length !== member_ids.length) {
             LIMIT 1
           ) AS submitted_at,
           `
-          : ''
-        }
+              : ''
+          }
 
           (
             SELECT COUNT(*)::int

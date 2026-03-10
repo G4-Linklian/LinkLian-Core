@@ -35,8 +35,12 @@ export class ClassInfoService {
     try {
       const result = await this.dataSource.query(query, [sectionId]);
       return result;
-    } catch (error : any) {
-      this.logger.error('Error fetching section educators', 'GetSectionEducators', error);
+    } catch (error: any) {
+      this.logger.error(
+        'Error fetching section educators',
+        'GetSectionEducators',
+        error,
+      );
       throw new InternalServerErrorException(
         'Error fetching section educators',
       );
@@ -137,7 +141,8 @@ export class ClassInfoService {
         sectionId,
       ]);
       this.logger.log(
-        `Educators query returned ${educators.length} educators`, 'GetClassInfo',
+        `Educators query returned ${educators.length} educators`,
+        'GetClassInfo',
       );
       const final_result = {
         room_location: roomLocation,
@@ -150,7 +155,7 @@ export class ClassInfoService {
         message: 'Class info fetched successfully',
         data: final_result,
       };
-    } catch (error : any) {
+    } catch (error: any) {
       this.logger.error('Error fetching class info', 'GetClassInfo', error);
       throw new InternalServerErrorException('Error fetching class info');
     }

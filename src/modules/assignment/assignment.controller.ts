@@ -88,12 +88,8 @@ export class AssignmentController {
       }
 
       return await this.assignmentService.createGroup(parsedUserId, dto);
-    } catch (error : any) {
-      this.logger.error(
-        'createGroup error:',
-        'CreateGroup',
-        error,
-      );
+    } catch (error: any) {
+      this.logger.error('createGroup error:', 'CreateGroup', error);
 
       if (error.message === 'You must be a member of the group you create') {
         throw new BadRequestException(error.message);
@@ -134,12 +130,8 @@ export class AssignmentController {
       );
 
       return result;
-    } catch (error : any) {
-      this.logger.error(
-        'updateGroup error:',
-        'UpdateGroup',
-        error,
-      );
+    } catch (error: any) {
+      this.logger.error('updateGroup error:', 'UpdateGroup', error);
 
       if (error.message === 'You cannot remove yourself from the group') {
         throw new BadRequestException(error.message);
