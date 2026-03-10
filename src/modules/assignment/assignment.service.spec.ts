@@ -340,6 +340,11 @@ describe('AssignmentService', () => {
             .fn()
             .mockResolvedValueOnce([{ assignment_id: 1 }])
             .mockResolvedValueOnce([{ student_id: 1 }])
+            .mockResolvedValueOnce([
+              { user_sys_id: 1 },
+              { user_sys_id: 2 },
+              { user_sys_id: 3 },
+            ])
             .mockResolvedValueOnce([{ group_id: 10 }])
             .mockResolvedValueOnce([]),
         };
@@ -385,6 +390,7 @@ describe('AssignmentService', () => {
           query: jest
             .fn()
             .mockResolvedValueOnce([{ group_id: 10 }])
+            .mockResolvedValueOnce([{ user_sys_id: 1 }, { user_sys_id: 2 }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]),
