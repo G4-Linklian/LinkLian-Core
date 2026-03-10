@@ -8,28 +8,8 @@ services:
     # volumes:
     #   - .:/app
       # - /app/node_modules
-    environment:
-      - PORT=${PORT}
-      - PG_HOST=${PG_HOST}
-      - PG_DATABASE=${PG_DATABASE}
-      - PG_USER=${PG_USER}
-      - PG_PASSWORD=${PG_PASSWORD}
-      - PG_PORT=${PG_PORT}
-      - SALTNUMBER=${SALTNUMBER}
-      - JWT_SECRET=${JWT_SECRET}
-      - TOKEN_EXPIRES_IN=${TOKEN_EXPIRES_IN}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - RABBITMQ_URL=${RABBITMQ_URL}
-      - AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
-      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
-      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
-      - API_PREFIX=${API_PREFIX}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    env_file:
+      - .env
     command: npm run start:prod
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5400/health"]
