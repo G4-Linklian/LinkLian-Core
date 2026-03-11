@@ -49,7 +49,12 @@ describe('FeedService', () => {
   // ─── getStudentClassFeed ───────────────────────────────────────────────────
 
   describe('getStudentClassFeed', () => {
-    const dto: GetClassFeedDto = { user_id: 1, semester_id: 2, limit: 10, offset: 0 };
+    const dto: GetClassFeedDto = {
+      user_id: 1,
+      semester_id: 2,
+      limit: 10,
+      offset: 0,
+    };
 
     it('should return student class feed successfully', async () => {
       mockQuery.mockResolvedValueOnce([mockClassRow]);
@@ -72,7 +77,10 @@ describe('FeedService', () => {
       mockQuery.mockResolvedValueOnce([]);
       await service.getStudentClassFeed(dto);
       expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
-        dto.user_id, dto.semester_id, dto.limit, dto.offset,
+        dto.user_id,
+        dto.semester_id,
+        dto.limit,
+        dto.offset,
       ]);
     });
 
@@ -99,7 +107,10 @@ describe('FeedService', () => {
     });
 
     it('should return multiple classes', async () => {
-      mockQuery.mockResolvedValueOnce([mockClassRow, { ...mockClassRow, section_id: 2 }]);
+      mockQuery.mockResolvedValueOnce([
+        mockClassRow,
+        { ...mockClassRow, section_id: 2 },
+      ]);
       const result = await service.getStudentClassFeed(dto);
       expect(result.data).toHaveLength(2);
     });
@@ -122,7 +133,12 @@ describe('FeedService', () => {
   // ─── getTeacherClassFeed ───────────────────────────────────────────────────
 
   describe('getTeacherClassFeed', () => {
-    const dto: GetClassFeedDto = { user_id: 10, semester_id: 2, limit: 10, offset: 0 };
+    const dto: GetClassFeedDto = {
+      user_id: 10,
+      semester_id: 2,
+      limit: 10,
+      offset: 0,
+    };
     const mockTeacherRow = { ...mockClassRow, position: 'main_teacher' };
 
     it('should return teacher class feed successfully', async () => {
@@ -146,7 +162,10 @@ describe('FeedService', () => {
       mockQuery.mockResolvedValueOnce([]);
       await service.getTeacherClassFeed(dto);
       expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
-        dto.user_id, dto.semester_id, dto.limit, dto.offset,
+        dto.user_id,
+        dto.semester_id,
+        dto.limit,
+        dto.offset,
       ]);
     });
 
@@ -180,7 +199,10 @@ describe('FeedService', () => {
     });
 
     it('should return multiple sections', async () => {
-      mockQuery.mockResolvedValueOnce([mockTeacherRow, { ...mockTeacherRow, section_id: 2 }]);
+      mockQuery.mockResolvedValueOnce([
+        mockTeacherRow,
+        { ...mockTeacherRow, section_id: 2 },
+      ]);
       const result = await service.getTeacherClassFeed(dto);
       expect(result.data).toHaveLength(2);
     });
