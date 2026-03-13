@@ -38,6 +38,8 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
+import { QuizModule } from './modules/quiz/quiz.module';
 
 @Module({
   imports: [
@@ -64,6 +66,8 @@ import { RequestMethod } from '@nestjs/common';
     RoleModule,
     AdminModule,
     ChatModule,
+    AiChatModule,
+    QuizModule,
     BuildingModule,
     RoomLocationModule,
     FileStorageModule,
@@ -115,6 +119,6 @@ export class AppModule implements NestModule {
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )
-      .forRoutes('*');
+      // .forRoutes('*');
   }
 }
