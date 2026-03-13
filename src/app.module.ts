@@ -33,6 +33,7 @@ import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
 import { BullMQModule } from './common/bullmq/bullmq.module';
+import { AiModule } from './modules/ai/ai.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
@@ -87,6 +88,7 @@ import { RequestMethod } from '@nestjs/common';
     ImportSectionScheduleModule,
     ImportEnrollmentModule,
     CommunityModule,
+    AiModule,
     LoggerModule,
     RabbitMQModule,
     BullMQModule,

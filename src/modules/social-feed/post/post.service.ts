@@ -16,10 +16,12 @@ import {
   UpdatePostDto,
   GetPostsInClassDto,
   SearchPostDto,
+  SearchPostMasterDto,
 } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
 import { AppLogger } from '../../../common/logger/app-logger.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
 @Injectable()
 export class PostService {
   constructor(
@@ -29,9 +31,10 @@ export class PostService {
     private postInClassRepo: Repository<PostInClass>,
     @InjectRepository(PostAttachment)
     private postAttachmentRepo: Repository<PostAttachment>,
+    private readonly bullmq: BullMQService,
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   /**
    * Check if user is in section (authorization)
@@ -83,9 +86,9 @@ export class PostService {
   async getPostsInClass(dto: GetPostsInClassDto): Promise<BaseResponse<any[]>> {
     this.logger.log(
       `Fetching posts`, 'GetPostsInClass', {
-        section_id: dto.section_id,
-        type: dto.type,
-      }
+      section_id: dto.section_id,
+      type: dto.type,
+    }
     );
 
     const values: any[] = [dto.section_id];
@@ -218,19 +221,19 @@ export class PostService {
           is_group: row.is_group ?? null,
           user: isAnonymous
             ? {
-                user_sys_id: userSysId,
-                email: null,
-                profile_pic: null,
-                display_name: displayName,
-                role_name: null,
-              }
+              user_sys_id: userSysId,
+              email: null,
+              profile_pic: null,
+              display_name: displayName,
+              role_name: null,
+            }
             : {
-                user_sys_id: userSysId,
-                email: row._email,
-                profile_pic: row._profile_pic,
-                display_name: row._display_name,
-                role_name: row._role_name,
-              },
+              user_sys_id: userSysId,
+              email: row._email,
+              profile_pic: row._profile_pic,
+              display_name: row._display_name,
+              role_name: row._role_name,
+            },
           attachments: row.attachments || [],
         };
       });
@@ -244,7 +247,7 @@ export class PostService {
         message: 'Posts retrieved successfully',
         data: posts,
       };
-    } catch (error : any) {
+    } catch (error: any) {
       this.logger.error('Error getting posts in class', 'GetPostInClass', error);
       throw new InternalServerErrorException('Error fetching posts');
     }
@@ -260,6 +263,18 @@ export class PostService {
     await queryRunner.startTransaction();
 
     const warnings: any[] = [];
+    let announcementSummaryJobData: {
+      post_content_id: string;
+      title: string;
+      content: string;
+      file: {
+        attachment_id: string;
+        file_url: string;
+        file_type: string;
+        original_name: string | null;
+      }[];
+      file_count: number;
+    } | null = null;
 
     try {
       // Determine section_ids (support both single and multiple)
@@ -405,6 +420,38 @@ export class PostService {
         this.logger.log('No attachments to process', 'CreatePost');
       }
 
+      // 3.5 Handle AI summary generation for announcement posts
+      if (dto.post_type === 'announcement') {
+        const pdfFiles = attachments.filter((attachment) => {
+          const fileType = String(attachment.file_type || '').toLowerCase();
+          return fileType === 'pdf' || fileType.includes('pdf');
+        });
+
+        if (pdfFiles.length > 0) {
+          announcementSummaryJobData = {
+            post_content_id: String(postContent.post_content_id),
+            title: postContent.title ?? '',
+            content: postContent.content ?? '',
+            file: pdfFiles.map((attachment) => ({
+              attachment_id: String(attachment.attachment_id),
+              file_url: attachment.file_url,
+              file_type: String(attachment.file_type).toLowerCase(),
+              original_name: attachment.original_name ?? null,
+            })),
+            file_count: pdfFiles.length,
+          };
+        } else {
+          this.logger.log(
+            'Announcement post has no PDF attachment, skipping AI summary queue',
+            'CreatePost',
+            {
+              post_content_id: postContent.post_content_id,
+              attachment_count: attachments.length,
+            },
+          );
+        }
+      }
+
       // 4. Handle assignment-specific logic if post_type is 'assignment'
       const assignmentIds: number[] = [];
       const createdGroups: any[] = [];
@@ -513,6 +560,19 @@ export class PostService {
       }
 
       await queryRunner.commitTransaction();
+
+      if (announcementSummaryJobData) {
+        await this.bullmq.addJob({
+          queue: 'ai_summary_queue',
+          job: 'post-summary',
+          data: announcementSummaryJobData,
+        });
+
+        this.logger.log('Announcement summary job queued', 'CreatePost', {
+          post_content_id: announcementSummaryJobData.post_content_id,
+          file_count: announcementSummaryJobData.file_count,
+        });
+      }
 
       const responseData = {
         post_ids: postIds,
@@ -654,8 +714,8 @@ export class PostService {
       // Check ownership
       if (ownerUserId !== userId) {
         this.logger.log(`Permission denied`, 'UpdatePost', {
-            ownerUserId,
-            requesterId: userId,
+          ownerUserId,
+          requesterId: userId,
         });
         throw new ForbiddenException('You are not allowed to update this post');
       }
@@ -979,9 +1039,9 @@ export class PostService {
       }
 
       this.logger.log(`delete post detail`, 'DeletePost', {
-          targetPostIds,
-          ownerUserId,
-          requesterId: userId,
+        targetPostIds,
+        ownerUserId,
+        requesterId: userId,
       });
 
       // Check ownership
@@ -1212,19 +1272,19 @@ a.is_group,
 
           user: isAnonymous
             ? {
-                user_sys_id: userSysId,
-                email: null,
-                profile_pic: null,
-                display_name: displayName,
-                role_name: null,
-              }
+              user_sys_id: userSysId,
+              email: null,
+              profile_pic: null,
+              display_name: displayName,
+              role_name: null,
+            }
             : {
-                user_sys_id: userSysId,
-                email: row.email,
-                profile_pic: row.profile_pic,
-                display_name: row._display_name,
-                role_name: row.role_name,
-              },
+              user_sys_id: userSysId,
+              email: row.email,
+              profile_pic: row.profile_pic,
+              display_name: row._display_name,
+              role_name: row.role_name,
+            },
           attachments: row.attachments || [],
         };
       });
@@ -1338,19 +1398,19 @@ a.is_group,
 
       user: isAnonymous
         ? {
-            user_sys_id: userSysId,
-            email: null,
-            profile_pic: null,
-            display_name: displayName,
-            role_name: null,
-          }
+          user_sys_id: userSysId,
+          email: null,
+          profile_pic: null,
+          display_name: displayName,
+          role_name: null,
+        }
         : {
-            user_sys_id: userSysId,
-            email: row._email,
-            profile_pic: row._profile_pic,
-            display_name: row._display_name,
-            role_name: row._role_name,
-          },
+          user_sys_id: userSysId,
+          email: row._email,
+          profile_pic: row._profile_pic,
+          display_name: row._display_name,
+          role_name: row._role_name,
+        },
 
       attachments: row.attachments || [],
     };
@@ -1360,5 +1420,39 @@ a.is_group,
       message: 'Post retrieved successfully',
       data: post,
     };
+  }
+
+  async searchPostMaster(dto: SearchPostMasterDto) {
+    const hasInput =
+      dto.post_content_id;
+
+    if (!hasInput) {
+      throw new BadRequestException('No value input!');
+    }
+
+    let query = `
+      SELECT * FROM post_content pc
+      LEFT JOIN post_attachment pa ON pc.post_content_id = pa.post_content_id AND pa.flag_valid = true
+      WHERE 1=1
+    `
+
+    const values: any[] = [];
+    let index = 1;
+
+    if (dto.post_content_id) {
+      query += ` AND pc.post_content_id = $${index++}`;
+      values.push(dto.post_content_id);
+    }
+
+    try {
+      const result = await this.dataSource.query(
+        query,
+        values,
+      );
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      this.logger.error('Error querying sections:', 'SearchPostMaster', error);
+      throw new InternalServerErrorException('Internal server error');
+    }
   }
 }

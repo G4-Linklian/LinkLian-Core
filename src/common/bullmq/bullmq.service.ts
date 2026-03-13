@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Queue, Worker, Job, QueueEvents, ConnectionOptions } from 'bullmq';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class BullMQService implements OnModuleInit, OnModuleDestroy {
@@ -44,25 +45,26 @@ export class BullMQService implements OnModuleInit, OnModuleDestroy {
   /**
    * เพิ่ม Job เข้า Queue
    */
-  async addJob<T extends object>(
-    queueName: string,
-    jobName: string,
-    data: T,
-    options?: {
-      delay?: number;
-      attempts?: number;
-      priority?: number;
-      removeOnComplete?: boolean | number;
-      removeOnFail?: boolean | number;
-    },
-  ): Promise<Job<T>> {
-    const queue = this.getQueue(queueName);
-    const job = await queue.add(jobName, data, {
-      delay: options?.delay,
-      attempts: options?.attempts ?? 3,
-      priority: options?.priority,
-      removeOnComplete: options?.removeOnComplete ?? 100,
-      removeOnFail: options?.removeOnFail ?? 200,
+  async addJob<T extends object = object>(input: {
+    queue: string;
+    job: string;
+    data: T;
+    delay?: number;
+    attempts?: number;
+    // Optional advanced settings (kept for backward compatibility)
+    priority?: number;
+    removeOnComplete?: boolean | number;
+    removeOnFail?: boolean | number;
+  }): Promise<Job<T>> {
+    const queue = this.getQueue(input.queue);
+    const jobId = `${input.job}_${uuidv4()}`;
+    const job = await queue.add(input.job, input.data, {
+      jobId,
+      delay: input.delay,
+      attempts: input.attempts ?? 3,
+      priority: input.priority,
+      removeOnComplete: input.removeOnComplete ?? 100,
+      removeOnFail: input.removeOnFail ?? 200,
       backoff: {
         type: 'exponential',
         delay: 2000,
@@ -70,8 +72,13 @@ export class BullMQService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.logger.log(
-      `Job "${jobName}" added to queue "${queueName}" (id: ${job.id})`,
+      `Job added to queue`,
       'BullMQService',
+      {
+        job: input.job,
+        queue: input.queue,
+        jobId: job.id,
+      },
     );
     return job;
   }
@@ -81,41 +88,51 @@ export class BullMQService implements OnModuleInit, OnModuleDestroy {
   /**
    * เพิ่ม Job เข้า Queue แล้วรอ Worker ทำงานเสร็จ → ได้ result กลับมา
    */
-  async addJobAndWait<TData extends object, TResult = unknown>(
-    queueName: string,
-    jobName: string,
-    data: TData,
-    options?: {
-      delay?: number;
-      attempts?: number;
-      timeout?: number; // ms — timeout รอผล (default: 30s)
-    },
-  ): Promise<TResult> {
-    const queue = this.getQueue(queueName);
-    const queueEvents = this.getQueueEvents(queueName);
+  async addJobAndWait<TResult = unknown>(input: {
+    queue: string;
+    job: string;
+    data: object;
+    timeout?: number; // ms — timeout รอผล (default: 30s)
+    delay?: number;
+    attempts?: number;
+  }): Promise<TResult> {
+    const queue = this.getQueue(input.queue);
+    const queueEvents = this.getQueueEvents(input.queue);
+    const jobId = `${input.job}_${uuidv4()}`;
 
-    const job = await queue.add(jobName, data, {
-      delay: options?.delay,
-      attempts: options?.attempts ?? 3,
+    const job = await queue.add(input.job, input.data, {
+      jobId,
+      delay: input.delay,
+      attempts: input.attempts ?? 3,
       removeOnComplete: 100,
       removeOnFail: 200,
       backoff: { type: 'exponential', delay: 2000 },
     });
 
     this.logger.log(
-      `Job "${jobName}" added to queue "${queueName}" (id: ${job.id}), waiting for result...`,
+      `Job added to queue, waiting for result...`,
       'BullMQService',
+      {
+        job: input.job,
+        queue: input.queue,
+        jobId : job.id,
+      }
     );
 
-    const timeout = options?.timeout ?? 30_000;
+    const timeout = input.timeout ?? 30_000;
     const result = await job.waitUntilFinished(queueEvents, timeout);
 
     this.logger.log(
-      `Job "${jobName}" (id: ${job.id}) finished in queue "${queueName}"`,
+      `Job finished in queue`,
       'BullMQService',
+      {
+        job: input.job,
+        queue: input.queue,
+        jobId: job.id,
+      }
     );
 
-    return result as TResult;
+    return result;
   }
 
   // ─── Add Bulk Jobs ──────────────────────────────────────────────────────────
