@@ -32,6 +32,8 @@ import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-e
 import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
+import { BullMQModule } from './common/bullmq/bullmq.module';
+import { AiModule } from './modules/ai/ai.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
@@ -90,8 +92,10 @@ import { QuizModule } from './modules/quiz/quiz.module';
     ImportSectionScheduleModule,
     ImportEnrollmentModule,
     CommunityModule,
+    AiModule,
     LoggerModule,
     RabbitMQModule,
+    BullMQModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -118,6 +122,7 @@ export class AppModule implements NestModule {
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
+        { path: 'assets/(.*)', method: RequestMethod.ALL },
       )
       // .forRoutes('*');
   }
