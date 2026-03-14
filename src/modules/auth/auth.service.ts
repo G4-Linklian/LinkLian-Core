@@ -109,7 +109,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     user: UserSys,
     rememberMe: boolean = false,
   ): { sessionId: string; otp: string; expiresAt: number } {
-    const otp = this.generateOTP();
+    const isTestLoginEnabled =
+      process.env.TEST_LOGIN?.toLowerCase() === 'true';
+    const otp = isTestLoginEnabled ? '111111' : this.generateOTP();
     const sessionId = randomUUID();
     const expiresAt = Date.now() + this.OTP_EXPIRY_MS;
 
