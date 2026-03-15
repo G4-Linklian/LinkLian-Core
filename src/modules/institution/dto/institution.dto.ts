@@ -76,6 +76,11 @@ export class SearchInstitutionDto {
   @IsBoolean()
   flag_valid?: boolean;
 
+  @ApiPropertyOptional({ description: 'จังหวัด', example: 'กรุงเทพมหานคร' })
+  @IsOptional()
+  @IsString()
+  province?: string;
+
   @ApiPropertyOptional({
     description: 'แหล่งที่มา (admin สำหรับ filter พิเศษ)',
     example: 'admin',
@@ -112,6 +117,14 @@ export class SearchInstitutionDto {
   @Type(() => Number)
   @IsInt()
   offset?: number;
+
+  @ApiPropertyOptional({
+    description: 'Keyword search for code, first_name, last_name, email',
+    example: 'john',
+  })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
 }
 
 export class CreateInstitutionDto {

@@ -38,6 +38,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
+import { AssetsModule } from './modules/asset/asset.module';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { RequestMethod } from '@nestjs/common';
     CommunityModule,
     LoggerModule,
     RabbitMQModule,
+    AssetsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -111,6 +113,8 @@ export class AppModule implements NestModule {
         { path: 'institution', method: RequestMethod.ALL },
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'admin', method: RequestMethod.ALL },
+        { path: 'assets/(.*)', method: RequestMethod.ALL },
+        { path: 'assets', method: RequestMethod.ALL },
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
