@@ -124,6 +124,6 @@ export class AppModule implements NestModule {
         { path: 'health', method: RequestMethod.ALL },
         { path: 'assets/(.*)', method: RequestMethod.ALL },
       )
-      // .forRoutes('*');
+      .forRoutes('*');
   }
 }

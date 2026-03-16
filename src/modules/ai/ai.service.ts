@@ -148,37 +148,37 @@ export class AiService {
             }
         }
 
-        // const url_text = `https://linklianstorage.blob.core.windows.net/ai-summary/summary-post-announcement/all-${dto.post_content_id}.txt`;
+        const url_text = `https://linklianstorage.blob.core.windows.net/ai-summary/summary-post-announcement/all-${dto.post_content_id}.txt`;
 
-        // this.logger.debug(
-        //     'Checking for cached quiz in Azure',
-        //     'QuizGeneration',
-        //     {
-        //         url: url_text,
-        //     }
-        // )
+        this.logger.debug(
+            'Checking for cached quiz in Azure',
+            'QuizGeneration',
+            {
+                url: url_text,
+            }
+        )
 
-        // try {
-        //     const response = await fetch(url_text);
-        //     this.logger.debug('Azure response for cached quiz', 'QuizGeneration', { status: response.status });
-        //     if (response.ok) {
-        //         const buffer = await response.arrayBuffer();
-        //         const cached = new TextDecoder().decode(buffer);
-        //         this.logger.debug('Cached quiz content from Azure', 'QuizGeneration', {
-        //             cached,
-        //             length: cached.length
-        //         });
+        try {
+            const response = await fetch(url_text);
+            this.logger.debug('Azure response for cached quiz', 'QuizGeneration', { status: response.status });
+            if (response.ok) {
+                const buffer = await response.arrayBuffer();
+                const cached = new TextDecoder().decode(buffer);
+                this.logger.debug('Cached quiz content from Azure', 'QuizGeneration', {
+                    cached,
+                    length: cached.length
+                });
 
-        //         if (!cached || cached.trim().length === 0 || cached === 'null') {
-        //             return {
-        //                 success: false,
-        //                 message: 'Quiz generation is in progress. Please check back later.',
-        //             }
-        //         }
-        //     }
-        // } catch (error) {
-        //     this.logger.error('Error fetching cached quiz from Azure:', 'QuizGeneration', error);
-        // }
+                if (!cached || cached.trim().length === 0 || cached === 'null') {
+                    return {
+                        success: false,
+                        message: 'Quiz generation is in progress. Please check back later.',
+                    }
+                }
+            }
+        } catch (error) {
+            this.logger.error('Error fetching cached quiz from Azure:', 'QuizGeneration', error);
+        }
 
         this.logger.log(
             'Sending quiz generation job to queue',
