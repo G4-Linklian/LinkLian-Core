@@ -33,7 +33,9 @@ import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
 import { BullMQModule } from './common/bullmq/bullmq.module';
+import { RedisModule } from './common/redis/redis.module';
 import { AiModule } from './modules/ai/ai.module';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
@@ -93,9 +95,11 @@ import { QuizModule } from './modules/quiz/quiz.module';
     ImportEnrollmentModule,
     CommunityModule,
     AiModule,
+    AiChatModule,
     LoggerModule,
     RabbitMQModule,
     BullMQModule,
+    RedisModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),

@@ -40,6 +40,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "jsonwebtoken": "^9.0.3",
+    "ioredis": "^5.8.1",
     "nodemailer": "^7.0.12",
     "open-graph-scraper": "^6.11.0",
     "pg": "^8.17.2",

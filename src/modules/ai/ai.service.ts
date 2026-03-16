@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { BullMQService } from 'src/common/bullmq/bullmq.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { PostSummaryDto, QuizGenerationDto } from './dto/post-summary.dto';
+import { QaChatDto } from './dto/qa-chat.dto';
+import { ClearChatSessionDto } from './dto/clear-chat-session.dto';
 import { PostService } from '../social-feed/post/post.service';
+import { AiRedisService } from './redis/ai-redis.service';
+import { AiChatService } from '../ai-chat/ai-chat.service';
 
 const AI_QUEUE = 'ai-queue';
 
@@ -12,6 +16,8 @@ export class AiService {
         private readonly bullmq: BullMQService,
         private readonly logger: AppLogger,
         private readonly postService: PostService,
+        private readonly aiRedisService: AiRedisService,
+        private readonly aiChatService: AiChatService,
     ) { }
 
     async postSummary(dto: PostSummaryDto) {
@@ -201,5 +207,163 @@ export class AiService {
             timeout: 60_000,
         });
 
+    }
+
+    async qaChat(dto: QaChatDto) {
+        this.logger.log('Requesting QA chat response', 'QaChat', {
+            ai_chat_id: dto.ai_chat_id,
+        });
+
+        let assistantContent: any;
+
+        try {
+
+            let minutesSinceLastActivity: number | null = null;
+            const lastActivity = await this.aiRedisService.getLastActivity(dto.ai_chat_id);
+
+            if (lastActivity) {
+                const now = Date.now();
+                const diffMs = now - lastActivity;
+                minutesSinceLastActivity = Math.floor(diffMs / (1000 * 60));
+            }
+
+            this.logger.debug('Last activity for chat', 'QaChat', {
+                ai_chat_id: dto.ai_chat_id,
+                last_activity: lastActivity,
+                minutes_since_last_activity: minutesSinceLastActivity,
+            });
+
+            if (minutesSinceLastActivity === null) {
+
+                this.logger.log('No existing chat session found, starting new session', 'QaChat', {
+                    ai_chat_id: dto.ai_chat_id,
+                });
+
+                // Call chat history from database to warm up cache for new session
+                const chatHistory = await this.aiChatService.searchAiMessages({ ai_chat_id: dto.ai_chat_id });
+
+                if (Array.isArray(chatHistory.data)) {
+                    for (const message of chatHistory.data) {
+                        if (!message?.role || !message?.content) {
+                            continue;
+                        }
+
+                        await this.aiRedisService.addMessage(
+                            message.ai_chat_id ?? dto.ai_chat_id,
+                            String(message.role),
+                            String(message.content),
+                        );
+                    }
+                }
+
+                this.logger.debug('Chat history loaded from database', 'QaChat', {
+                    ai_chat_id: dto.ai_chat_id,
+                    history: chatHistory.data,
+                });
+
+
+                // Call Docs overview from blob storage to warm up cache for new session
+                const azure_path = `https://linklianstorage.blob.core.windows.net/ai-summary/summary-post-announcement/all-${dto.post_content_id}.json`;
+
+                try {
+                    const response = await fetch(azure_path);
+                    if (response.ok) {
+                        const cached = await response.json();
+                        const docsOverview =
+                            typeof cached?.document_overview === 'string'
+                                ? cached.document_overview
+                                : '';
+
+                        if (docsOverview) {
+                            await this.aiRedisService.setDocsOverview(
+                                dto.ai_chat_id,
+                                docsOverview,
+                            );
+                        }
+
+                        this.logger.debug('Docs overview loaded from Azure', 'QaChat', {
+                            ai_chat_id: dto.ai_chat_id,
+                            post_content_id: dto.post_content_id,
+                            docs_overview: docsOverview,
+                        });
+                    }
+                } catch (error) {
+                    this.logger.error('Error fetching cached summary from Azure:', 'AiPostSummary', error);
+                }
+
+
+            }
+
+            const data = await this.bullmq.addJobAndWait({
+                queue: 'qa_chat_queue',
+                job: 'qa-chat',
+                data: {
+                    ai_chat_id: dto.ai_chat_id,
+                    question: dto.question,
+                    post_id: dto.post_content_id,
+                },
+                timeout: 60_000,
+            });
+
+            this.logger.debug('QA chat response from worker', 'QaChat', {
+                ai_chat_id: dto.ai_chat_id,
+                response: data,
+            });
+
+            assistantContent =
+                typeof data === 'string'
+                    ? data
+                    : typeof data === 'object' && data !== null && 'result' in data
+                        ? String((data as { result?: unknown }).result ?? '')
+                        : '';
+
+            if (assistantContent) {
+                await this.aiRedisService.addMessage(
+                    dto.ai_chat_id,
+                    'user',
+                    dto.question,
+                );
+
+                await this.aiRedisService.addMessage(
+                    dto.ai_chat_id,
+                    'system',
+                    assistantContent,
+                );
+
+                this.logger.log(
+                    'QA chat response cached and saved to database',
+                    'QaChat',
+                    {
+                        ai_chat_id: dto.ai_chat_id,
+                        question: dto.question,
+                        assistant_content_length: assistantContent.length,
+                    }
+                )
+
+
+                return assistantContent;
+            }
+
+        } catch (error) {
+            this.logger.error('Failed to update chat history cache', 'QaChat', error);
+        }
+    }
+
+    async clearQaChatSession(dto: ClearChatSessionDto) {
+        const deletedKeys = await this.aiRedisService.clearChatSession(dto.ai_chat_id);
+
+        this.logger.log('Cleared QA chat Redis session keys', 'QaChat', {
+            ai_chat_id: dto.ai_chat_id,
+            deleted_keys: deletedKeys,
+        });
+
+        return {
+            success: true,
+            data: {
+                ai_chat_id: dto.ai_chat_id,
+                deleted_keys: deletedKeys,
+            },
+            message: 'QA chat Redis session cleared successfully.',
+        };
     }
 }
