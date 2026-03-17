@@ -121,6 +121,8 @@ export class AppModule implements NestModule {
         { path: 'institution', method: RequestMethod.ALL },
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'admin', method: RequestMethod.ALL },
+        { path: 'assets/(.*)', method: RequestMethod.ALL },
+        { path: 'assets', method: RequestMethod.ALL },
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },

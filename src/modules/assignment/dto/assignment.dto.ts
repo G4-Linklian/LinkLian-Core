@@ -5,6 +5,7 @@ import {
   IsString,
   IsArray,
   IsNumber,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -142,4 +143,71 @@ export class SearchAssignmentsDto {
   @IsNumber()
   @Type(() => Number)
   limit?: number = 50;
+}
+
+// --- Submission DTOs ---
+
+export class GetSubmissionDto {
+  @IsInt()
+  @Type(() => Number)
+  submission_id: number;
+}
+
+export class SubmissionFileDto {
+  @IsString()
+  file_url: string;
+
+  @IsString()
+  original_name: string;
+
+  @IsString()
+  file_type: string;
+}
+
+export class CreateSubmissionDto {
+  @IsInt()
+  @Type(() => Number)
+  assignment_id: number;
+
+  @IsOptional()
+  @IsNumber()
+  group_id?: number;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => SubmissionFileDto)
+  files?: SubmissionFileDto[];
+}
+
+export class UpdateSubmissionDto {
+  @IsInt()
+  @Type(() => Number)
+  submission_id: number;
+
+  @IsInt()
+  @Type(() => Number)
+  assignment_id: number;
+
+  @IsOptional()
+  @IsNumber()
+  group_id?: number;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => SubmissionFileDto)
+  files?: SubmissionFileDto[];
+}
+
+export class GradeSubmissionDto {
+  @IsInt()
+  @Type(() => Number)
+  submission_id: number;
+
+  @IsNumber()
+  @Type(() => Number)
+  score: number;
+
+  @IsOptional()
+  @IsString()
+  feedback?: string;
 }

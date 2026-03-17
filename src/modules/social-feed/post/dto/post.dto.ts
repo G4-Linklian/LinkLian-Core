@@ -211,6 +211,13 @@ export class UpdatePostDto {
   @IsOptional()
   @IsBoolean()
   is_group?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Groups for assignment update',
+    type: 'array',
+  })
+  @IsOptional()
+  groups?: { group_name: string; member_ids: number[] }[];
 }
 
 /**

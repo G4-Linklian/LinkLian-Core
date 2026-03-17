@@ -155,7 +155,9 @@ export class InstitutionService {
       dto.inst_type ||
       dto.approve_status ||
       dto.from ||
-      typeof dto.flag_valid === 'boolean';
+      typeof dto.flag_valid === 'boolean' ||
+      dto.province ||
+      dto.keyword;
     
     this.logger.debug('SearchInstitutionDto received:', 'SearchInstitution', dto);
 
@@ -196,10 +198,28 @@ export class InstitutionService {
         approveStatus: dto.approve_status,
       });
 
+    if (dto.province)
+      query.andWhere('i.province = :province', { province: dto.province });
+
     if (typeof dto.flag_valid === 'boolean') {
       query.andWhere('i.flag_valid = :flagValid', {
         flagValid: dto.flag_valid,
       });
+    }
+
+    if (dto.keyword) {
+      const keyword = `%${dto.keyword.trim()}%`;
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('CAST(i.inst_id AS TEXT) ILIKE :keyword', { keyword })
+            .orWhere('i.inst_email ILIKE :keyword', { keyword })
+            .orWhere('i.inst_name_th ILIKE :keyword', { keyword })
+            .orWhere('i.inst_name_en ILIKE :keyword', { keyword })
+            .orWhere('i.inst_abbr_th ILIKE :keyword', { keyword })
+            .orWhere('i.inst_abbr_en ILIKE :keyword', { keyword })
+            .orWhere('i.province ILIKE :keyword', { keyword });
+        }),
+      );
     }
 
     if (dto.from === 'admin') {

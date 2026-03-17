@@ -26,10 +26,12 @@ import { BullMQService } from 'src/common/bullmq/bullmq.service';
 export class PostService {
   constructor(
     @InjectRepository(PostContent)
-    private postContentRepo: Repository<PostContent>,
+    private readonly postContentRepo: Repository<PostContent>,
+
     @InjectRepository(PostInClass)
-    private postInClassRepo: Repository<PostInClass>,
-    @InjectRepository(PostAttachment)
+    private readonly postInClassRepo: Repository<PostInClass>,
+
+       @InjectRepository(PostAttachment)
     private postAttachmentRepo: Repository<PostAttachment>,
     private readonly bullmq: BullMQService,
     private dataSource: DataSource,
@@ -86,9 +88,9 @@ export class PostService {
   async getPostsInClass(dto: GetPostsInClassDto): Promise<BaseResponse<any[]>> {
     this.logger.log(
       `Fetching posts`, 'GetPostsInClass', {
-      section_id: dto.section_id,
-      type: dto.type,
-    }
+        section_id: dto.section_id,
+        type: dto.type,
+      }
     );
 
     const values: any[] = [dto.section_id];
@@ -187,7 +189,10 @@ export class PostService {
     try {
       const result = await this.dataSource.query(query, values);
 
-      this.logger.log(`Query returned ${result.length} posts`, 'GetPostsInClass');
+      this.logger.log(
+        `Query returned ${result.length} posts`,
+        'GetPostsInClass',
+      );
 
       // Log first post's attachments for debugging
       if (result.length > 0 && result[0].attachments) {
@@ -238,7 +243,8 @@ export class PostService {
         };
       });
       this.logger.log(
-        `Transformed posts sample:`, 'GetPostsInClass',
+        `Transformed posts sample:`,
+        'GetPostsInClass',
         posts.length > 0 ? posts[0] : 'No posts',
       );
 
@@ -247,7 +253,7 @@ export class PostService {
         message: 'Posts retrieved successfully',
         data: posts,
       };
-    } catch (error: any) {
+    } catch (error : any) {
       this.logger.error('Error getting posts in class', 'GetPostInClass', error);
       throw new InternalServerErrorException('Error fetching posts');
     }
@@ -301,14 +307,20 @@ export class PostService {
 
       // Strict validation for attachments
       if (dto.attachments && dto.attachments.length > 0) {
-        this.logger.log(`Validating ${dto.attachments.length} attachments strictly`, 'CreatePost');
+        this.logger.log(
+          `Validating ${dto.attachments.length} attachments strictly`,
+          'CreatePost',
+        );
 
         const invalidAttachments = dto.attachments.filter(
           (f) => !f.file_url || !f.file_type,
         );
 
         if (invalidAttachments.length > 0) {
-          this.logger.error(`Found ${invalidAttachments.length} invalid attachments`, 'CreatePost');
+          this.logger.error(
+            `Found ${invalidAttachments.length} invalid attachments`,
+            'CreatePost',
+          );
           throw new BadRequestException(
             `มีไฟล์แนบ ${invalidAttachments.length} ไฟล์ที่ไม่สมบูรณ์ กรุณาลองอัปโหลดใหม่อีกครั้ง`,
           );
@@ -322,7 +334,10 @@ export class PostService {
           throw new BadRequestException('พบไฟล์ซ้ำ กรุณาตรวจสอบไฟล์แนบ');
         }
 
-        this.logger.log(`All ${dto.attachments.length} attachments are valid`, 'CreatePost');
+        this.logger.log(
+          `All ${dto.attachments.length} attachments are valid`,
+          'CreatePost',
+        );
       }
 
       // 1. Insert post_content
@@ -373,7 +388,10 @@ export class PostService {
       // 3. Insert attachments if any - MUST succeed all or rollback
       const attachments: any[] = [];
       if (dto.attachments && dto.attachments.length > 0) {
-        this.logger.log(`Processing ${dto.attachments.length} attachments (strict mode)`, 'CreatePost');
+        this.logger.log(
+          `Processing ${dto.attachments.length} attachments (strict mode)`,
+          'CreatePost',
+        );
 
         for (const attachment of dto.attachments) {
           this.logger.log('Attachment data:', 'CreatePost', {
@@ -389,16 +407,12 @@ export class PostService {
             RETURNING attachment_id, file_url, file_type, original_name
           `;
 
-          this.logger.log(
-            'Inserting attachment with params:',
-            'CreatePost',
-            {
-              post_content_id: postContent.post_content_id,
-              file_url: attachment.file_url,
-              file_type: attachment.file_type,
-              original_name: attachment.original_name || null,
-            },
-          );
+          this.logger.log('Inserting attachment with params:', 'CreatePost', {
+            post_content_id: postContent.post_content_id,
+            file_url: attachment.file_url,
+            file_type: attachment.file_type,
+            original_name: attachment.original_name || null,
+          });
 
           const attachmentResult = await queryRunner.query(attachmentQuery, [
             postContent.post_content_id,
@@ -415,7 +429,10 @@ export class PostService {
           attachments.push(attachmentResult[0]);
         }
 
-        this.logger.log(`All ${attachments.length} attachments inserted successfully`, 'CreatePost');
+        this.logger.log(
+          `All ${attachments.length} attachments inserted successfully`,
+          'CreatePost',
+        );
       } else {
         this.logger.log('No attachments to process', 'CreatePost');
       }
@@ -493,7 +510,10 @@ export class PostService {
           // Handle group creation based on is_group flag
           if (!dto.is_group) {
             // ===== งานเดี่ยว: สร้าง student_group + group_member ให้นักเรียนทุกคนใน section =====
-            this.logger.log('Individual assignment - auto-creating groups for all enrolled students', 'CreatePost');
+            this.logger.log(
+              'Individual assignment - auto-creating groups for all enrolled students',
+              'CreatePost',
+            );
 
             // Find the section_id for this post_id
             const sectionForPost = sectionIds[postIds.indexOf(postId)];
@@ -509,7 +529,10 @@ export class PostService {
               [sectionForPost],
             );
 
-            this.logger.log(`Found ${enrolledStudents.length} enrolled students in section ${sectionForPost}`, 'CreatePost');
+            this.logger.log(
+              `Found ${enrolledStudents.length} enrolled students in section ${sectionForPost}`,
+              'CreatePost',
+            );
 
             // Create 1 student_group per student (งานเดี่ยว = 1 คน 1 กลุ่ม)
             for (const student of enrolledStudents) {
@@ -549,10 +572,16 @@ export class PostService {
               });
             }
 
-            this.logger.log(`Created ${enrolledStudents.length} individual groups`, 'CreatePost');
+            this.logger.log(
+              `Created ${enrolledStudents.length} individual groups`,
+              'CreatePost',
+            );
           } else {
             // ===== งานกลุ่ม: ไม่สร้าง group ตอนนี้ นักเรียนจะมาสร้างเองทีหลัง =====
-            this.logger.log('Group assignment - students will create groups later', 'CreatePost');
+            this.logger.log(
+              'Group assignment - students will create groups later',
+              'CreatePost',
+            );
           }
         }
 
@@ -679,7 +708,10 @@ export class PostService {
       let targetPostContentId: number;
       let ownerUserId: number;
 
-      this.logger.log(`userId=${userId}, postId=${postId}, postContentId=${postContentId}`, 'UpdatePost');
+      this.logger.log(
+        `userId=${userId}, postId=${postId}, postContentId=${postContentId}`,
+        'UpdatePost',
+      );
 
       // If postContentId is provided directly, use it
       if (postContentId && postContentId > 0) {
@@ -755,11 +787,17 @@ export class PostService {
 
       // Handle attachments if provided (including empty array to clear all)
       if (dto.attachments !== undefined) {
-        this.logger.log(`Updating attachments: ${dto.attachments.length} files`, 'UpdatePost');
+        this.logger.log(
+          `Updating attachments: ${dto.attachments.length} files`,
+          'UpdatePost',
+        );
 
         try {
           // Soft delete existing attachments
-          this.logger.log(`Soft deleting existing attachments for post_content_id: ${targetPostContentId}`, 'UpdatePost');
+          this.logger.log(
+            `Soft deleting existing attachments for post_content_id: ${targetPostContentId}`,
+            'UpdatePost',
+          );
           await this.dataSource.query(
             `
             UPDATE post_attachment
@@ -772,15 +810,11 @@ export class PostService {
           // Insert new attachments
           if (dto.attachments.length > 0) {
             for (const attachment of dto.attachments) {
-              this.logger.log(
-                'Processing attachment:',
-                'UpdatePost',
-                {
-                  file_url: attachment.file_url,
-                  file_type: attachment.file_type,
-                  original_name: attachment.original_name,
-                },
-              );
+              this.logger.log('Processing attachment:', 'UpdatePost', {
+                file_url: attachment.file_url,
+                file_type: attachment.file_type,
+                original_name: attachment.original_name,
+              });
 
               if (!attachment.file_url || !attachment.file_type) {
                 this.logger.log(
@@ -791,7 +825,10 @@ export class PostService {
                 continue;
               }
 
-              this.logger.log(`Inserting attachment with original_name: ${attachment.original_name || 'NULL'}`, 'UpdatePost');
+              this.logger.log(
+                `Inserting attachment with original_name: ${attachment.original_name || 'NULL'}`,
+                'UpdatePost',
+              );
               const result = await this.dataSource.query(
                 `
                 INSERT INTO post_attachment (post_content_id, file_url, file_type, original_name)
@@ -850,6 +887,114 @@ export class PostService {
         }
 
         if (setClauses.length > 0) {
+          // Resolve assignment rows for this post_content.
+          const assignmentRows: Array<{
+            assignment_id: number;
+            is_group: boolean;
+            section_id: number;
+          }> = await this.dataSource.query(
+            `
+              SELECT
+                a.assignment_id::int AS assignment_id,
+                a.is_group AS is_group,
+                pic.section_id::int AS section_id
+              FROM assignment a
+              JOIN post_in_class pic
+                ON a.post_id = pic.post_id
+               AND pic.flag_valid = true
+              WHERE pic.post_content_id = $1
+                AND a.flag_valid = true
+            `,
+            [targetPostContentId],
+          );
+
+          const assignmentIds = assignmentRows.map((r) => r.assignment_id);
+          const isChangingType =
+            dto.is_group !== undefined &&
+            assignmentRows.some((r) => r.is_group !== dto.is_group);
+
+          if (assignmentIds.length > 0 && isChangingType) {
+            // Business rule: once there is a submission, assignment type cannot be changed.
+            const submissionCountRows: Array<{ total: string }> =
+              await this.dataSource.query(
+                `
+                  SELECT COUNT(*)::int AS total
+                  FROM submission
+                  WHERE assignment_id = ANY($1)
+                    AND flag_valid = true
+                `,
+                [assignmentIds],
+              );
+
+            const totalSubmissions =
+              Number(submissionCountRows[0]?.total ?? 0) || 0;
+            if (totalSubmissions > 0) {
+              throw new BadRequestException(
+                'ไม่สามารถเปลี่ยนประเภทงานได้ เนื่องจากมีนักเรียนส่งงานแล้ว',
+              );
+            }
+
+            // Clear all old groups/members before rebuilding type-specific groups.
+            await this.dataSource.query(
+              `
+                DELETE FROM group_member
+                WHERE group_id IN (
+                  SELECT group_id FROM student_group
+                  WHERE assignment_id = ANY($1)
+                )
+              `,
+              [assignmentIds],
+            );
+            await this.dataSource.query(
+              `
+                DELETE FROM student_group
+                WHERE assignment_id = ANY($1)
+              `,
+              [assignmentIds],
+            );
+
+            // Switching to individual assignment => recreate one-person groups.
+            if (dto.is_group === false) {
+              for (const row of assignmentRows) {
+                const enrolledStudents: Array<{ student_id: number }> =
+                  await this.dataSource.query(
+                    `
+                      SELECT student_id::int AS student_id
+                      FROM enrollment
+                      WHERE section_id = $1
+                        AND flag_valid = true
+                    `,
+                    [row.section_id],
+                  );
+
+                for (const student of enrolledStudents) {
+                  const groupRes: Array<{ group_id: number }> =
+                    await this.dataSource.query(
+                      `
+                        INSERT INTO student_group (assignment_id, group_name, flag_valid)
+                        VALUES ($1, $2, true)
+                        RETURNING group_id::int AS group_id
+                      `,
+                      [
+                        row.assignment_id,
+                        `individual_student_${student.student_id}`,
+                      ],
+                    );
+                  const groupId = Number(groupRes[0]?.group_id);
+                  if (!groupId) continue;
+
+                  await this.dataSource.query(
+                    `
+                      INSERT INTO group_member (group_id, user_sys_id, flag_valid)
+                      VALUES ($1, $2, true)
+                    `,
+                    [groupId, student.student_id],
+                  );
+                }
+              }
+            }
+          }
+
           assignmentValues.push(targetPostContentId);
           const assignmentQuery = `
             UPDATE assignment a
@@ -861,7 +1006,10 @@ export class PostService {
           `;
 
           await this.dataSource.query(assignmentQuery, assignmentValues);
-          this.logger.log('Assignment fields updated successfully', 'UpdatePost');
+          this.logger.log(
+            'Assignment fields updated successfully',
+            'UpdatePost',
+          );
         }
       }
 
@@ -971,7 +1119,7 @@ export class PostService {
   /**
    * Hard delete post and its related data (only owner can delete)
    * Supports both post_id and post_content_id
-   * Deletes: assignment -> post_attachment -> post_in_class -> post_content
+   * Deletes: assignment -> comments -> post_attachment -> post_in_class -> post_content
    */
   async deletePost(userId: number, postId: number, postContentId?: number) {
     try {
@@ -1071,7 +1219,10 @@ export class PostService {
           assignmentIds = assignmentIdsResult.map(
             (row: any) => row.assignment_id,
           );
-          this.logger.log(`Found assignment_ids: ${assignmentIds}`, 'DeletePost');
+          this.logger.log(
+            `Found assignment_ids: ${assignmentIds}`,
+            'DeletePost',
+          );
         }
 
         // 2. Delete group_member for all groups in these assignments
@@ -1085,7 +1236,10 @@ export class PostService {
           `,
             [assignmentIds],
           );
-          this.logger.log(`Deleted group_member records for assignment_ids: ${assignmentIds}`, 'DeletePost');
+          this.logger.log(
+            `Deleted group_member records for assignment_ids: ${assignmentIds}`,
+            'DeletePost',
+          );
         }
 
         // 3. Delete student_group for these assignments
@@ -1097,7 +1251,10 @@ export class PostService {
           `,
             [assignmentIds],
           );
-          this.logger.log(`Deleted student_group records for assignment_ids: ${assignmentIds}`, 'DeletePost');
+          this.logger.log(
+            `Deleted student_group records for assignment_ids: ${assignmentIds}`,
+            'DeletePost',
+          );
         }
 
         // 4. Delete assignments
@@ -1109,10 +1266,63 @@ export class PostService {
           `,
             [targetPostIds],
           );
-          this.logger.log(`Deleted assignments for post_ids: ${targetPostIds}`, 'DeletePost');
+          this.logger.log(
+            `Deleted assignments for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
         }
 
-        // 5. Delete attachments
+        // 5. Delete comment closure paths for comments in these posts
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM post_comment_path
+            WHERE ancestor_id IN (
+              SELECT comment_id FROM post_comment WHERE post_id = ANY($1)
+            )
+            OR descendant_id IN (
+              SELECT comment_id FROM post_comment WHERE post_id = ANY($1)
+            )
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted post_comment_path records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 6. Delete comments that reference these post_ids
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM post_comment
+            WHERE post_id = ANY($1)
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted post_comment records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 7. Delete bookmarks that reference these post_ids
+        if (targetPostIds.length > 0) {
+          await queryRunner.query(
+            `
+            DELETE FROM bookmark
+            WHERE post_id = ANY($1)
+          `,
+            [targetPostIds],
+          );
+          this.logger.debug(
+            `[DeletePost] Deleted bookmark records for post_ids: ${targetPostIds}`,
+            'DeletePost',
+          );
+        }
+
+        // 8. Delete attachments
         await queryRunner.query(
           `
           DELETE FROM post_attachment
@@ -1120,9 +1330,12 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        this.logger.log(`Deleted attachments for post_content_id: ${targetPostContentId}`, 'DeletePost');
+        this.logger.log(
+          `Deleted attachments for post_content_id: ${targetPostContentId}`,
+          'DeletePost',
+        );
 
-        // 6. Delete all post_in_class records
+        // 9. Delete all post_in_class records
         await queryRunner.query(
           `
           DELETE FROM post_in_class
@@ -1130,9 +1343,12 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        this.logger.log(`Deleted post_in_class records for post_content_id: ${targetPostContentId}`, 'DeletePost');
+        this.logger.log(
+          `Deleted post_in_class records for post_content_id: ${targetPostContentId}`,
+          'DeletePost',
+        );
 
-        // 7. Delete post_content
+        // 10. Delete post_content
         await queryRunner.query(
           `
           DELETE FROM post_content
@@ -1140,7 +1356,10 @@ export class PostService {
         `,
           [targetPostContentId],
         );
-        this.logger.log(`Deleted post_content: ${targetPostContentId}`, 'DeletePost');
+        this.logger.log(
+          `Deleted post_content: ${targetPostContentId}`,
+          'DeletePost',
+        );
 
         await queryRunner.commitTransaction();
 
@@ -1157,6 +1376,13 @@ export class PostService {
         };
       } catch (error) {
         await queryRunner.rollbackTransaction();
+        if (
+          error instanceof NotFoundException ||
+          error instanceof ForbiddenException ||
+          error instanceof BadRequestException
+        ) {
+          throw error;
+        }
         throw error;
       } finally {
         await queryRunner.release();

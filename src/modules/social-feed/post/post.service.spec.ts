@@ -26,7 +26,13 @@ const mockDataSource = {
   query: mockQuery,
   createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
 };
-const mockLogger = { log: jest.fn(), error: jest.fn(), warn: jest.fn() };
+const mockLogger = {
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  verbose: jest.fn(),
+};
 const mockRepo = { find: jest.fn(), findOne: jest.fn(), save: jest.fn() };
 
 const mockPostRow = {
@@ -64,8 +70,19 @@ describe('PostService', () => {
     }).compile();
 
     service = module.get<PostService>(PostService);
+
     jest.clearAllMocks();
+
+    // Restore after clearAllMocks
     mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
+    mockLogger.debug.mockImplementation((..._args) => undefined);
+    mockLogger.error.mockImplementation((..._args) => undefined);
+    mockLogger.warn.mockImplementation((..._args) => undefined);
+    mockLogger.log.mockImplementation((..._args) => undefined);
+    mockLogger.verbose.mockImplementation((..._args) => undefined);
+
+    // Ensure the service uses our mock logger (override private field)
+    (service as any).logger = mockLogger;
   });
 
   // ─── checkUserInSection ────────────────────────────────────────────────────
@@ -81,7 +98,11 @@ describe('PostService', () => {
 
     it('should return true for high school student', async () => {
       mockQuery.mockResolvedValueOnce([{ 1: 1 }]);
-      const result = await service.checkUserInSection(1, 1, 'high school student');
+      const result = await service.checkUserInSection(
+        1,
+        1,
+        'high school student',
+      );
       expect(result).toBe(true);
     });
 
@@ -166,7 +187,12 @@ describe('PostService', () => {
   describe('findPostOwner', () => {
     it('should return post owner', async () => {
       mockQuery.mockResolvedValueOnce([
-        { post_content_id: 10, user_sys_id: 5, pic_flag_valid: true, pc_flag_valid: true },
+        {
+          post_content_id: 10,
+          user_sys_id: 5,
+          pic_flag_valid: true,
+          pc_flag_valid: true,
+        },
       ]);
       const result = await service.findPostOwner(1);
       expect(result.post_content_id).toBe(10);
@@ -175,12 +201,19 @@ describe('PostService', () => {
 
     it('should throw NotFoundException if post not found', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      await expect(service.findPostOwner(99)).rejects.toThrow(NotFoundException);
+      await expect(service.findPostOwner(99)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if post is soft deleted', async () => {
       mockQuery.mockResolvedValueOnce([
-        { post_content_id: 10, user_sys_id: 5, pic_flag_valid: false, pc_flag_valid: true },
+        {
+          post_content_id: 10,
+          user_sys_id: 5,
+          pic_flag_valid: false,
+          pc_flag_valid: true,
+        },
       ]);
       await expect(service.findPostOwner(1)).rejects.toThrow(NotFoundException);
     });
@@ -206,7 +239,16 @@ describe('PostService', () => {
 
     it('should create a normal post successfully', async () => {
       setupQueryRunner([
-        [{ post_content_id: 10, title: 'Test', content: 'Content', post_type: 'normal', is_anonymous: false, created_at: new Date() }],
+        [
+          {
+            post_content_id: 10,
+            title: 'Test',
+            content: 'Content',
+            post_type: 'normal',
+            is_anonymous: false,
+            created_at: new Date(),
+          },
+        ],
         [{ post_id: 1 }],
       ]);
       const result = await service.createPost(1, baseDto);
@@ -216,7 +258,11 @@ describe('PostService', () => {
 
     it('should throw BadRequestException if no section_id provided', async () => {
       await expect(
-        service.createPost(1, { title: 'Test', content: 'Content', post_type: 'normal' } as any),
+        service.createPost(1, {
+          title: 'Test',
+          content: 'Content',
+          post_type: 'normal',
+        } as any),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -255,17 +301,39 @@ describe('PostService', () => {
 
     it('should throw BadRequestException if assignment missing due_date', async () => {
       setupQueryRunner([
-        [{ post_content_id: 10, title: 'Test', content: 'Content', post_type: 'assignment', is_anonymous: false, created_at: new Date() }],
+        [
+          {
+            post_content_id: 10,
+            title: 'Test',
+            content: 'Content',
+            post_type: 'assignment',
+            is_anonymous: false,
+            created_at: new Date(),
+          },
+        ],
         [{ post_id: 1 }],
       ]);
       await expect(
-        service.createPost(1, { ...baseDto, post_type: 'assignment' as any, is_group: false }),
+        service.createPost(1, {
+          ...baseDto,
+          post_type: 'assignment' as any,
+          is_group: false,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should support multiple section_ids', async () => {
       setupQueryRunner([
-        [{ post_content_id: 10, title: 'Test', content: 'Content', post_type: 'normal', is_anonymous: false, created_at: new Date() }],
+        [
+          {
+            post_content_id: 10,
+            title: 'Test',
+            content: 'Content',
+            post_type: 'normal',
+            is_anonymous: false,
+            created_at: new Date(),
+          },
+        ],
         [{ post_id: 1 }],
         [{ post_id: 2 }],
       ]);
@@ -297,7 +365,9 @@ describe('PostService', () => {
     });
 
     it('should throw ForbiddenException if not post owner', async () => {
-      mockQuery.mockResolvedValueOnce([{ user_sys_id: 99, post_content_id: 10 }]);
+      mockQuery.mockResolvedValueOnce([
+        { user_sys_id: 99, post_content_id: 10 },
+      ]);
       await expect(
         service.updatePost(1, 0, { title: 'Updated' }, 10),
       ).rejects.toThrow(ForbiddenException);
@@ -311,7 +381,14 @@ describe('PostService', () => {
 
     it('should update post by postId using findPostOwner', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ post_content_id: 10, user_sys_id: 1, pic_flag_valid: true, pc_flag_valid: true }]) // findPostOwner
+        .mockResolvedValueOnce([
+          {
+            post_content_id: 10,
+            user_sys_id: 1,
+            pic_flag_valid: true,
+            pc_flag_valid: true,
+          },
+        ]) // findPostOwner
         .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }]); // update
 
       const result = await service.updatePost(1, 1, { title: 'Updated' });
@@ -340,10 +417,18 @@ describe('PostService', () => {
       mockQuery.mockResolvedValueOnce([{ user_sys_id: 1 }]);
       mockQueryRunner.query
         .mockResolvedValueOnce([]) // remove
-        .mockResolvedValueOnce([{ attachment_id: 1, file_url: 'new.jpg', file_type: 'image', original_name: 'new.jpg' }]); // add
+        .mockResolvedValueOnce([
+          {
+            attachment_id: 1,
+            file_url: 'new.jpg',
+            file_type: 'image',
+            original_name: 'new.jpg',
+          },
+        ]); // add
 
       const result = await service.updatePostAttachments(
-        1, 10,
+        1,
+        10,
         [{ file_url: 'new.jpg', file_type: 'image', original_name: 'new.jpg' }],
         [5],
       );
@@ -357,19 +442,25 @@ describe('PostService', () => {
 
   describe('deletePost', () => {
     it('should throw BadRequestException if neither postId nor postContentId provided', async () => {
-      await expect(service.deletePost(1, 0)).rejects.toThrow(BadRequestException);
+      await expect(service.deletePost(1, 0)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException if post not found by postId', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      await expect(service.deletePost(1, 99)).rejects.toThrow(NotFoundException);
+      await expect(service.deletePost(1, 99)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if not post owner', async () => {
       mockQuery
         .mockResolvedValueOnce([{ user_sys_id: 99, post_content_id: 10 }]) // owner check
         .mockResolvedValueOnce([{ post_id: 1 }]); // all post_ids
-      await expect(service.deletePost(1, 1)).rejects.toThrow(ForbiddenException);
+      await expect(service.deletePost(1, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should delete post successfully by postId', async () => {
@@ -378,10 +469,10 @@ describe('PostService', () => {
         .mockResolvedValueOnce([{ post_id: 1 }]); // all post_ids
 
       mockQueryRunner.query
-        .mockResolvedValueOnce([]) // assignment ids
-        .mockResolvedValueOnce([]) // delete group_member (skipped if no assignmentIds)
-        .mockResolvedValueOnce([]) // delete student_group
-        .mockResolvedValueOnce([]) // delete assignment
+        .mockResolvedValueOnce([]) // get assignment_ids (empty → skip group steps)
+        .mockResolvedValueOnce([]) // delete post_comment_path
+        .mockResolvedValueOnce([]) // delete post_comment
+        .mockResolvedValueOnce([]) // delete bookmark
         .mockResolvedValueOnce([]) // delete post_attachment
         .mockResolvedValueOnce([]) // delete post_in_class
         .mockResolvedValueOnce([]); // delete post_content
@@ -389,6 +480,13 @@ describe('PostService', () => {
       const result = await service.deletePost(1, 1);
       expect(result.success).toBe(true);
       expect(result.message).toBe('Post deleted successfully');
+
+      const executedSql = mockQueryRunner.query.mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(executedSql.some((q) => q.includes('DELETE FROM bookmark'))).toBe(
+        true,
+      );
     });
 
     it('should delete post successfully by postContentId', async () => {
@@ -397,15 +495,23 @@ describe('PostService', () => {
         .mockResolvedValueOnce([{ post_id: 1 }]); // post_ids
 
       mockQueryRunner.query
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce([]) // get assignment_ids (empty → skip group steps)
+        .mockResolvedValueOnce([]) // delete post_comment_path
+        .mockResolvedValueOnce([]) // delete post_comment
+        .mockResolvedValueOnce([]) // delete bookmark
+        .mockResolvedValueOnce([]) // delete post_attachment
+        .mockResolvedValueOnce([]) // delete post_in_class
+        .mockResolvedValueOnce([]); // delete post_content
 
       const result = await service.deletePost(1, 0, 10);
       expect(result.success).toBe(true);
+
+      const executedSql = mockQueryRunner.query.mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(executedSql.some((q) => q.includes('DELETE FROM bookmark'))).toBe(
+        true,
+      );
     });
   });
 
@@ -425,18 +531,31 @@ describe('PostService', () => {
 
     it('should return search results', async () => {
       mockQuery.mockResolvedValueOnce([
-        { ...mockPostRow, user_sys_id: 5, section_id: 1, email: 'u@test.com', profile_pic: null, role_name: 'teacher' },
+        {
+          ...mockPostRow,
+          user_sys_id: 5,
+          section_id: 1,
+          email: 'u@test.com',
+          profile_pic: null,
+          role_name: 'teacher',
+        },
       ]);
-      const result = await service.searchPosts({ keyword: 'Test' }) as any;
+      const result = (await service.searchPosts({ keyword: 'Test' })) as any;
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(1);
     });
 
     it('should hide user info for anonymous posts', async () => {
       mockQuery.mockResolvedValueOnce([
-        { ...mockPostRow, user_sys_id: 5, section_id: 1, is_anonymous: true, email: 'u@test.com' },
+        {
+          ...mockPostRow,
+          user_sys_id: 5,
+          section_id: 1,
+          is_anonymous: true,
+          email: 'u@test.com',
+        },
       ]);
-      const result = await service.searchPosts({ keyword: 'Test' }) as any;
+      const result = (await service.searchPosts({ keyword: 'Test' })) as any;
       expect(result.data[0].user.email).toBeNull();
     });
 

@@ -78,14 +78,32 @@ describe('BookmarkService', () => {
 
     it('should fallback to safe sortBy if invalid field is given', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      await service.getBookmarks(undefined, undefined, undefined, true, 0, 50, 'DROP TABLE', 'ASC');
+      await service.getBookmarks(
+        undefined,
+        undefined,
+        undefined,
+        true,
+        0,
+        50,
+        'DROP TABLE',
+        'ASC',
+      );
       const [calledQuery] = mockQuery.mock.calls[0];
       expect(calledQuery).toContain('ORDER BY b.saved_at');
     });
 
     it('should fallback to DESC if invalid sortOrder is given', async () => {
       mockQuery.mockResolvedValueOnce([]);
-      await service.getBookmarks(undefined, undefined, undefined, true, 0, 50, 'saved_at', 'ASC');
+      await service.getBookmarks(
+        undefined,
+        undefined,
+        undefined,
+        true,
+        0,
+        50,
+        'saved_at',
+        'ASC',
+      );
       const [calledQuery] = mockQuery.mock.calls[0];
       expect(calledQuery).toContain('ORDER BY b.saved_at ASC');
     });
@@ -115,8 +133,8 @@ describe('BookmarkService', () => {
 
     it('should create bookmark if it does not exist', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ count: '0' }])  // check → not exists
-        .mockResolvedValueOnce([]);                 // insert
+        .mockResolvedValueOnce([{ count: '0' }]) // check → not exists
+        .mockResolvedValueOnce([]); // insert
 
       const result = await service.toggleBookmark(1, 10);
 
@@ -127,8 +145,8 @@ describe('BookmarkService', () => {
 
     it('should remove bookmark if it already exists', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ count: '1' }])  // check → exists
-        .mockResolvedValueOnce([]);                 // delete
+        .mockResolvedValueOnce([{ count: '1' }]) // check → exists
+        .mockResolvedValueOnce([]); // delete
 
       const result = await service.toggleBookmark(1, 10);
 

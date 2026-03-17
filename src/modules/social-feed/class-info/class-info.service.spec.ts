@@ -100,8 +100,17 @@ describe('ClassInfoService', () => {
         day_of_week: 1,
         start_time: '08:00',
         end_time: '10:00',
-        room: { room_location_id: 1, room_number: '101', floor: '1', room_remark: null },
-        building: { building_id: 1, building_name: 'อาคาร A', building_no: 'A' },
+        room: {
+          room_location_id: 1,
+          room_number: '101',
+          floor: '1',
+          room_remark: null,
+        },
+        building: {
+          building_id: 1,
+          building_name: 'อาคาร A',
+          building_no: 'A',
+        },
       },
     ];
 
@@ -128,9 +137,9 @@ describe('ClassInfoService', () => {
 
     it('should return full class info successfully', async () => {
       mockQuery
-        .mockResolvedValueOnce(mockRoom)       // roomQuery
-        .mockResolvedValueOnce(mockSchedules)  // schedulesQuery
-        .mockResolvedValueOnce(mockMembers)    // membersQuery
+        .mockResolvedValueOnce(mockRoom) // roomQuery
+        .mockResolvedValueOnce(mockSchedules) // schedulesQuery
+        .mockResolvedValueOnce(mockMembers) // membersQuery
         .mockResolvedValueOnce(mockEducators); // educatorsQuery
 
       const result = await service.getClassInfo(1);
@@ -156,7 +165,7 @@ describe('ClassInfoService', () => {
 
     it('should return empty room_location if no room found', async () => {
       mockQuery
-        .mockResolvedValueOnce([])  // no room
+        .mockResolvedValueOnce([]) // no room
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
@@ -167,7 +176,14 @@ describe('ClassInfoService', () => {
 
     it('should build room_location with only building_name if room/floor missing', async () => {
       mockQuery
-        .mockResolvedValueOnce([{ building_name: 'อาคาร B', building_no: null, room_number: null, floor: null }])
+        .mockResolvedValueOnce([
+          {
+            building_name: 'อาคาร B',
+            building_no: null,
+            room_number: null,
+            floor: null,
+          },
+        ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
