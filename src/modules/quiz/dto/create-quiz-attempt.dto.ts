@@ -1,4 +1,4 @@
-import { IsInt } from 'class-validator';
+import { IsInt, IsObject } from 'class-validator';
 
 export class CreateQuizAttemptDto {
 
@@ -11,5 +11,6 @@ export class CreateQuizAttemptDto {
   @IsInt()
   total: number;
 
+  @IsObject()
   answers: any;
 }

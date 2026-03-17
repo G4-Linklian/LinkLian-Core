@@ -1,22 +1,3 @@
-// import { ApiProperty } from '@nestjs/swagger';
-// import { IsInt, IsString } from 'class-validator';
-
-// export class CreateQuizDto {
-
-//   @ApiProperty()
-//   @IsInt()
-//   post_content_id: number;
-
-//   @ApiProperty()
-//   @IsString()
-//   difficulty: string;
-
-//   @ApiProperty()
-//   @IsInt()
-//   question_count: number;
-
-// }
-
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsString } from 'class-validator';
 

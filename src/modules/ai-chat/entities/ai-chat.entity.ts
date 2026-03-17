@@ -23,4 +23,5 @@ export class AiChat {
 
   @Column({ name: 'flag_valid', type: 'boolean', default: true })
   flag_valid!: boolean;
+  
 }

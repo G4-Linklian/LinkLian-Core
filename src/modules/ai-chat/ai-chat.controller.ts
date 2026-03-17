@@ -21,7 +21,7 @@ import { AiChatService } from './ai-chat.service';
 import {
   CreateAiChatDto,
   CreateAiMessageDto,
-  SearchAiChatDto,
+  //SearchAiChatDto,
   SearchAiMessageDto,
   UpdateAiChatDto,
 } from './dto/ai-chat.dto';
@@ -29,15 +29,15 @@ import {
 @ApiTags('AI Chat')
 @Controller('ai-chat')
 export class AiChatController {
-  constructor(private readonly aiChatService: AiChatService) {}
+  constructor(private readonly aiChatService: AiChatService) { }
 
-  @Get()
-  @ApiOperation({ summary: 'Search AI chats' })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'No value input' })
-  async getAiChats(@Query() dto: SearchAiChatDto) {
-    return this.aiChatService.searchAiChat(dto);
-  }
+  // @Get()
+  // @ApiOperation({ summary: 'Search AI chats' })
+  // @ApiResponse({ status: 200, description: 'Success' })
+  // @ApiResponse({ status: 400, description: 'No value input' })
+  // async getAiChats(@Query() dto: SearchAiChatDto) {
+  //   return this.aiChatService.searchAiChat(dto);
+  // }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -96,6 +96,11 @@ export class AiChatController {
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiResponse({ status: 404, description: 'AI chat not found' })
   async getAiChatById(@Param('id') id: number) {
-    return this.aiChatService.findAiChatById(Number(id));
+    //return this.aiChatService.findAiChatById(Number(id));
+    return this.aiChatService.getAiChat(Number(id));
+  }
+  @Get()
+  async getAiChats() {
+    return this.aiChatService.getAll();
   }
 }

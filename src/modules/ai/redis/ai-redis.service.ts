@@ -10,7 +10,7 @@ export interface ChatMessage {
 
 @Injectable()
 export class AiRedisService {
-  private readonly messageTtlSeconds = 60;
+  private readonly messageTtlSeconds = 3600;
   private readonly maxHistory = 20;
 
   constructor(

@@ -98,27 +98,89 @@ export class AiChatService {
         }
     }
 
+    // async createAiChat(dto: CreateAiChatDto) {
+    //     try {
+    //         const newChat = this.aiChatRepo.create({
+    //             post_content_id: dto.post_content_id,
+    //             chat_title: dto.chat_title,
+    //             summary_text: dto.summary_text,
+    //             created_at: new Date(),
+    //             flag_valid: true,
+    //         });
+
+    //         const saved = await this.aiChatRepo.save(newChat);
+
+    //         return {
+    //             success: true,
+    //             message: 'AI chat created successfully!',
+    //             data: saved,
+    //         };
+    //     } catch (error) {
+    //         this.logger.error('Error creating ai_chat', 'CreateAiChat', error);
+    //         throw new InternalServerErrorException('Error creating AI chat');
+    //     }
+    // }
     async createAiChat(dto: CreateAiChatDto) {
-        try {
-            const newChat = this.aiChatRepo.create({
-                post_content_id: dto.post_content_id,
-                chat_title: dto.chat_title,
-                summary_text: dto.summary_text,
-                created_at: new Date(),
-                flag_valid: true,
-            });
+        let existing = await this.aiChatRepo.findOne({
+            where: { post_content_id: dto.post_content_id, flag_valid: true },
+        });
 
-            const saved = await this.aiChatRepo.save(newChat);
-
+        if (existing) {
             return {
-                success: true,
-                message: 'AI chat created successfully!',
-                data: saved,
+                ai_chat_id: existing.ai_chat_id,
+                title: existing.chat_title,
+                document_title: existing.chat_title,
+                summary: existing.summary_text,
             };
-        } catch (error) {
-            this.logger.error('Error creating ai_chat', 'CreateAiChat', error);
-            throw new InternalServerErrorException('Error creating AI chat');
         }
+
+        const post = await this.dataSource.query(
+            `
+    SELECT pc.title, pc.content
+    FROM post_content pc
+    WHERE pc.post_content_id = $1
+    `,
+            [dto.post_content_id],
+        );
+
+        if (!post.length) {
+            throw new NotFoundException('Post not found');
+        }
+
+        const postData = post[0];
+
+        const aiResult = await this.aiService.postSummary({
+            post_content_id: dto.post_content_id,
+        });
+
+        let summary =
+            aiResult?.data?.final_summary ||
+            aiResult?.data?.summary ||
+            aiResult?.data?.summary_text;
+
+        if (!summary) {
+            throw new BadRequestException('AI summary not ready');
+        }
+
+        const documentTitle =
+            aiResult?.data?.document_title || postData.title;
+
+        const chat = await this.aiChatRepo.save({
+            post_content_id: dto.post_content_id,
+            chat_title: documentTitle,
+            summary_text: summary,
+            created_at: new Date(),
+            flag_valid: true,
+        });
+
+        return {
+            ai_chat_id: chat.ai_chat_id,
+            title: chat.chat_title,
+            document_title: chat.chat_title,
+            post_title: postData.title,
+            content: postData.content,
+            summary: summary,
+        };
     }
 
     async updateAiChat(id: number, dto: UpdateAiChatDto) {
@@ -239,16 +301,31 @@ export class AiChatService {
         }
 
         try {
-            const data: any = await this.aiService.qaChat({
+            const aiRes: any = await this.aiService.qaChat({
                 ai_chat_id: Number(dto.ai_chat_id),
                 question: dto.question,
                 post_content_id: Number(chat.post_content_id),
             });
 
+            const answer =
+                aiRes?.result ||
+                aiRes?.data?.result ||
+                aiRes;
+
+            if (!answer) {
+                throw new BadRequestException('AI answer not found');
+            }
+
+            await this.createQaMessagePairTransaction(
+                dto.ai_chat_id,
+                dto.question,
+                answer,
+            );
+
             return {
                 success: true,
                 message: 'AI message created successfully!',
-                data: data,
+                data: answer,
             };
         } catch (error) {
             this.logger.error('Error creating ai_message', 'CreateAiMessage', error);
@@ -339,5 +416,59 @@ export class AiChatService {
             this.logger.error('Error deleting ai_message', 'DeleteAiMessage', error);
             throw new InternalServerErrorException('Error deleting AI message');
         }
+    }
+
+    async getAiChat(id: number) {
+        const chat = await this.aiChatRepo.findOne({
+            where: { ai_chat_id: id, flag_valid: true },
+        });
+
+        if (!chat) {
+            throw new NotFoundException("AI chat not found");
+        }
+
+        const post = await this.dataSource.query(
+            `
+        SELECT
+            pc.title,
+            pc.content,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'file_url', pa.file_url,
+                        'file_type', pa.file_type,
+                        'original_name', pa.original_name
+                    )
+                ) FILTER (WHERE pa.file_url IS NOT NULL),
+                '[]'
+            ) as attachments
+        FROM post_content pc
+        LEFT JOIN post_attachment pa
+            ON pc.post_content_id = pa.post_content_id
+        WHERE pc.post_content_id = $1
+        GROUP BY pc.post_content_id
+        `,
+            [chat.post_content_id],
+        );
+
+        const postData = post[0];
+
+        return {
+            ai_chat_id: chat.ai_chat_id,
+            post_content_id: chat.post_content_id,
+
+            title: chat.chat_title,
+            document_title: chat.chat_title,
+            post_title: postData?.title ?? "",
+            content: postData?.content ?? "",
+            summary: chat.summary_text,
+            attachments: postData?.attachments ?? [],
+        };
+    }
+    async getAll() {
+        return this.aiChatRepo.find({
+            where: { flag_valid: true },
+            order: { created_at: 'DESC' },
+        });
     }
 }
