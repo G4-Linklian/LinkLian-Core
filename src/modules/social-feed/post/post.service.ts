@@ -16,6 +16,7 @@ import {
   UpdatePostDto,
   GetPostsInClassDto,
   SearchPostDto,
+  DownloadAttachmentDto,
 } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
@@ -32,6 +33,65 @@ export class PostService {
     private dataSource: DataSource,
     private readonly logger: AppLogger,
   ) {}
+
+  private sanitizeFileName(name: string): string {
+    const cleaned = (name || 'attachment')
+      .replace(/[/\\?%*:|"<>]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || 'attachment';
+  }
+
+  async downloadAttachment(dto: DownloadAttachmentDto): Promise<{
+    data: Buffer;
+    contentType: string;
+    contentLength?: string;
+    fileName: string;
+  }> {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(dto.url);
+    } catch {
+      throw new BadRequestException('Invalid attachment URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new BadRequestException('Invalid attachment URL protocol');
+    }
+
+    const allowedHost = (process.env.SOCIAL_FEED_ATTACHMENT_HOST || 'linklianstorage.blob.core.windows.net').toLowerCase();
+    const allowedPrefix = process.env.SOCIAL_FEED_ATTACHMENT_PATH_PREFIX || '/social-feed/fileattachment/';
+    if (parsedUrl.hostname.toLowerCase() !== allowedHost) {
+      throw new BadRequestException('Attachment host is not allowed');
+    }
+    if (!parsedUrl.pathname.startsWith(allowedPrefix)) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    try {
+      const upstream = await fetch(parsedUrl.toString(), { method: 'GET' });
+      if (!upstream.ok) {
+        this.logger.warn(
+          `Attachment upstream failed with status ${upstream.status}`,
+          'DownloadAttachment',
+          { url: parsedUrl.toString() },
+        );
+        throw new BadRequestException('Cannot fetch attachment file');
+      }
+
+      const data = Buffer.from(await upstream.arrayBuffer());
+      const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = upstream.headers.get('content-length') || undefined;
+      const pathName = decodeURIComponent(parsedUrl.pathname.split('/').pop() || '').trim();
+      const fileName = this.sanitizeFileName(dto.filename?.trim() || pathName || 'attachment');
+
+      return { data, contentType, contentLength, fileName };
+    } catch (error: any) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('DownloadAttachment failed', 'DownloadAttachment', error);
+      throw new InternalServerErrorException('Download attachment failed');
+    }
+  }
 
   /**
    * Check if user is in section (authorization)
