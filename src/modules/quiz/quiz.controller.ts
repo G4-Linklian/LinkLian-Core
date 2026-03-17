@@ -26,8 +26,6 @@ export class QuizController {
   ) {
     const userId = Number(req.headers['x-user-id']);
 
-    console.log("USER ID:", userId);
-
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
@@ -41,8 +39,6 @@ export class QuizController {
     @Req() req,
   ) {
     const userId = Number(req.headers['x-user-id']);
-
-    console.log("USER ID:", userId);
 
     if (!userId) {
       throw new UnauthorizedException('User not found');
