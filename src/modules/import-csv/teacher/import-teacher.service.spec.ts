@@ -44,10 +44,8 @@ jest.mock('../shared', () => ({
 }));
 
 import { parseExcelFile } from '../shared/utils/excel.util';
-import { createValidationToken } from '../shared';
 
 const mockParseExcelFile = parseExcelFile as jest.Mock;
-const mockCreateValidationToken = createValidationToken as jest.Mock;
 
 const mockUserSysRepo = () => ({
   find: jest.fn(),

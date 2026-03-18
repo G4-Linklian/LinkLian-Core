@@ -55,7 +55,7 @@ export class FileStorageService {
 
       // Upload all files in parallel
       this.logger.log(
-        `Uploading ${files.length} files to ${containerName}/${folderName}`,
+        `Uploading files to ${containerName}/${folderName}`,
         'FileStorageService',
       );
 
