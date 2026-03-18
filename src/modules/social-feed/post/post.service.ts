@@ -59,19 +59,62 @@ export class PostService {
       throw new BadRequestException('Invalid attachment URL protocol');
     }
 
-    const allowedHost = (process.env.SOCIAL_FEED_ATTACHMENT_HOST || 'linklianstorage.blob.core.windows.net').toLowerCase();
-    const allowedPrefix = process.env.SOCIAL_FEED_ATTACHMENT_PATH_PREFIX || '/social-feed/fileattachment/';
+    const configuredHost =
+      process.env.SOCIAL_FEED_ATTACHMENT_HOST ||
+      'linklianstorage.blob.core.windows.net';
+    const trustedOrigin = new URL(`https://${configuredHost}`);
+    const allowedHost = trustedOrigin.hostname.toLowerCase();
+
+    const configuredPrefix =
+      process.env.SOCIAL_FEED_ATTACHMENT_PATH_PREFIX ||
+      '/social-feed/fileattachment/';
+    const allowedPrefix =
+      '/' + configuredPrefix.split('/').filter(Boolean).join('/') + '/';
+
     if (parsedUrl.hostname.toLowerCase() !== allowedHost) {
       throw new BadRequestException('Attachment host is not allowed');
     }
-    if (!parsedUrl.pathname.startsWith(allowedPrefix)) {
+
+    let decodedPath = '';
+    try {
+      decodedPath = decodeURIComponent(parsedUrl.pathname);
+    } catch {
+      throw new BadRequestException('Invalid attachment path');
+    }
+
+    if (decodedPath.includes('\\')) {
       throw new BadRequestException('Attachment path is not allowed');
     }
 
-    // Reconstruct a safe URL from validated components instead of using the raw user input.
-    const safeOrigin = parsedUrl.origin;
-    const safePathAndSearch = parsedUrl.pathname + parsedUrl.search;
-    const safeUrl = safeOrigin + safePathAndSearch;
+    const normalizedPath = '/' + decodedPath.split('/').filter(Boolean).join('/');
+    if (!normalizedPath.startsWith(allowedPrefix)) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const relativePath = normalizedPath.slice(allowedPrefix.length);
+    if (!relativePath) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const pathSegments = relativePath.split('/').filter(Boolean);
+    if (
+      pathSegments.some(
+        (segment) =>
+          segment === '.' ||
+          segment === '..' ||
+          /[\u0000-\u001F\u007F]/.test(segment),
+      )
+    ) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const encodedRelativePath = pathSegments
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    const safeUrl = new URL(
+      `${allowedPrefix}${encodedRelativePath}`,
+      trustedOrigin,
+    ).toString();
 
     try {
       const upstream = await fetch(safeUrl, { method: 'GET' });
@@ -87,7 +130,7 @@ export class PostService {
       const data = Buffer.from(await upstream.arrayBuffer());
       const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
       const contentLength = upstream.headers.get('content-length') || undefined;
-      const pathName = decodeURIComponent(parsedUrl.pathname.split('/').pop() || '').trim();
+      const pathName = decodeURIComponent(pathSegments[pathSegments.length - 1] || '').trim();
       const fileName = this.sanitizeFileName(dto.filename?.trim() || pathName || 'attachment');
 
       return { data, contentType, contentLength, fileName };
