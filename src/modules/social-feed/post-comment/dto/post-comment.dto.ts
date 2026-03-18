@@ -43,6 +43,7 @@ export class CreatePostCommentDto {
   is_anonymous?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => value !== undefined ? parseInt(value, 10) : undefined)
   @IsNumber()
   parent_id?: number;
 }
