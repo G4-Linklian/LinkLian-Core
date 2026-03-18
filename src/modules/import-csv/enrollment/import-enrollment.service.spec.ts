@@ -43,7 +43,7 @@ jest.mock('../shared', () => ({
 }));
 
 import { parseExcelFile } from '../shared/utils/excel.util';
-import { createValidationToken, verifyValidationToken } from '../shared';
+import { verifyValidationToken } from '../shared';
 
 const mockParseExcelFile = parseExcelFile as jest.Mock;
 const mockVerifyValidationToken = verifyValidationToken as jest.Mock;
