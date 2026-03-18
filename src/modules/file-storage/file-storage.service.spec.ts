@@ -23,10 +23,6 @@ const mockContainerClient = {
   getBlockBlobClient: jest.fn().mockReturnValue(mockBlockBlobClient),
 };
 
-const mockBlobServiceClient = {
-  getContainerClient: jest.fn().mockReturnValue(mockContainerClient),
-};
-
 jest.mock('../../config/blob.config', () => ({
   blobServiceClient: {
     getContainerClient: jest.fn(),

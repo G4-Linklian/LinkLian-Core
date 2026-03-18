@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   Headers,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,7 +27,12 @@ import {
   GetPostsInClassDto,
   SearchPostDto,
   SearchPostMasterDto,
+  DownloadAttachmentDto,
 } from './dto/post.dto';
+import type { Response } from 'express';
+
+const encodeRFC5987 = (value: string): string =>
+  encodeURIComponent(value).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 
 @ApiTags('Social Feed - Post')
 @Controller('social-feed/post')
@@ -67,6 +73,28 @@ export class PostController {
   @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
   getPostsInClass(@Query() dto: GetPostsInClassDto) {
     return this.postService.getPostsInClass(dto);
+  }
+
+  /**
+   * Download attachment (backend proxy for browser-native download behavior)
+   * Additive endpoint to keep existing mobile API flow unchanged.
+   */
+  @Get('attachment/download')
+  @ApiOperation({ summary: 'Download social-feed attachment via backend proxy' })
+  @ApiQuery({ name: 'url', description: 'Attachment URL', required: true })
+  @ApiQuery({ name: 'filename', description: 'Optional download filename', required: false })
+  async downloadAttachment(
+    @Query() dto: DownloadAttachmentDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const result = await this.postService.downloadAttachment(dto);
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.fileName.replace(/"/g, '')}"; filename*=UTF-8''${encodeRFC5987(result.fileName)}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).send(result.data);
   }
 
   /**

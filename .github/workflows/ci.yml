@@ -68,7 +68,7 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:ci
-        continue-on-error: true
+        continue-on-error: false
         env:
           NODE_ENV: test
   
@@ -85,6 +85,7 @@ jobs:
           docker build -t linklian-core:local -f Dockerfile .
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
+            --exit-code 1 \
             aquasec/trivy image \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \

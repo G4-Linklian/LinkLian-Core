@@ -7,6 +7,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  IsUrl,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -259,6 +260,28 @@ export class SearchPostMasterDto {
   @Type(() => Number)
   @IsInt()
   post_content_id?: number;
+}
+
+/**
+ * DTO for downloading attachment via backend proxy.
+ * Additive endpoint, does not affect existing mobile flows.
+ */
+export class DownloadAttachmentDto {
+  @ApiProperty({
+    description: 'Attachment URL to download',
+    example: 'https://linklianstorage.blob.core.windows.net/social-feed/fileattachment/sample.pdf',
+  })
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  url!: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional preferred filename for Content-Disposition',
+    example: 'Homework-Week-01.pdf',
+  })
+  @IsOptional()
+  @IsString()
+  filename?: string;
 }
 
 /**
