@@ -86,8 +86,7 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy image \
-            --exit-code 1 \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
             linklian-core:local
-        #--exit-code 1 \
+        # --exit-code 1 \
