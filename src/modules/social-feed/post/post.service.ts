@@ -17,6 +17,7 @@ import {
   GetPostsInClassDto,
   SearchPostDto,
   SearchPostMasterDto,
+  DownloadAttachmentDto,
 } from './dto/post.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
@@ -37,6 +38,113 @@ export class PostService {
     private dataSource: DataSource,
     private readonly logger: AppLogger,
   ) { }
+
+  private sanitizeFileName(name: string): string {
+    const cleaned = (name || 'attachment')
+      .replace(/[/\\?%*:|"<>]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || 'attachment';
+  }
+
+  async downloadAttachment(dto: DownloadAttachmentDto): Promise<{
+    data: Buffer;
+    contentType: string;
+    contentLength?: string;
+    fileName: string;
+  }> {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(dto.url);
+    } catch {
+      throw new BadRequestException('Invalid attachment URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new BadRequestException('Invalid attachment URL protocol');
+    }
+
+    const configuredHost =
+      process.env.SOCIAL_FEED_ATTACHMENT_HOST ||
+      'linklianstorage.blob.core.windows.net';
+    const trustedOrigin = new URL(`https://${configuredHost}`);
+    const allowedHost = trustedOrigin.hostname.toLowerCase();
+
+    const configuredPrefix =
+      process.env.SOCIAL_FEED_ATTACHMENT_PATH_PREFIX ||
+      '/social-feed/fileattachment/';
+    const allowedPrefix =
+      '/' + configuredPrefix.split('/').filter(Boolean).join('/') + '/';
+
+    if (parsedUrl.hostname.toLowerCase() !== allowedHost) {
+      throw new BadRequestException('Attachment host is not allowed');
+    }
+
+    let decodedPath = '';
+    try {
+      decodedPath = decodeURIComponent(parsedUrl.pathname);
+    } catch {
+      throw new BadRequestException('Invalid attachment path');
+    }
+
+    if (decodedPath.includes('\\')) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const normalizedPath = '/' + decodedPath.split('/').filter(Boolean).join('/');
+    if (!normalizedPath.startsWith(allowedPrefix)) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const relativePath = normalizedPath.slice(allowedPrefix.length);
+    if (!relativePath) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const pathSegments = relativePath.split('/').filter(Boolean);
+    if (
+      pathSegments.some(
+        (segment) =>
+          segment === '.' ||
+          segment === '..' ||
+          /[\u0000-\u001F\u007F]/.test(segment),
+      )
+    ) {
+      throw new BadRequestException('Attachment path is not allowed');
+    }
+
+    const encodedRelativePath = pathSegments
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    const safeUrl = new URL(
+      `${allowedPrefix}${encodedRelativePath}`,
+      trustedOrigin,
+    ).toString();
+
+    try {
+      const upstream = await fetch(safeUrl, { method: 'GET' });
+      if (!upstream.ok) {
+        this.logger.warn(
+          `Attachment upstream failed with status ${upstream.status}`,
+          'DownloadAttachment',
+          { url: safeUrl },
+        );
+        throw new BadRequestException('Cannot fetch attachment file');
+      }
+
+      const data = Buffer.from(await upstream.arrayBuffer());
+      const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = upstream.headers.get('content-length') || undefined;
+      const pathName = decodeURIComponent(pathSegments[pathSegments.length - 1] || '').trim();
+      const fileName = this.sanitizeFileName(dto.filename?.trim() || pathName || 'attachment');
+
+      return { data, contentType, contentLength, fileName };
+    } catch (error: any) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('DownloadAttachment failed', 'DownloadAttachment', error);
+      throw new InternalServerErrorException('Download attachment failed');
+    }
+  }
 
   /**
    * Check if user is in section (authorization)
@@ -204,7 +312,34 @@ export class PostService {
       }
 
       // Transform result to handle anonymous posts
-      const posts = result.map((row: any) => {
+      const sanitizedRows = result.filter((row: any) => {
+        const postId = Number(row?.post_id);
+        const postContentId = Number(row?.post_content_id);
+        const userSysId = Number(row?._user_sys_id);
+        const isValid =
+          Number.isFinite(postId) &&
+          postId > 0 &&
+          Number.isFinite(postContentId) &&
+          postContentId > 0 &&
+          Number.isFinite(userSysId) &&
+          userSysId > 0;
+
+        if (!isValid) {
+          this.logger.warn(
+            `Skipping invalid post row in GetPostsInClass`,
+            'GetPostsInClass',
+            {
+              post_id: row?.post_id,
+              post_content_id: row?.post_content_id,
+              user_sys_id: row?._user_sys_id,
+            },
+          );
+        }
+
+        return isValid;
+      });
+
+      const posts = sanitizedRows.map((row: any) => {
         const isAnonymous = row.is_anonymous;
         const userSysId = Number(row._user_sys_id);
         const sectionId = dto.section_id;
@@ -1531,6 +1666,16 @@ a.is_group,
   }
 
   async getPostById(postId: number) {
+    const safePostId = Number(postId);
+    if (!Number.isFinite(safePostId) || safePostId <= 0) {
+      this.logger.warn(
+        `Invalid postId received in getPostById`,
+        'GetPostById',
+        { postId },
+      );
+      throw new BadRequestException('invalid post_id');
+    }
+
     const query = `
     SELECT
       pic.post_id,
@@ -1594,7 +1739,7 @@ a.is_group,
       a.is_group
   `;
 
-    const result = await this.dataSource.query(query, [postId]);
+    const result = await this.dataSource.query(query, [safePostId]);
 
     if (!result.length) {
       throw new NotFoundException('Post not found');
