@@ -68,13 +68,18 @@ export class PostService {
       throw new BadRequestException('Attachment path is not allowed');
     }
 
+    // Reconstruct a safe URL from validated components instead of using the raw user input.
+    const safeOrigin = parsedUrl.origin;
+    const safePathAndSearch = parsedUrl.pathname + parsedUrl.search;
+    const safeUrl = safeOrigin + safePathAndSearch;
+
     try {
-      const upstream = await fetch(parsedUrl.toString(), { method: 'GET' });
+      const upstream = await fetch(safeUrl, { method: 'GET' });
       if (!upstream.ok) {
         this.logger.warn(
           `Attachment upstream failed with status ${upstream.status}`,
           'DownloadAttachment',
-          { url: parsedUrl.toString() },
+          { url: safeUrl },
         );
         throw new BadRequestException('Cannot fetch attachment file');
       }
