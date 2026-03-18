@@ -110,17 +110,16 @@ describe('AssetService', () => {
 
   describe('search', () => {
     it('should throw BadRequestException when no input provided', async () => {
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       await expect(service.search({})).rejects.toThrow(BadRequestException);
     });
 
     it('should return rows with total_count', async () => {
-      const syncQb = buildWriteQb();
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       const searchRows = [mockAsset({ theme_id: 1 }), mockAsset({ theme_id: 2 })];
       const searchQb = buildReadQb({ manyAndCount: [searchRows, 2] });
 
-      mockRepo.createQueryBuilder
-        .mockReturnValueOnce(syncQb)
-        .mockReturnValueOnce(searchQb);
+      mockRepo.createQueryBuilder.mockReturnValueOnce(searchQb);
 
       const result = await service.search({ theme_name: 'Theme' });
 
@@ -130,13 +129,11 @@ describe('AssetService', () => {
     });
 
     it('should throw InternalServerErrorException when query fails', async () => {
-      const syncQb = buildWriteQb();
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       const searchQb = buildReadQb({ manyAndCount: [[], 0] });
       searchQb.getManyAndCount.mockRejectedValueOnce(new Error('DB error'));
 
-      mockRepo.createQueryBuilder
-        .mockReturnValueOnce(syncQb)
-        .mockReturnValueOnce(searchQb);
+      mockRepo.createQueryBuilder.mockReturnValueOnce(searchQb);
 
       await expect(service.search({ theme_name: 'Theme' })).rejects.toThrow(
         InternalServerErrorException,
@@ -193,7 +190,10 @@ describe('AssetService', () => {
         return callback(manager);
       });
 
-      const file = { originalname: 'theme.png' } as Express.Multer.File;
+      const file = {
+        originalname: 'theme.png',
+        mimetype: 'image/png',
+      } as Express.Multer.File;
       const result = await service.create(
         {
           theme_name: 'Theme New',
@@ -235,15 +235,11 @@ describe('AssetService', () => {
         .mockReturnValueOnce(findQb)
         .mockReturnValueOnce(updatedQb);
 
-      const unsetDefaultQb = buildWriteQb();
       const updateQb = buildWriteQb();
 
       mockDataSource.transaction.mockImplementationOnce(async (callback: any) => {
         const manager = {
-          createQueryBuilder: jest
-            .fn()
-            .mockReturnValueOnce(unsetDefaultQb)
-            .mockReturnValueOnce(updateQb),
+          createQueryBuilder: jest.fn().mockReturnValue(updateQb),
         };
         return callback(manager);
       });
@@ -263,12 +259,11 @@ describe('AssetService', () => {
 
   describe('getActiveThemeUrl', () => {
     it('should return default theme_url when no active range found', async () => {
-      const syncQb = buildWriteQb();
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       const activeQb = buildReadQb({ rawMany: [] });
       const defaultQb = buildReadQb({ rawOne: { theme_url: 'https://default.png' } });
 
       mockRepo.createQueryBuilder
-        .mockReturnValueOnce(syncQb)
         .mockReturnValueOnce(activeQb)
         .mockReturnValueOnce(defaultQb);
 
@@ -280,23 +275,20 @@ describe('AssetService', () => {
 
   describe('delete', () => {
     it('should reject deleting active asset', async () => {
-      const syncQb = buildWriteQb();
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       const findQb = buildReadQb({ one: mockAsset({ status: 'active', flag_valid: true }) });
 
-      mockRepo.createQueryBuilder
-        .mockReturnValueOnce(syncQb)
-        .mockReturnValueOnce(findQb);
+      mockRepo.createQueryBuilder.mockReturnValueOnce(findQb);
 
       await expect(service.delete(1)).rejects.toThrow(BadRequestException);
     });
 
     it('should delete asset when not active', async () => {
-      const syncQb = buildWriteQb();
+      jest.spyOn(service, 'syncStatuses').mockResolvedValue();
       const findQb = buildReadQb({ one: mockAsset({ status: 'completed', flag_valid: true }) });
       const deleteQb = buildWriteQb();
 
       mockRepo.createQueryBuilder
-        .mockReturnValueOnce(syncQb)
         .mockReturnValueOnce(findQb)
         .mockReturnValueOnce(deleteQb);
 
