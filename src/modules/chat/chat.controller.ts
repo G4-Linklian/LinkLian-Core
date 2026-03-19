@@ -8,6 +8,7 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +16,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import {
@@ -22,12 +24,15 @@ import {
   SearchChatDto,
   CreateMessageDto,
   SearchMessageDto,
+  SearchUserForChatDto,
 } from './dto/chat.dto';
+import { UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Chat')
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   // ========== Chat Endpoints ==========
 
@@ -40,19 +45,6 @@ export class ChatController {
   @ApiResponse({ status: 400, description: 'No value input' })
   async getChat(@Query() dto: SearchChatDto) {
     const data = await this.chatService.searchChat(dto);
-    return data;
-  }
-
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get chat by ID',
-    description: 'Get a specific chat by its ID',
-  })
-  @ApiParam({ name: 'id', description: 'Chat ID', type: Number })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 404, description: 'Chat not found' })
-  async getChatById(@Param('id') id: number) {
-    const data = await this.chatService.findChatById(id);
     return data;
   }
 
@@ -84,6 +76,19 @@ export class ChatController {
     return data;
   }
 
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get chat by ID',
+    description: 'Get a specific chat by its ID',
+  })
+  @ApiParam({ name: 'id', description: 'Chat ID', type: Number })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiResponse({ status: 404, description: 'Chat not found' })
+  async getChatById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.chatService.findChatById(id);
+    return data;
+  }
+
   @Post('messages')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -93,8 +98,22 @@ export class ChatController {
   @ApiBody({ type: CreateMessageDto })
   @ApiResponse({ status: 201, description: 'Message created successfully' })
   @ApiResponse({ status: 400, description: 'Missing required fields' })
-  async createMessage(@Body() dto: CreateMessageDto) {
-    const result = await this.chatService.createMessage(dto);
-    return result;
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('files'))
+  async createMessage(
+    @Body() dto: CreateMessageDto,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    return this.chatService.createMessage(dto, files);
+  }
+
+  @Get('users/search')
+  @ApiOperation({
+    summary: 'Search users to start chat',
+  })
+  @ApiResponse({ status: 200, description: 'Success' })
+  async searchUsers(@Query() dto: SearchUserForChatDto) {
+    const data = await this.chatService.searchUsersForChat(dto);
+    return data;
   }
 }
