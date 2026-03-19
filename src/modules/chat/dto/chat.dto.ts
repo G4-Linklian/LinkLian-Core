@@ -1,5 +1,11 @@
 // dto/chat.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsArray,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -144,31 +150,38 @@ export class SearchMessageDto {
   offset?: number;
 }
 
-// ========== RabbitMQ Event Interface ==========
 export class CreateMessageDto {
   @ApiProperty({ description: 'Chat ID', example: 1 })
-  @Type(() => Number)
   @IsInt()
   chat_id!: number;
 
   @ApiProperty({ description: 'Sender ID', example: 1 })
-  @Type(() => Number)
   @IsInt()
   sender_id!: number;
 
   @ApiProperty({
     description: 'Message content',
-    example: 'Hello',
+    example: 'Hello, how are you?',
   })
   @IsString()
-  content!: string;
+  content?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Reply to message ID', example: null })
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
   reply_id?: number;
+
+  @ApiPropertyOptional({
+    description: 'File attachments',
+    example: [{ url: 'https://example.com/file.pdf', name: 'file.pdf' }],
+  })
+  @IsOptional()
+  @IsArray()
+  file?: object[];
 }
+
+// ========== RabbitMQ Event Interface ==========
+
 export interface ChatSendEvent {
   type: string;
   payload: {
@@ -179,28 +192,4 @@ export interface ChatSendEvent {
     file_url: object[] | null;
     created_at: Date;
   };
-}
-
-export class SearchUserForChatDto {
-  @ApiProperty({ example: 8 })
-  @Type(() => Number)
-  @IsInt()
-  user_sys_id!: number;
-
-  @ApiPropertyOptional({ example: 'สม' })
-  @IsOptional()
-  @IsString()
-  keyword?: string;
-
-  @ApiPropertyOptional({ example: 6 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  limit?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  offset?: number;
 }

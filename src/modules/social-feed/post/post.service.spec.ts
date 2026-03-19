@@ -6,7 +6,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { PostContent } from './entities/post-content.entity';
 import { PostInClass } from './entities/post-in-class.entity';
 import { PostAttachment } from './entities/post-attachment.entity';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -35,9 +34,6 @@ const mockLogger = {
   verbose: jest.fn(),
 };
 const mockRepo = { find: jest.fn(), findOne: jest.fn(), save: jest.fn() };
-const mockBullMQService = {
-  addJob: jest.fn(),
-};
 
 const mockPostRow = {
   post_id: 1,
@@ -67,7 +63,6 @@ describe('PostService', () => {
         PostService,
         { provide: DataSource, useValue: mockDataSource },
         { provide: AppLogger, useValue: mockLogger },
-        { provide: BullMQService, useValue: mockBullMQService },
         { provide: getRepositoryToken(PostContent), useValue: mockRepo },
         { provide: getRepositoryToken(PostInClass), useValue: mockRepo },
         { provide: getRepositoryToken(PostAttachment), useValue: mockRepo },
@@ -85,7 +80,6 @@ describe('PostService', () => {
     mockLogger.warn.mockImplementation((..._args) => undefined);
     mockLogger.log.mockImplementation((..._args) => undefined);
     mockLogger.verbose.mockImplementation((..._args) => undefined);
-    mockBullMQService.addJob.mockReset();
 
     // Ensure the service uses our mock logger (override private field)
     (service as any).logger = mockLogger;
