@@ -26,6 +26,7 @@ import {
   UpdatePostDto,
   GetPostsInClassDto,
   SearchPostDto,
+  SearchPostMasterDto,
   DownloadAttachmentDto,
 } from './dto/post.dto';
 import type { Response } from 'express';
@@ -217,8 +218,15 @@ export class PostController {
       body.post_content_id,
     );
   }
+  @Get('search-master')
+  @ApiOperation({ summary: 'Search posts by post_content_id' })
+  @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
+  searchPostMaster(@Query() dto: SearchPostMasterDto) {
+    return this.postService.searchPostMaster(dto);
+  }
+
   @Get(':postId')
-  getPostById(@Param('postId') postId: number) {
-    return this.postService.getPostById(Number(postId));
+  getPostById(@Param('postId', ParseIntPipe) postId: number) {
+    return this.postService.getPostById(postId);
   }
 }

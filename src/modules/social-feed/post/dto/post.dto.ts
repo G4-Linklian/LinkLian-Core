@@ -251,6 +251,17 @@ export class SearchPostDto {
   offset?: number = 0;
 }
 
+export class SearchPostMasterDto {
+  @ApiPropertyOptional({
+    description: 'Section ID to filter posts',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  post_content_id?: number;
+}
+
 /**
  * DTO for downloading attachment via backend proxy.
  * Additive endpoint, does not affect existing mobile flows.

@@ -16,9 +16,11 @@ import {
   CreateMessageDto,
   SearchMessageDto,
   ChatSendEvent,
+  SearchUserForChatDto,
 } from './dto/chat.dto';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
+import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
 
 @Injectable()
 export class ChatService {
@@ -32,6 +34,7 @@ export class ChatService {
     private dataSource: DataSource,
     private readonly logger: AppLogger,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly fileStorageService: FileStorageService,
   ) { }
 
   // ========== Chat Methods ==========
@@ -146,6 +149,45 @@ export class ChatService {
   async createChat(dto: CreateChatDto) {
     if (!dto.sender_id || !dto.receiver_id) {
       throw new BadRequestException('Missing required fields!');
+    }
+
+    try {
+      const existingChat = await this.dataSource.query(
+        `
+        SELECT chat_id
+        FROM user_sys_chat_normalize
+        WHERE user_sys_id IN ($1, $2)
+        GROUP BY chat_id
+        HAVING COUNT(*) = 2
+        LIMIT 1
+        `,
+        [dto.sender_id, dto.receiver_id],
+      );
+
+      if (existingChat.length > 0) {
+        const chat = await this.chatRepo.findOne({
+          where: { chat_id: existingChat[0].chat_id },
+        });
+
+        this.logger.log(
+          JSON.stringify({
+            label: 'CreateChat',
+            message: 'Chat already exists',
+            sender: dto.sender_id,
+            receiver: dto.receiver_id,
+            chat_id: existingChat[0].chat_id,
+          }),
+        );
+
+        return {
+          success: true,
+          message: 'Chat already exists',
+          data: chat,
+        };
+      }
+    } catch (error) {
+      this.logger.error('Error checking existing chat', 'CreateChat', error);
+      throw new InternalServerErrorException('Error checking existing chat');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -281,7 +323,8 @@ export class ChatService {
    * Also updates chat's last_sent and last_messages
    * Sends event to RabbitMQ for real-time delivery
    */
-  async createMessage(dto: CreateMessageDto) {
+  //async createMessage(dto: CreateMessageDto) {
+  async createMessage(dto: CreateMessageDto, files?: Express.Multer.File[],) {
     if (!dto.chat_id || !dto.sender_id || !dto.content) {
       throw new BadRequestException('Missing required fields!');
     }
@@ -291,15 +334,42 @@ export class ChatService {
     await queryRunner.startTransaction();
 
     try {
-      // Create the message
       const newMessage = new Message();
       newMessage.chat_id = dto.chat_id;
       newMessage.sender_id = dto.sender_id;
       newMessage.content = dto.content;
       newMessage.reply_id = dto.reply_id || null;
-      newMessage.file = dto.file || null;
+      // newMessage.file = dto.file || null;
+      let attachments: any[] = [];
+      if (files && files.length > 0) {
+
+        const uploadResult = await this.fileStorageService.uploadFiles(
+          'chat',
+          'message',
+          files,
+        );
+
+        for (const uploaded of uploadResult.files) {
+
+          attachments.push({
+            url: uploaded.fileUrl,
+            original_name: uploaded.originalName,
+            type: uploaded.fileType,
+          });
+
+        }
+      }
+      newMessage.file = attachments.length ? attachments : null;
       newMessage.status = 'SENDED';
       newMessage.flag_valid = true;
+      this.logger.debug(
+        JSON.stringify({
+          label: 'BeforeSaveFile',
+          value: newMessage.file,
+          type: typeof newMessage.file,
+          isArray: Array.isArray(newMessage.file),
+        }),
+      );
 
       const savedMessage = await queryRunner.manager.save(newMessage);
 
@@ -309,13 +379,22 @@ export class ChatService {
         { chat_id: dto.chat_id },
         {
           last_sent: new Date(),
-          last_messages: dto.content,
+          last_messages: dto.content ?? '',
         },
       );
 
       // Send event to RabbitMQ for real-time delivery
       // Must succeed before committing — failure will trigger rollback
-      await this.sendMessageToRabbitMQ(savedMessage);
+      ///await this.sendMessageToRabbitMQ(savedMessage);
+      try {
+        await this.sendMessageToRabbitMQ(savedMessage);
+      } catch (error) {
+        this.logger.error(
+          'RabbitMQ failed but message saved',
+          'CreateMessage',
+          error,
+        );
+      }
 
       // Commit transaction only after RabbitMQ succeeds
       await queryRunner.commitTransaction();
@@ -333,6 +412,94 @@ export class ChatService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async searchUsersForChat(dto: SearchUserForChatDto) {
+
+    const user = await this.dataSource.query(
+      `
+    SELECT role_id, inst_id
+    FROM user_sys
+    WHERE user_sys_id = $1
+    `,
+      [dto.user_sys_id],
+    );
+
+    if (!user.length) {
+      throw new NotFoundException('User not found');
+    }
+
+    const currentUser = user[0];
+
+    const roleMap: Record<number, number> = {
+      2: 4,
+      4: 2,
+      3: 5,
+      5: 3,
+    };
+
+    const targetRole = roleMap[currentUser.role_id];
+
+    if (!targetRole) {
+      throw new BadRequestException('Role not allowed');
+    }
+
+    let query = `
+    SELECT 
+      user_sys_id,
+      first_name,
+      last_name,
+      profile_pic
+    FROM user_sys
+    WHERE inst_id = $1
+    AND role_id = $2
+    AND user_status = 'Active'
+    AND user_sys_id <> $3
+  `;
+
+    const values: any[] = [
+      currentUser.inst_id,
+      targetRole,
+      dto.user_sys_id,
+    ];
+
+    let paramIndex = 4;
+
+    if (dto.keyword) {
+      query += `
+      AND (
+        first_name ILIKE $${paramIndex}
+        OR last_name ILIKE $${paramIndex}
+      )
+    `;
+      values.push(`%${dto.keyword}%`);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY first_name ASC`;
+
+    if (dto.limit) {
+      query += ` LIMIT $${paramIndex}`;
+      values.push(dto.limit);
+      paramIndex++;
+    }
+
+    if (dto.offset) {
+      query += ` OFFSET $${paramIndex}`;
+      values.push(dto.offset);
+    }
+
+    const users = await this.dataSource.query(query, values);
+
+    const usersData = {
+      users: users,
+    };
+
+    return {
+      success: true,
+      data: usersData,
+      message: 'Search users successfully',
+    };
   }
 
   /**
@@ -357,7 +524,6 @@ export class ChatService {
       eventMessage,
     );
 
-    // Reuse the shared channel — no new connection per call
     await this.rabbitMQService.publish('linklian_events', 'chat.deliver', eventMessage);
 
     this.logger.debug('Message published to RabbitMQ successfully', 'ChatService');

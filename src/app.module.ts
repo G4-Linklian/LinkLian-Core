@@ -32,13 +32,17 @@ import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-e
 import { CommunityModule } from './modules/community/community.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
+import { BullMQModule } from './common/bullmq/bullmq.module';
+import { RedisModule } from './common/redis/redis.module';
+import { AiModule } from './modules/ai/ai.module';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthMiddleware } from './common/middleware/auth.middleware';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
-import { AssetsModule } from './modules/asset/asset.module';
+import { QuizModule } from './modules/quiz/quiz.module';
 
 @Module({
   imports: [
@@ -65,6 +69,7 @@ import { AssetsModule } from './modules/asset/asset.module';
     RoleModule,
     AdminModule,
     ChatModule,
+    QuizModule,
     BuildingModule,
     RoomLocationModule,
     FileStorageModule,
@@ -87,9 +92,12 @@ import { AssetsModule } from './modules/asset/asset.module';
     ImportSectionScheduleModule,
     ImportEnrollmentModule,
     CommunityModule,
+    AiModule,
+    AiChatModule,
     LoggerModule,
     RabbitMQModule,
-    AssetsModule,
+    BullMQModule,
+    RedisModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -118,6 +126,7 @@ export class AppModule implements NestModule {
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
         { path: 'auth/(.*)', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
+        { path: 'assets/(.*)', method: RequestMethod.ALL },
       )
       .forRoutes('*');
   }
