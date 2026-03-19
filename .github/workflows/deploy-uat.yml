@@ -1,0 +1,16 @@
+name: Deploy to UAT
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Portainer Webhook
+        run: |
+          echo "Triggering deploy..."
+          curl -X POST ${{ secrets.PORTAINER_WEBHOOK }}
