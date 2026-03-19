@@ -5,12 +5,11 @@ import { ChatController } from './chat.controller';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
-import { FileStorageModule } from '../file-storage/file-storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize]), FileStorageModule],
+  imports: [TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize])],
   controllers: [ChatController],
   providers: [ChatService],
   exports: [ChatService],
 })
-export class ChatModule { }
+export class ChatModule {}
