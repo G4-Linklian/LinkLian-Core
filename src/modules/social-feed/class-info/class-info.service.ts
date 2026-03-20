@@ -1,10 +1,14 @@
 // filepath: /Users/thunyatorn/Desktop/LinkLian-Core/src/modules/social-feed/class-info/class-info.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class ClassInfoService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get section educators with user info
@@ -31,9 +35,15 @@ export class ClassInfoService {
     try {
       const result = await this.dataSource.query(query, [sectionId]);
       return result;
-    } catch (error) {
-      console.error('Error fetching section educators:', error);
-      throw new InternalServerErrorException('Error fetching section educators');
+    } catch (error: any) {
+      this.logger.error(
+        'Error fetching section educators',
+        'GetSectionEducators',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Error fetching section educators',
+      );
     }
   }
 
@@ -57,7 +67,7 @@ export class ClassInfoService {
         LIMIT 1
       `;
       const roomResult = await this.dataSource.query(roomQuery, [sectionId]);
-      
+
       let roomLocation = '';
       if (roomResult.length > 0) {
         const room = roomResult[0];
@@ -92,7 +102,9 @@ export class ClassInfoService {
           AND ss.flag_valid = true
         ORDER BY ss.day_of_week ASC, ss.start_time ASC
       `;
-      const schedules = await this.dataSource.query(schedulesQuery, [sectionId]);
+      const schedules = await this.dataSource.query(schedulesQuery, [
+        sectionId,
+      ]);
 
       // 3. Get members (enrolled students)
       const membersQuery = `
@@ -125,16 +137,26 @@ export class ClassInfoService {
           AND se.flag_valid = true
         ORDER BY is_main_teacher DESC, u.first_name ASC
       `;
-      const educators = await this.dataSource.query(educatorsQuery, [sectionId]);
-
-      return {
+      const educators = await this.dataSource.query(educatorsQuery, [
+        sectionId,
+      ]);
+      this.logger.log(
+        `Educators query returned ${educators.length} educators`,
+        'GetClassInfo',
+      );
+      const final_result = {
         room_location: roomLocation,
         schedules,
         members,
         educators,
       };
-    } catch (error) {
-      console.error('Error fetching class info:', error);
+      return {
+        success: true,
+        message: 'Class info fetched successfully',
+        data: final_result,
+      };
+    } catch (error: any) {
+      this.logger.error('Error fetching class info', 'GetClassInfo', error);
       throw new InternalServerErrorException('Error fetching class info');
     }
   }

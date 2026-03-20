@@ -1,9 +1,8 @@
 // user-sys-program-normalize.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity('user_sys_program_normalize')
 export class UserSysProgramNormalize {
-
   @PrimaryColumn({ name: 'program_id' })
   program_id!: number;
 

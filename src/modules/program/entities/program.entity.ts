@@ -1,5 +1,5 @@
 // program.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * Enum for program tree type
@@ -17,6 +17,7 @@ export enum ProgramType {
   DEPARTMENT = 'department',
   FACULTY = 'faculty',
   MAJOR = 'major',
+  STUDY_PLAN = 'study_plan',
   CLASS = 'class',
 }
 
@@ -49,14 +50,14 @@ export class Program {
   @Column({
     name: 'created_at',
     type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP'
+    default: () => 'CURRENT_TIMESTAMP',
   })
   created_at?: Date;
 
   @Column({
     name: 'updated_at',
     type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP'
+    default: () => 'CURRENT_TIMESTAMP',
   })
   updated_at?: Date;
 }

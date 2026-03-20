@@ -1,5 +1,5 @@
 // user-sys.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * Enum for user status
@@ -55,17 +55,17 @@ export class UserSys {
   @Column({ name: 'flag_valid', default: true })
   flag_valid?: boolean;
 
-  @Column({ 
+  @Column({
     name: 'created_at',
     type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP'
+    default: () => 'CURRENT_TIMESTAMP',
   })
   created_at?: Date;
 
-  @Column({ 
+  @Column({
     name: 'updated_at',
     type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP'
+    default: () => 'CURRENT_TIMESTAMP',
   })
   updated_at?: Date;
 }

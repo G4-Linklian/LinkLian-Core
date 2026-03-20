@@ -79,3 +79,8 @@ export interface ITokenVerifyResponse extends ISuccessResponse {
 export interface IForgotPasswordResponse extends ISuccessResponse {
   _dev_password?: string;
 }
+
+export interface RoleQueryResult {
+  role_name: string;
+  access?: Record<string, unknown>;
+}

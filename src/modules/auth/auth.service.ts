@@ -1,40 +1,45 @@
-import { 
-  Injectable, 
-  UnauthorizedException, 
+import {
+  Injectable,
+  UnauthorizedException,
   BadRequestException,
   NotFoundException,
   OnModuleInit,
-  OnModuleDestroy
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 import { UserSys } from '../users/entities/user-sys.entity';
-import { 
-  hashPassword, 
-  verifyPassword, 
-  generateJwtToken, 
-  verifyJwtToken 
+import {
+  hashPassword,
+  verifyPassword,
+  generateJwtToken,
+  verifyJwtToken,
 } from '../../common/utils/auth.util';
-import { generateInitialPassword } from '../../common/utils/auth.utils';
-import { sendOTPEmail, sendTempPasswordEmail, sendInitialPasswordEmail } from '../../common/utils/mailer.utils';
+import { generateInitialPassword } from '../../common/utils/auth.util';
+import {
+  sendOTPEmail,
+  sendTempPasswordEmail,
+} from '../../common/utils/mailer.utils';
 
-import { 
-  LoginDto, 
-  VerifyOTPDto, 
-  ResendOTPDto, 
-  ResetPasswordDto, 
+import {
+  LoginDto,
+  VerifyOTPDto,
+  ResendOTPDto,
+  ResetPasswordDto,
   ForgotPasswordDto,
-  RegisterDto
 } from './dto/auth.dto';
 
-import { 
-  IOTPSession, 
-  ILoginResponse, 
+import {
+  IOTPSession,
+  ILoginResponse,
   IVerifyResponse,
-  ITokenPayload 
+  ITokenPayload,
 } from './interfaces/auth.interface';
+
+import { AppLogger } from '../../common/logger/app-logger.service';
+import { RoleQueryResult } from './interfaces/auth.interface';
 
 // User group to role mapping (ต้องใช้ role_id แทน role_name)
 const USER_GROUP_ROLE_MAP: Record<string, number[]> = {
@@ -46,7 +51,7 @@ const USER_GROUP_ROLE_MAP: Record<string, number[]> = {
 export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly otpSessions: Map<string, IOTPSession>;
   private cleanupInterval?: NodeJS.Timeout;
-  
+
   private readonly OTP_EXPIRY_MS = 5 * 60 * 1000;
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
   private readonly TOKEN_SHORT_EXPIRY = '15d';
@@ -56,6 +61,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @InjectRepository(UserSys)
     private readonly userRepo: Repository<UserSys>,
+    private readonly logger: AppLogger,
   ) {
     this.otpSessions = new Map<string, IOTPSession>();
   }
@@ -88,7 +94,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (cleaned > 0) {
-      console.log(`🧹 [AUTH] Cleaned up ${cleaned} expired OTP sessions`);
+      this.logger.log(
+        `Cleaned up ${cleaned} expired OTP sessions`,
+        'AuthService',
+      );
     }
   }
 
@@ -97,10 +106,12 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
 
   private createOTPSession(
-    user: UserSys, 
-    rememberMe: boolean = false
+    user: UserSys,
+    rememberMe: boolean = false,
   ): { sessionId: string; otp: string; expiresAt: number } {
-    const otp = this.generateOTP();
+    const isTestLoginEnabled =
+      process.env.TEST_LOGIN?.toLowerCase() === 'true';
+    const otp = isTestLoginEnabled ? '111111' : this.generateOTP();
     const sessionId = randomUUID();
     const expiresAt = Date.now() + this.OTP_EXPIRY_MS;
 
@@ -158,46 +169,64 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async generateUserToken(user: UserSys, rememberMe: boolean = false): Promise<string> {
-    const expiresIn = rememberMe ? this.TOKEN_LONG_EXPIRY : this.TOKEN_SHORT_EXPIRY;
-    
+  private async generateUserToken(
+    user: UserSys,
+    rememberMe: boolean = false,
+  ): Promise<string> {
+    const expiresIn = rememberMe
+      ? this.TOKEN_LONG_EXPIRY
+      : this.TOKEN_SHORT_EXPIRY;
+
     // ดึง role_name และ access จาก database
     let roleName = '';
-    let access = {};
-    if (user.role_id) {
+    const roleID = Number(user.role_id);
+    let access: Record<string, unknown> = {};
+
+    if (roleID) {
       try {
-        const roleResult = await this.userRepo.query(
+        const roleResult: RoleQueryResult[] = await this.userRepo.query(
           'SELECT role_name, access FROM role WHERE role_id = $1',
-          [user.role_id]
+          [roleID],
         );
+
         if (roleResult.length > 0) {
           roleName = roleResult[0].role_name;
-          access = roleResult[0].access || {};
+          access = roleResult[0].access ?? {};
         }
-      } catch (error) {
-        console.error('Failed to fetch role_name and access:', error);
+      } catch (error: unknown) {
+        this.logger.error(
+          'Failed to fetch role_name and access:',
+          'GenerateUserToken',
+          error,
+        );
       }
     }
-    
+
     const payload: ITokenPayload = {
       user_id: user.user_sys_id.toString(),
       username: String(user.email),
       role_id: user.role_id?.toString() || '',
       inst_id: user.inst_id?.toString() || '',
       role_name: roleName,
-      access: access,
+      access,
       otp_verified: true,
     };
 
     return generateJwtToken(payload, expiresIn);
   }
 
-  private hasValidToken(authorization: string | undefined, userId: number): boolean {
+  private hasValidToken(
+    authorization: string | undefined,
+    userId: number,
+  ): boolean {
     const decoded = this.verifyOptionalToken(authorization);
     return decoded !== null && decoded.user_id === userId.toString();
   }
 
-  private validateUserGroup(userGroup: string | undefined, roleId: number): void {
+  private validateUserGroup(
+    userGroup: string | undefined,
+    roleId: number,
+  ): void {
     if (!userGroup) return;
 
     const allowedRoleIds = USER_GROUP_ROLE_MAP[userGroup];
@@ -211,53 +240,72 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async findUserByEmail(email: string): Promise<UserSys> {
-      console.log('🔍 [DEBUG] Finding user by email:', email);
+    this.logger.debug('Finding user by email', 'findUserByEmail', {
+      email,
+    });
+
     const user = await this.userRepo.findOne({
       where: { email },
     });
 
     if (!user) {
-        console.log('❌ [DEBUG] User not found in database');
+      this.logger.warn('User not found in database', 'findUserByEmail', {
+        email,
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
-    console.log('✅ [DEBUG] User found:', {
-    user_sys_id: user.user_sys_id,
-    email: user.email,
-    role_id: user.role_id,
-    has_password: !!user.password
-  });
+    this.logger.debug('User found:', 'findUserByEmail', {
+      user_sys_id: user.user_sys_id,
+      email: user.email,
+      role_id: user.role_id,
+      has_password: !!user.password,
+    });
 
     return user;
   }
 
-  private async verifyUserPassword(user: UserSys, password: string): Promise<void> {
-    console.log('🔍 [DEBUG] Password verification:', {
-    user_email: String(user.email),
-    password_length: password.length,
-    stored_password_prefix: String(user.password).substring(0, 10) + '...'
-  });
-    
+  private async verifyUserPassword(
+    user: UserSys,
+    password: string,
+  ): Promise<void> {
+    this.logger.debug('Password verification', 'verifyUserPassword', {
+      user_email: String(user.email),
+      password_length: password.length,
+      stored_password_prefix: `${String(user.password).substring(0, 10)}...`,
+    });
+
     const isValid = await verifyPassword(password, String(user.password));
-    console.log('🔍 [DEBUG] Password verification result:', isValid);
+    this.logger.debug('Password verification result', 'verifyUserPassword', {
+      user_email: String(user.email),
+      is_valid: isValid,
+    });
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
   }
 
-  private async createLoginResponse(user: UserSys, token: string): Promise<IVerifyResponse> {
+  private async createLoginResponse(
+    user: UserSys,
+    token: string,
+  ): Promise<IVerifyResponse> {
     // ดึง role_name จาก database
     let roleName = '';
+
     if (user.role_id) {
       try {
-        const roleResult = await this.userRepo.query(
+        const roleResult: RoleQueryResult[] = await this.userRepo.query(
           'SELECT role_name FROM role WHERE role_id = $1',
-          [user.role_id]
+          [user.role_id],
         );
+
         if (roleResult.length > 0) {
           roleName = roleResult[0].role_name;
         }
-      } catch (error) {
-        console.error('Failed to fetch role_name:', error);
+      } catch (error: unknown) {
+        this.logger.error('Failed to fetch role_name', 'createLoginResponse', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          user_id: user.user_sys_id,
+        });
       }
     }
 
@@ -272,10 +320,16 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
 
   private createOTPResponse(
-    sessionId: string, 
-    expiresAt: number, 
-    otp?: string
+    sessionId: string,
+    expiresAt: number,
+    otp?: string,
   ): ILoginResponse {
+    this.logger.debug('Creating OTP response', 'createOTPResponse', {
+      sessionId,
+      expiresAt: new Date(expiresAt).toISOString(),
+      include_dev_otp: !!otp,
+    });
+
     return {
       success: true,
       message: 'OTP sent to your email',
@@ -285,17 +339,24 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-
-  async login(dto: LoginDto, authorization?: string): Promise<ILoginResponse | IVerifyResponse> {
+  async login(
+    dto: LoginDto,
+    authorization?: string,
+  ): Promise<ILoginResponse | IVerifyResponse> {
     const { username, password, user_group, remember_me = false } = dto;
 
     const user = await this.findUserByEmail(username);
     this.validateUserGroup(user_group, Number(user.role_id));
     await this.verifyUserPassword(user, password);
 
-    // ✅ ตรวจสอบ flag_valid - ถ้า false ต้อง reset password ก่อน
     if (user.flag_valid === false) {
-      console.log('🔑 [AUTH] flag_valid is false - require password reset');
+      this.logger.log(
+        'flag_valid is false - require password reset',
+        'Auth Login',
+        {
+          user_id: user.user_sys_id,
+        },
+      );
       return {
         success: true,
         message: 'Please reset your password',
@@ -304,24 +365,42 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
-    // ✅ Check if user has valid token (skip OTP)
+    // Check if user has valid token (skip OTP)
     if (this.hasValidToken(authorization, user.user_sys_id)) {
       const token = await this.generateUserToken(user, remember_me);
-      console.log('✅ [AUTH] Valid token found - skip OTP');
+      this.logger.log('Valid token found - skip OTP', 'Auth Login', {
+        user_id: user.user_sys_id,
+      });
       return this.createLoginResponse(user, token);
     }
 
-    // ✅ Generate and send OTP
-    const { sessionId, otp, expiresAt } = this.createOTPSession(user, remember_me);
-    
-    console.log(`📧 [AUTH] OTP for ${user.email}: ${otp}`);
+    // Generate and send OTP
+    const { sessionId, otp, expiresAt } = this.createOTPSession(
+      user,
+      remember_me,
+    );
 
-    // 🔥 ส่งอีเมล OTP
+    this.logger.log(`OTP`, 'Auth Login', {
+      email: user.email,
+      otp,
+      user_id: user.user_sys_id,
+      otp_session_id: sessionId,
+      otp_expires_at: new Date(expiresAt).toISOString(),
+    });
+
+    // ส่งอีเมล OTP
     try {
-      console.log('📧 [AUTH] Attempting to send OTP email...');
+      this.logger.debug('Attempting to send OTP email...', 'Auth Login', {
+        email: user.email,
+        otp_session_id: sessionId,
+      });
       await sendOTPEmail(String(user.email), otp);
-    } catch (error) {
-      console.error('❌ [AUTH] Failed to send OTP email:', error);
+    } catch (error: unknown) {
+      this.logger.error('Failed to send OTP email', 'Auth Login', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email: user.email,
+        otp_session_id: sessionId,
+      });
     }
 
     return this.createOTPResponse(sessionId, expiresAt, otp);
@@ -366,17 +445,35 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     this.deleteOTPSession(otp_session_id);
 
-    const { sessionId, otp, expiresAt } = this.createOTPSession(user, oldSession.rememberMe);
+    const { sessionId, otp, expiresAt } = this.createOTPSession(
+      user,
+      oldSession.rememberMe,
+    );
 
-    console.log(`📧 [AUTH] New OTP for ${oldSession.email}: ${otp}`);
+    this.logger.log(`New OTP`, 'Auth Resend OTP', {
+      email: oldSession.email,
+      otp,
+      user_id: user.user_sys_id,
+      otp_session_id: sessionId,
+      otp_expires_at: new Date(expiresAt).toISOString(),
+    });
 
-    // 🔥 ส่งอีเมล OTP ใหม่
     try {
-      console.log('📧 [AUTH] Attempting to send OTP email...');
+      this.logger.debug('Attempting to send OTP email...', 'Auth Resend OTP', {
+        email: user.email,
+        otp_session_id: sessionId,
+      });
       await sendOTPEmail(String(user.email), otp);
-      console.log('✅ [AUTH] OTP email sent successfully');
-    } catch (error) {
-      console.error('❌ [AUTH] Failed to send OTP email:', error);
+      this.logger.log('OTP email sent successfully', 'Auth Resend OTP', {
+        email: user.email,
+        otp_session_id: sessionId,
+      });
+    } catch (error: unknown) {
+      this.logger.error('Failed to send OTP email', 'Auth Resend OTP', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email: user.email,
+        otp_session_id: sessionId,
+      });
     }
 
     return this.createOTPResponse(sessionId, expiresAt, otp);
@@ -406,7 +503,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
           otp_verified: true,
         },
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      this.logger.error('Token verification failed', 'Auth Verify Token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
@@ -415,12 +515,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const { email, password, new_password, confirm_password } = dto;
 
     if (new_password !== confirm_password) {
-      throw new BadRequestException('New password and confirm password do not match');
+      throw new BadRequestException(
+        'New password and confirm password do not match',
+      );
     }
 
     if (new_password.length < this.MIN_PASSWORD_LENGTH) {
       throw new BadRequestException(
-        `New password must be at least ${this.MIN_PASSWORD_LENGTH} characters`
+        `New password must be at least ${this.MIN_PASSWORD_LENGTH} characters`,
       );
     }
 
@@ -437,19 +539,23 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     // Hash new password
     const hashedPassword = await hashPassword(new_password);
-    
+
     // Update password + set flag_valid = true
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
-      flag_valid: true,  // ✅ เปลี่ยนเป็น true หลังจาก reset password
+      flag_valid: true,
       updated_at: new Date(),
     });
 
-    console.log(`✅ [AUTH] Password reset successfully for ${email}, flag_valid set to true`);
+    this.logger.log(`Password reset successfully`, 'Auth Reset Password', {
+      detail: 'flag_valid set to true - user can login with new password',
+      email: user.email,
+    });
 
     return {
       success: true,
-      message: 'Password reset successful. Please login with your new password.',
+      message:
+        'Password reset successful. Please login with your new password.',
     };
   }
 
@@ -467,30 +573,43 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const tempPassword = generateInitialPassword();
     const hashedPassword = await hashPassword(tempPassword);
 
-    // 🔥 Update password + set flag_valid = false (ต้อง reset password ก่อนใช้งาน)
+    // Update password + set flag_valid = false (ต้อง reset password ก่อนใช้งาน)
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
-      flag_valid: false, // ✅ เพิ่มนี้
+      flag_valid: false,
       updated_at: new Date(),
     });
 
-    console.log(`📧 [AUTH] Temporary password for ${email}: ${tempPassword}`);
-    console.log(`🔑 [AUTH] flag_valid set to false - require password reset`);
+    this.logger.log(`Temporary password generated`, 'Auth Forgot Password', {
+      email: user.email,
+      temp_password: tempPassword,
+    });
 
     // ส่งอีเมล Temporary Password
     try {
-      console.log('📧 [AUTH] Attempting to send temp password email...');
+      this.logger.log(
+        'Attempting to send temp password email...',
+        'Auth Forgot Password',
+      );
       await sendTempPasswordEmail(email, tempPassword);
-      console.log('✅ [AUTH] Temp password email sent successfully');
-    } catch (error) {
-      console.error('❌ [AUTH] Failed to send temp password email:', error);
-      // ไม่ throw error เพื่อให้ในโหมด development ยังใช้งานได้
+      this.logger.log(
+        'Temp password email sent successfully',
+        'Auth Forgot Password',
+      );
+    } catch (error: any) {
+      this.logger.error(
+        'Failed to send temp password email',
+        error,
+        'Auth Forgot Password',
+      );
     }
 
     return {
       success: true,
       message: 'Temporary password has been sent to your email',
-      ...(process.env.NODE_ENV === 'development' && { _dev_password: tempPassword }),
+      ...(process.env.NODE_ENV === 'development' && {
+        _dev_password: tempPassword,
+      }),
     };
   }
 }

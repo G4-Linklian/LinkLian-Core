@@ -1,8 +1,16 @@
 // profile.controller.ts
-import { Controller, Get, Put, Body, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Body,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/profile.dto';
+import { Access } from 'src/common/decorators/access.decorator';
 
 @ApiTags('Profile')
 @Controller('profile')
@@ -12,6 +20,7 @@ export class ProfileController {
   /**
    * Get user profile with education info
    */
+  @Access('profile', 'read')
   @Get(':userId')
   @ApiOperation({ summary: 'Get user profile with education info' })
   @ApiParam({ name: 'userId', description: 'User Sys ID', example: 1 })
@@ -24,6 +33,7 @@ export class ProfileController {
   /**
    * Update user profile
    */
+  @Access('profile', 'update')
   @Put(':userId')
   @ApiOperation({ summary: 'Update user profile' })
   @ApiParam({ name: 'userId', description: 'User Sys ID', example: 1 })
@@ -40,10 +50,14 @@ export class ProfileController {
   /**
    * Get teaching schedule for educator
    */
+  @Access('profile', 'read')
   @Get(':userId/teaching-schedule')
   @ApiOperation({ summary: 'Get teaching schedule for educator' })
   @ApiParam({ name: 'userId', description: 'User Sys ID', example: 1 })
-  @ApiResponse({ status: 200, description: 'Teaching schedule retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Teaching schedule retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   async getTeachingSchedule(@Param('userId', ParseIntPipe) userId: number) {
     return this.profileService.getTeachingSchedule(userId);

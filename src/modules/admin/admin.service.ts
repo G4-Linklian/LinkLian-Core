@@ -1,35 +1,51 @@
 // admin.service.ts
-import { Injectable, BadRequestException, ConflictException, InternalServerErrorException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Admin } from './entities/admin.entity';
-import { CreateAdminDto, SearchAdminDto, UpdateAdminDto, LoginAdminDto } from './dto/admin.dto';
-import { hashPassword, verifyPassword, generateJwtToken } from 'src/common/utils/auth.util';
+import {
+  CreateAdminDto,
+  SearchAdminDto,
+  UpdateAdminDto,
+  LoginAdminDto,
+} from './dto/admin.dto';
+import {
+  hashPassword,
+  verifyPassword,
+  generateJwtToken,
+} from 'src/common/utils/auth.util';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectRepository(Admin)
     private adminRepo: Repository<Admin>,
-    private dataSource: DataSource,
+    private readonly logger: AppLogger,
   ) {}
 
   async searchAdmin(dto: SearchAdminDto) {
-    const query = this.adminRepo.createQueryBuilder('a')
+    const query = this.adminRepo
+      .createQueryBuilder('a')
       .select([
-        'a.admin_id',
         'a.username',
         'a.flag_valid',
-        'a.created_at',
-        'a.updated_at',
-      ])
-      .addSelect('COUNT(*) OVER()', 'total_count');
+      ]);
 
-    if (dto.username) query.andWhere('a.username = :username', { username: dto.username });
-    
-    // Check Boolean แบบระวัง null
+    if (dto.username)
+      query.andWhere('a.username = :username', { username: dto.username });
+
     if (typeof dto.flag_valid === 'boolean') {
-      query.andWhere('a.flag_valid = :flagValid', { flagValid: dto.flag_valid });
+      query.andWhere('a.flag_valid = :flagValid', {
+        flagValid: dto.flag_valid,
+      });
     }
 
     // Sort
@@ -44,88 +60,69 @@ export class AdminService {
 
     try {
       const result = await query.getRawMany();
-      return result;
+      return { success: true, data: result };
     } catch (err) {
       throw new InternalServerErrorException(err);
     }
   }
 
   async createAdmin(dto: CreateAdminDto) {
-    // ใช้ Transaction เพื่อความปลอดภัยในการสร้าง Admin
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      // เช็คว่า username มีอยู่แล้วหรือไม่
-      const existingAdmin = await queryRunner.manager.findOne(Admin, {
-        where: { username: dto.username }
+      const existingAdmin = await this.adminRepo.findOne({
+        where: { username: dto.username },
       });
 
       if (existingAdmin) {
         throw new ConflictException('Username already exists!');
       }
 
-      // Hash password
       const hashedPassword = await hashPassword(dto.password);
 
-      // สร้าง Object เตรียม save
-      const newAdmin = queryRunner.manager.create(Admin, {
+      const newAdmin = this.adminRepo.create({
         username: dto.username,
         password: hashedPassword,
         flag_valid: dto.flag_valid ?? true,
       });
 
-      const savedAdmin = await queryRunner.manager.save(newAdmin);
+      const savedAdmin = await this.adminRepo.save(newAdmin);
 
-      // Commit Transaction
-      await queryRunner.commitTransaction();
-
-      // ไม่ส่ง password กลับ
-      const { password, ...result } = savedAdmin;
-      return { message: "Admin created successfully!", data: result };
-
-    } catch (error) {
-      // Rollback Transaction เมื่อเกิด Error
-      await queryRunner.rollbackTransaction();
-
+      const { password: _password, ...result } = savedAdmin;
+      return {
+        success: true,
+        message: 'Admin created successfully!',
+        data: result,
+      };
+    } catch (error: unknown) {
       if (error instanceof ConflictException) {
         throw error;
       }
-      // เช็ค Error Code ของ Postgres (Unique Constraint)
-      if (error.code === '23505') {
+
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === '23505'
+      ) {
         throw new ConflictException('Username already exists!');
       }
-      console.error('Error creating admin:', error);
+
+      this.logger.error('Error creating admin:', 'Create Admin', error);
       throw new InternalServerErrorException('Error creating admin');
-    } finally {
-      // Release QueryRunner
-      await queryRunner.release();
     }
   }
 
-  async updateAdmin(id: number, dto: UpdateAdminDto) {
-    // ใช้ Transaction สำหรับ Update
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+  async updateAdmin(username: string, dto: UpdateAdminDto) {
     try {
-      // เช็คว่า admin มีอยู่หรือไม่
-      const existing = await queryRunner.manager.findOne(Admin, {
-        where: { admin_id: id }
+      const existing = await this.adminRepo.findOne({
+        where: { username },
       });
 
       if (!existing) {
         throw new NotFoundException('Admin not found');
       }
 
-      // กรอง field ที่มีค่าเท่านั้น
       const fieldsToUpdate: Partial<Admin> = {};
-      
-      if (dto.username !== undefined) {
-        fieldsToUpdate.username = dto.username;
-      }
+
       if (dto.password !== undefined) {
         fieldsToUpdate.password = await hashPassword(dto.password);
       }
@@ -137,36 +134,33 @@ export class AdminService {
         throw new BadRequestException('No fields to update!');
       }
 
-      await queryRunner.manager.update(Admin, { admin_id: id }, fieldsToUpdate);
+      await this.adminRepo.update({ username }, fieldsToUpdate);
 
-      // Commit Transaction
-      await queryRunner.commitTransaction();
-
-      const updatedAdmin = await this.adminRepo.findOne({ where: { admin_id: id } });
+      const updatedAdmin = await this.adminRepo.findOne({ where: { username } });
       if (!updatedAdmin) {
         throw new NotFoundException('Admin not found after update');
       }
-      const { password, ...result } = updatedAdmin;
-      return { message: "Admin updated successfully!", data: result };
-
+      const { password: _password, ...result } = updatedAdmin;
+      return {
+        success: true,
+        message: 'Admin updated successfully!',
+        data: result,
+      };
     } catch (error) {
-      // Rollback Transaction เมื่อเกิด Error
-      await queryRunner.rollbackTransaction();
-
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      console.error('Error updating admin:', error);
+      this.logger.error('Error updating admin:', 'Update Admin', error);
       throw new InternalServerErrorException('Error updating admin');
-    } finally {
-      await queryRunner.release();
     }
   }
 
-  async deleteAdmin(id: number) {
-    // เช็คว่า admin มีอยู่หรือไม่
+  async deleteAdmin(username: string) {
     const existing = await this.adminRepo.findOne({
-      where: { admin_id: id }
+      where: { username },
     });
 
     if (!existing) {
@@ -174,10 +168,10 @@ export class AdminService {
     }
 
     try {
-      await this.adminRepo.delete({ admin_id: id });
-      return { message: "Admin deleted successfully!" };
+      await this.adminRepo.delete({ username });
+      return { success: true, message: 'Admin deleted successfully!' };
     } catch (error) {
-      console.error('Error deleting admin:', error);
+      this.logger.error('Error deleting admin:', 'Delete Admin', error);
       throw new InternalServerErrorException('Error deleting admin');
     }
   }
@@ -188,42 +182,45 @@ export class AdminService {
     }
 
     try {
-      // ค้นหา admin จาก username และ flag_valid = true
       const admin = await this.adminRepo.findOne({
-        where: { 
+        where: {
           username: dto.username,
-          flag_valid: true 
-        }
+          flag_valid: true,
+        },
       });
 
       if (!admin) {
         throw new UnauthorizedException('Invalid credentials!');
       }
 
-      // ตรวจสอบ password
       const isMatch = await verifyPassword(dto.password, admin.password);
+
+      this.logger.debug(`Login attempt for admin: ${dto.username}`, 'Login Admin', {
+        isMatch,
+      });
 
       if (!isMatch) {
         throw new UnauthorizedException('Incorrect password');
       }
 
-      // สร้าง payload สำหรับ JWT (ไม่รวม password)
-      const { password, ...adminData } = admin;
+      const { password: _password, ...adminData } = admin;
 
-      // Generate JWT Token
       const token = generateJwtToken({ admin: adminData });
 
       return {
-        message: "Login successful",
+        success: true,
+        message: 'Login successful',
         token,
         admin: adminData,
       };
-
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      console.error('Error logging in admin:', error);
+      this.logger.error('Error logging in admin:', 'Login Admin', error);
       throw new InternalServerErrorException('Error logging in admin');
     }
   }

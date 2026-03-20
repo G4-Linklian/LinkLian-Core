@@ -17,12 +17,20 @@ export class GetClassFeedDto {
   @IsInt()
   semester_id: number;
 
-  @ApiProperty({ description: 'Offset for pagination', example: 0, required: false })
+  @ApiProperty({
+    description: 'Offset for pagination',
+    example: 0,
+    required: false,
+  })
   @Type(() => Number)
   @IsInt()
   offset?: number = 0;
 
-  @ApiProperty({ description: 'Limit for pagination', example: 10, required: false })
+  @ApiProperty({
+    description: 'Limit for pagination',
+    example: 10,
+    required: false,
+  })
   @Type(() => Number)
   @IsInt()
   limit?: number = 10;
@@ -45,7 +53,7 @@ export interface ScheduleInfo {
     building_id: number | null;
     building_name: string | null;
     building_no: string | null;
-    room_format: string | null;
+    // room_format: string | null;
   };
 }
 
@@ -53,6 +61,12 @@ export interface ScheduleInfo {
  * Interface for student class feed response
  */
 export interface StudentClassFeedResponse {
+  success: boolean;
+  message?: string;
+  data: StudentClassFeedItem[];
+}
+
+export interface StudentClassFeedItem {
   section_id: number;
   section_name: string;
   subject_code: string;
@@ -60,14 +74,20 @@ export interface StudentClassFeedResponse {
   subject_name_en: string;
   learning_area_name: string | null;
   semester: string;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }
-
 /**
  * Interface for teacher class feed response
  */
 export interface TeacherClassFeedResponse {
+  success: boolean;
+  message?: string;
+  data: TeacherClassFeedItem[];
+}
+
+export interface TeacherClassFeedItem {
   section_id: number;
   section_name: string;
   subject_code: string;
@@ -76,6 +96,7 @@ export interface TeacherClassFeedResponse {
   learning_area_name: string | null;
   semester: string;
   position: string | null;
+  student_count: number;
   display_class_name: string;
   schedules: ScheduleInfo[];
 }

@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
 export class BookmarkService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get all bookmarks for a user (similar to old getBookmark with filters)
@@ -16,12 +24,16 @@ export class BookmarkService {
     offset: number = 0,
     limit: number = 50,
     sortBy: string = 'saved_at',
-    sortOrder: 'ASC' | 'DESC' = 'DESC'
+    sortOrder: 'ASC' | 'DESC' = 'DESC',
   ) {
     // Validate sort_by to prevent SQL injection
     const allowedSortFields = ['saved_at', 'post_id', 'user_sys_id'];
-    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'saved_at';
-    const validSortOrder = ['ASC', 'DESC'].includes(sortOrder) ? sortOrder : 'DESC';
+    const validSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : 'saved_at';
+    const validSortOrder = ['ASC', 'DESC'].includes(sortOrder)
+      ? sortOrder
+      : 'DESC';
 
     try {
       const values: any[] = [];
@@ -73,7 +85,7 @@ export class BookmarkService {
         data: bookmarks,
       };
     } catch (error) {
-      console.error('Error fetching bookmarks:', error);
+      this.logger.error('Error fetching bookmarks:', 'GetBookmark', error);
       throw new InternalServerErrorException('Failed to fetch bookmarks');
     }
   }
@@ -83,16 +95,21 @@ export class BookmarkService {
    */
   async toggleBookmark(userId: number, postId: number) {
     if (!userId || !postId) {
-      throw new BadRequestException('Missing required fields: user_sys_id, post_id');
+      throw new BadRequestException(
+        'Missing required fields: user_sys_id, post_id',
+      );
     }
 
     try {
-      // ✅ ตรวจสอบว่ามี bookmark อยู่แล้วหรือไม่
+      //ตรวจสอบว่ามี bookmark อยู่แล้วหรือไม่
       const checkQuery = `
         SELECT COUNT(*) as count FROM bookmark 
         WHERE user_sys_id = $1 AND post_id = $2
       `;
-      const checkResult = await this.dataSource.query(checkQuery, [userId, postId]);
+      const checkResult = await this.dataSource.query(checkQuery, [
+        userId,
+        postId,
+      ]);
       const exists = parseInt(checkResult[0]?.count, 10) > 0;
 
       let action: string;
@@ -117,9 +134,10 @@ export class BookmarkService {
 
       return {
         success: true,
-        message: action === 'created' 
-          ? 'Bookmark created successfully'
-          : 'Bookmark removed successfully',
+        message:
+          action === 'created'
+            ? 'Bookmark created successfully'
+            : 'Bookmark removed successfully',
         data: {
           user_sys_id: userId,
           post_id: postId,
@@ -127,7 +145,7 @@ export class BookmarkService {
         },
       };
     } catch (error) {
-      console.error('Error toggling bookmark:', error);
+      this.logger.error('Error toggling bookmark:', 'ToggleBookmark', error);
       throw new InternalServerErrorException('Failed to toggle bookmark');
     }
   }
@@ -137,7 +155,9 @@ export class BookmarkService {
    */
   async deleteBookmark(userId: number, postId: number) {
     if (!userId || !postId) {
-      throw new BadRequestException('Missing required fields: user_sys_id, post_id');
+      throw new BadRequestException(
+        'Missing required fields: user_sys_id, post_id',
+      );
     }
 
     try {
@@ -150,13 +170,14 @@ export class BookmarkService {
 
       return {
         success: true,
-        message: result.length > 0
-          ? 'Bookmark deleted successfully'
-          : 'Bookmark not found',
+        message:
+          result.length > 0
+            ? 'Bookmark deleted successfully'
+            : 'Bookmark not found',
         deleted: result.length > 0,
       };
     } catch (error) {
-      console.error('Error deleting bookmark:', error);
+      this.logger.error('Error deleting bookmark:', 'DeleteBookmark', error);
       throw new InternalServerErrorException('Failed to delete bookmark');
     }
   }

@@ -1,5 +1,5 @@
 // dto/chat.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsObject, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -35,7 +35,11 @@ export class SearchChatDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'DESC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'DESC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -54,14 +58,22 @@ export class SearchChatDto {
 }
 
 export class CreateChatDto {
-  @ApiPropertyOptional({ description: 'Is AI Chat', example: false, default: false })
-  @IsOptional() @IsBoolean() is_ai_chat?: boolean;
+  @ApiPropertyOptional({
+    description: 'Is AI Chat',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_ai_chat?: boolean;
 
   @ApiProperty({ description: 'Sender User ID', example: 1 })
-  @IsInt() sender_id: number;
+  @IsInt()
+  sender_id!: number;
 
   @ApiProperty({ description: 'Receiver User ID', example: 2 })
-  @IsInt() receiver_id: number;
+  @IsInt()
+  receiver_id!: number;
 }
 
 // ========== Message DTOs ==========
@@ -85,7 +97,10 @@ export class SearchMessageDto {
   @IsInt()
   sender_id?: number;
 
-  @ApiPropertyOptional({ description: 'Content search keyword', example: 'hello' })
+  @ApiPropertyOptional({
+    description: 'Content search keyword',
+    example: 'hello',
+  })
   @IsOptional()
   @IsString()
   content?: string;
@@ -107,7 +122,11 @@ export class SearchMessageDto {
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'DESC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'DESC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -125,25 +144,31 @@ export class SearchMessageDto {
   offset?: number;
 }
 
+// ========== RabbitMQ Event Interface ==========
 export class CreateMessageDto {
   @ApiProperty({ description: 'Chat ID', example: 1 })
-  @IsInt() chat_id: number;
+  @Type(() => Number)
+  @IsInt()
+  chat_id!: number;
 
   @ApiProperty({ description: 'Sender ID', example: 1 })
-  @IsInt() sender_id: number;
+  @Type(() => Number)
+  @IsInt()
+  sender_id!: number;
 
-  @ApiProperty({ description: 'Message content', example: 'Hello, how are you?' })
-  @IsString() content: string;
+  @ApiProperty({
+    description: 'Message content',
+    example: 'Hello',
+  })
+  @IsString()
+  content!: string;
 
-  @ApiPropertyOptional({ description: 'Reply to message ID', example: null })
-  @IsOptional() @IsInt() reply_id?: number;
-
-  @ApiPropertyOptional({ description: 'File attachments', example: [{ url: 'https://example.com/file.pdf', name: 'file.pdf' }] })
-  @IsOptional() @IsArray() file?: object[];
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  reply_id?: number;
 }
-
-// ========== RabbitMQ Event Interface ==========
-
 export interface ChatSendEvent {
   type: string;
   payload: {
@@ -154,4 +179,28 @@ export interface ChatSendEvent {
     file_url: object[] | null;
     created_at: Date;
   };
+}
+
+export class SearchUserForChatDto {
+  @ApiProperty({ example: 8 })
+  @Type(() => Number)
+  @IsInt()
+  user_sys_id!: number;
+
+  @ApiPropertyOptional({ example: 'สม' })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @ApiPropertyOptional({ example: 6 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  limit?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  offset?: number;
 }

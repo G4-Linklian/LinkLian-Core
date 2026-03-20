@@ -7,7 +7,9 @@ import { LearningArea } from './entities/learning-area.entity';
 import { UserSysLearningAreaNormalize } from './entities/user-sys-learning-area-normalize.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LearningArea, UserSysLearningAreaNormalize])],
+  imports: [
+    TypeOrmModule.forFeature([LearningArea, UserSysLearningAreaNormalize]),
+  ],
   controllers: [LearningAreaController],
   providers: [LearningAreaService],
   exports: [LearningAreaService],

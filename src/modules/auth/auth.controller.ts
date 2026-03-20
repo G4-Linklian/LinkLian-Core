@@ -1,27 +1,26 @@
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  HttpCode, 
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
   HttpStatus,
-  Headers 
+  Headers,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
   ApiHeader,
-  ApiBearerAuth // 👈 เพิ่มนี้
+  ApiBearerAuth, // 👈 เพิ่มนี้
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { 
-  LoginDto, 
-  VerifyTokenDto, 
+import {
+  LoginDto,
+  VerifyTokenDto,
   VerifyOTPDto,
   ResendOTPDto,
   ResetPasswordDto,
   ForgotPasswordDto,
-  RegisterDto
 } from './dto/auth.dto';
 
 @ApiTags('Authentication')
@@ -31,17 +30,18 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Login for users (students/teachers)',
-    description: '⚠️ No authorization required - This is the first step to get a token'
+    description:
+      '⚠️ No authorization required - This is the first step to get a token',
   })
-  @ApiHeader({ 
-    name: 'Authorization', 
-    required: false, 
-    description: '(Optional) Bearer token - Skip OTP if valid token exists' 
+  @ApiHeader({
+    name: 'Authorization',
+    required: false,
+    description: '(Optional) Bearer token - Skip OTP if valid token exists',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Login successful (with token) OR OTP sent to email',
     schema: {
       oneOf: [
@@ -50,11 +50,14 @@ export class AuthController {
           properties: {
             success: { type: 'boolean', example: true },
             message: { type: 'string', example: 'Login successful' },
-            access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            access_token: {
+              type: 'string',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
             user_id: { type: 'number', example: 1 },
             role_name: { type: 'string', example: 'teacher' },
             inst_id: { type: 'number', example: 1 },
-          }
+          },
         },
         {
           // Response with OTP
@@ -62,12 +65,19 @@ export class AuthController {
             success: { type: 'boolean', example: true },
             message: { type: 'string', example: 'OTP sent to your email' },
             otp_session_id: { type: 'string', example: 'uuid-here' },
-            otp_expires_at: { type: 'string', example: '2025-01-29T12:05:00.000Z' },
-            _dev_otp: { type: 'string', example: '123456', description: 'Only in development' },
-          }
-        }
-      ]
-    }
+            otp_expires_at: {
+              type: 'string',
+              example: '2025-01-29T12:05:00.000Z',
+            },
+            _dev_otp: {
+              type: 'string',
+              example: '123456',
+              description: 'Only in development',
+            },
+          },
+        },
+      ],
+    },
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
@@ -79,23 +89,26 @@ export class AuthController {
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Verify OTP code',
-    description: '⚠️ No authorization required - Use OTP from login response'
+    description: '⚠️ No authorization required - Use OTP from login response',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'OTP verified - Returns access token',
     schema: {
       properties: {
         success: { type: 'boolean', example: true },
         message: { type: 'string', example: 'Login successful' },
-        access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+        access_token: {
+          type: 'string',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
         user_id: { type: 'number', example: 1 },
         role_name: { type: 'string', example: 'teacher' },
         inst_id: { type: 'number', example: 1 },
-      }
-    }
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   async verifyOTP(@Body() dto: VerifyOTPDto) {
@@ -104,9 +117,9 @@ export class AuthController {
 
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Resend OTP code',
-    description: '⚠️ No authorization required'
+    description: '⚠️ No authorization required',
   })
   @ApiResponse({ status: 200, description: 'New OTP sent' })
   @ApiResponse({ status: 401, description: 'Session expired' })
@@ -117,9 +130,9 @@ export class AuthController {
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth() // 👈 เฉพาะ endpoint นี้ต้องมี token
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Verify JWT token',
-    description: '🔒 Requires Authorization header'
+    description: '🔒 Requires Authorization header',
   })
   @ApiResponse({ status: 200, description: 'Token is valid' })
   @ApiResponse({ status: 401, description: 'Invalid or expired token' })
@@ -129,9 +142,10 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Reset initial password',
-    description: '⚠️ No authorization required - Use for first-time password change'
+    description:
+      '⚠️ No authorization required - Use for first-time password change',
   })
   @ApiResponse({ status: 200, description: 'Password reset successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
@@ -141,14 +155,14 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Request temporary password',
-    description: '⚠️ No authorization required - Get temporary password via email'
+    description:
+      '⚠️ No authorization required - Get temporary password via email',
   })
   @ApiResponse({ status: 200, description: 'Temporary password sent' })
   @ApiResponse({ status: 404, description: 'Email not found' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
-
 }

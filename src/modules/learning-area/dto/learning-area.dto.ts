@@ -19,7 +19,10 @@ export class SearchLearningAreaDto {
   @IsInt()
   inst_id?: number;
 
-  @ApiPropertyOptional({ description: 'Learning Area Name', example: 'Mathematics' })
+  @ApiPropertyOptional({
+    description: 'Learning Area Name',
+    example: 'Mathematics',
+  })
   @IsOptional()
   @IsString()
   learning_area_name?: string;
@@ -41,12 +44,19 @@ export class SearchLearningAreaDto {
   @IsBoolean()
   subject_count?: boolean;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'learning_area_name' })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'learning_area_name',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -63,7 +73,10 @@ export class SearchLearningAreaDto {
   @IsInt()
   offset?: number;
 
-  @ApiPropertyOptional({ description: 'Keyword search for learning_area_name, remark', example: 'Math' })
+  @ApiPropertyOptional({
+    description: 'Keyword search for learning_area_name, remark',
+    example: 'Math',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
@@ -96,7 +109,10 @@ export class UpdateLearningAreaDto {
   @IsInt()
   inst_id?: number;
 
-  @ApiPropertyOptional({ description: 'Learning Area Name', example: 'Mathematics' })
+  @ApiPropertyOptional({
+    description: 'Learning Area Name',
+    example: 'Mathematics',
+  })
   @IsOptional()
   @IsString()
   learning_area_name?: string;

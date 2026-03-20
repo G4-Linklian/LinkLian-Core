@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InstitutionModule } from './modules/institution/institution.module';
@@ -19,13 +19,34 @@ import { SubjectModule } from './modules/subject/subject.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { SocialFeedModule } from './modules/social-feed/social-feed.module';
+import { AssignmentModule } from './modules/assignment/assignment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
-import { RegisSummaryModule } from "./modules/summary/registration/regis.summary.module";
+import { RegisSummaryModule } from './modules/summary/registration/regis.summary.module';
+import { ImportStudentModule } from './modules/import-csv/student/import-student.module';
+import { ImportSubjectModule } from './modules/import-csv/subject/import-subject.module';
+import { ImportTeacherModule } from './modules/import-csv/teacher/import-teacher.module';
+import { ImportProgramModule } from './modules/import-csv/program/import-program.module';
+import { ImportSectionScheduleModule } from './modules/import-csv/section-schedule/import-section-schedule.module';
+import { ImportEnrollmentModule } from './modules/import-csv/enrollment/import-enrollment.module';
+import { CommunityModule } from './modules/community/community.module';
+import { LoggerModule } from './common/logger/logger.module';
+import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
+import { BullMQModule } from './common/bullmq/bullmq.module';
+import { RedisModule } from './common/redis/redis.module';
+import { AiModule } from './modules/ai/ai.module';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthMiddleware } from './common/middleware/auth.middleware';
+import { NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessGuard } from './common/guard/access.guard';
+import { RequestMethod } from '@nestjs/common';
+import { QuizModule } from './modules/quiz/quiz.module';
+import { AssetsModule } from './modules/asset/asset.module';
 
 @Module({
   imports: [
-
     ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
@@ -49,6 +70,7 @@ import { RegisSummaryModule } from "./modules/summary/registration/regis.summary
     RoleModule,
     AdminModule,
     ChatModule,
+    QuizModule,
     BuildingModule,
     RoomLocationModule,
     FileStorageModule,
@@ -61,12 +83,52 @@ import { RegisSummaryModule } from "./modules/summary/registration/regis.summary
     UsersModule,
     ProfileModule,
     SocialFeedModule,
+    AssignmentModule,
     BookmarkModule,
     RegisSummaryModule,
+    ImportStudentModule,
+    ImportSubjectModule,
+    ImportTeacherModule,
+    ImportProgramModule,
+    ImportSectionScheduleModule,
+    ImportEnrollmentModule,
+    CommunityModule,
+    AiModule,
+    AiChatModule,
+    LoggerModule,
+    RabbitMQModule,
+    BullMQModule,
+    RedisModule,
+    AssetsModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+    }),
   ],
 
   controllers: [AppController],
-  providers: [AppService],
-
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: AccessGuard,
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthMiddleware)
+      .exclude(
+        { path: 'institution/(.*)', method: RequestMethod.ALL },
+        { path: 'institution', method: RequestMethod.ALL },
+        { path: 'admin/(.*)', method: RequestMethod.ALL },
+        { path: 'admin', method: RequestMethod.ALL },
+        { path: 'assets/(.*)', method: RequestMethod.ALL },
+        { path: 'assets', method: RequestMethod.ALL },
+        { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
+        { path: 'auth/(.*)', method: RequestMethod.ALL },
+        { path: 'health', method: RequestMethod.ALL },
+      )
+      .forRoutes('*');
+  }
+}

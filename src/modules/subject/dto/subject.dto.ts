@@ -1,5 +1,11 @@
 // subject.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsNumber,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -24,12 +30,18 @@ export class SearchSubjectDto {
   @IsString()
   subject_code?: string;
 
-  @ApiPropertyOptional({ description: 'Thai Name', example: 'วิทยาศาสตร์คอมพิวเตอร์' })
+  @ApiPropertyOptional({
+    description: 'Thai Name',
+    example: 'วิทยาศาสตร์คอมพิวเตอร์',
+  })
   @IsOptional()
   @IsString()
   name_th?: string;
 
-  @ApiPropertyOptional({ description: 'English Name', example: 'Computer Science' })
+  @ApiPropertyOptional({
+    description: 'English Name',
+    example: 'Computer Science',
+  })
   @IsOptional()
   @IsString()
   name_en?: string;
@@ -58,17 +70,27 @@ export class SearchSubjectDto {
   @IsBoolean()
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Keyword search for subject_code or name_th', example: 'CS' })
+  @ApiPropertyOptional({
+    description: 'Keyword search for subject_code or name_th',
+    example: 'CS',
+  })
   @IsOptional()
   @IsString()
   keyword?: string;
 
-  @ApiPropertyOptional({ description: 'Sort by field', example: 'subject_code' })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'subject_code',
+  })
   @IsOptional()
   @IsString()
   sort_by?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', example: 'ASC', enum: ['ASC', 'DESC'] })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'ASC',
+    enum: ['ASC', 'DESC'],
+  })
   @IsOptional()
   @IsString()
   sort_order?: 'ASC' | 'DESC';
@@ -102,7 +124,10 @@ export class CreateSubjectDto {
   @IsString()
   name_th!: string;
 
-  @ApiPropertyOptional({ description: 'English Name', example: 'Computer Science' })
+  @ApiPropertyOptional({
+    description: 'English Name',
+    example: 'Computer Science',
+  })
   @IsOptional()
   @IsString()
   name_en?: string;
@@ -118,10 +143,16 @@ export class CreateSubjectDto {
   @ApiPropertyOptional({ description: 'Valid flag', example: true })
   flag_valid?: boolean;
 
-  @ApiPropertyOptional({ description: 'Created at timestamp', example: '2024-01-01T00:00:00Z' })
+  @ApiPropertyOptional({
+    description: 'Created at timestamp',
+    example: '2024-01-01T00:00:00Z',
+  })
   created_at?: Date;
 
-  @ApiPropertyOptional({ description: 'Updated at timestamp', example: '2024-01-01T00:00:00Z' })
+  @ApiPropertyOptional({
+    description: 'Updated at timestamp',
+    example: '2024-01-01T00:00:00Z',
+  })
   updated_at?: Date;
 }
 
@@ -139,12 +170,18 @@ export class UpdateSubjectDto {
   @IsString()
   subject_code?: string;
 
-  @ApiPropertyOptional({ description: 'Thai Name', example: 'วิทยาศาสตร์คอมพิวเตอร์' })
+  @ApiPropertyOptional({
+    description: 'Thai Name',
+    example: 'วิทยาศาสตร์คอมพิวเตอร์',
+  })
   @IsOptional()
   @IsString()
   name_th?: string;
 
-  @ApiPropertyOptional({ description: 'English Name', example: 'Computer Science' })
+  @ApiPropertyOptional({
+    description: 'English Name',
+    example: 'Computer Science',
+  })
   @IsOptional()
   @IsString()
   name_en?: string;

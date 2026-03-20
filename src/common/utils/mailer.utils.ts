@@ -1,13 +1,20 @@
 // mailer.utils.ts
 import * as nodemailer from 'nodemailer';
+import { AppLogger } from 'src/common/logger/app-logger.service';
+
+const logger = new AppLogger();
 
 /**
  * Send initial password email to new user
  */
-export async function sendInitialPasswordEmail(email: string, password: string): Promise<void> {
-  console.log('📧 [MAILER] Starting sendInitialPasswordEmail...');
-  console.log('📧 [MAILER] Target email:', email);
-  console.log('📧 [MAILER] SMTP Config:', {
+export async function sendInitialPasswordEmail(
+  email: string,
+  password: string,
+): Promise<void> {
+  logger.debug('Starting sendInitialPasswordEmail...', 'MAILER', {
+    email,
+  });
+  logger.debug('SMTP Config:', 'MAILER', {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
@@ -25,10 +32,11 @@ export async function sendInitialPasswordEmail(email: string, password: string):
     },
   });
 
-  console.log('📧 [MAILER] Transporter created');
+  logger.debug('Transporter created', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@smartgis.com',
+    from:
+      process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@smartgis.com',
     to: email,
     subject: 'Your Initial Password - LinkLian',
     html: `
@@ -43,21 +51,42 @@ export async function sendInitialPasswordEmail(email: string, password: string):
     `,
   };
 
-  console.log('📧 [MAILER] Mail options prepared');
+  logger.debug('Mail options prepared', 'MAILER');
 
   try {
-    console.log('📧 [MAILER] Sending email...');
+    logger.debug('Sending email...', 'MAILER');
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [MAILER] Email sent successfully!');
-    console.log('✅ [MAILER] Message ID:', info.messageId);
-    console.log('✅ [MAILER] Response:', info.response);
-  } catch (error) {
-    console.error('❌ [MAILER] Error sending email:', error);
-    console.error('❌ [MAILER] Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
+    logger.debug('Email sent successfully', 'MAILER', {
+      messageId: info.messageId,
+      response: info.response,
     });
+  } catch (error: unknown) {
+    logger.error('Error sending email:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -66,9 +95,11 @@ export async function sendInitialPasswordEmail(email: string, password: string):
  * Send OTP email
  */
 export async function sendOTPEmail(email: string, otp: string): Promise<void> {
-  console.log('📧 [MAILER] Starting sendOTPEmail...');
-  console.log('📧 [MAILER] Target email:', email);
-  console.log('📧 [MAILER] OTP:', otp);
+  logger.debug('Starting sendOTPEmail...', 'MAILER');
+  logger.debug('SMTP Config:', 'MAILER', {
+    email,
+    otp,
+  });
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -80,10 +111,13 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
     },
   });
 
-  console.log('📧 [MAILER] Transporter created for OTP');
+  logger.debug('Transporter created for OTP', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Your OTP Code - LinkLian',
     html: `
@@ -102,21 +136,42 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
     `,
   };
 
-  console.log('📧 [MAILER] Mail options prepared for OTP');
+  logger.debug('Mail options prepared for OTP', 'MAILER');
 
   try {
-    console.log('📧 [MAILER] Sending OTP email...');
+    logger.debug('Sending OTP email...', 'MAILER');
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [MAILER] OTP email sent successfully!');
-    console.log('✅ [MAILER] Message ID:', info.messageId);
-    console.log('✅ [MAILER] Response:', info.response);
-  } catch (error) {
-    console.error('❌ [MAILER] Error sending OTP email:', error);
-    console.error('❌ [MAILER] Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
+    logger.debug('OTP email sent successfully', 'MAILER', {
+      messageId: info.messageId,
+      response: info.response,
     });
+  } catch (error: unknown) {
+    logger.error('Error sending OTP:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -124,10 +179,15 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
 /**
  * Send temporary password email (for forgot password)
  */
-export async function sendTempPasswordEmail(email: string, tempPassword: string): Promise<void> {
-  console.log('📧 [MAILER] Starting sendTempPasswordEmail...');
-  console.log('📧 [MAILER] Target email:', email);
-  console.log('📧 [MAILER] Temporary password:', tempPassword);
+export async function sendTempPasswordEmail(
+  email: string,
+  tempPassword: string,
+): Promise<void> {
+  logger.debug('Starting sendTempPasswordEmail...', 'MAILER');
+  logger.debug('SMTP Config:', 'MAILER', {
+    email,
+    tempPassword,
+  });
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -139,10 +199,13 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
     },
   });
 
-  console.log('📧 [MAILER] Transporter created for temp password');
+  logger.debug('Transporter created for temp password', 'MAILER');
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Temporary Password - LinkLian',
     html: `
@@ -161,21 +224,42 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
     `,
   };
 
-  console.log('📧 [MAILER] Mail options prepared for temp password');
+  logger.debug('Mail options prepared for temp password', 'MAILER');
 
   try {
-    console.log('📧 [MAILER] Sending temp password email...');
+    logger.debug('Sending temp password email...', 'MAILER');
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [MAILER] Temp password email sent successfully!');
-    console.log('✅ [MAILER] Message ID:', info.messageId);
-    console.log('✅ [MAILER] Response:', info.response);
-  } catch (error) {
-    console.error('❌ [MAILER] Error sending temp password email:', error);
-    console.error('❌ [MAILER] Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
+    logger.debug('Temp password email sent successfully', 'MAILER', {
+      messageId: info.messageId,
+      response: info.response,
     });
+  } catch (error: unknown) {
+    logger.error('Error temp password email:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }
@@ -183,9 +267,12 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string)
 /**
  * Send password reset email
  */
-export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
-  console.log('📧 [MAILER] Starting sendPasswordResetEmail...');
-  console.log('📧 [MAILER] Target email:', email);
+export async function sendPasswordResetEmail(
+  email: string,
+  resetToken: string,
+): Promise<void> {
+  logger.debug('Starting sendPasswordResetEmail...', 'MAILER');
+  logger.debug('Target email:', 'MAILER', email);
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -197,12 +284,15 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
     },
   });
 
-  console.log('📧 [MAILER] Transporter created for password reset');
+  logger.debug('Transporter created for password reset', 'MAILER');
 
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || 'LinkLian.edu@gmail.com',
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER ||
+      'LinkLian.edu@gmail.com',
     to: email,
     subject: 'Password Reset - LinkLian',
     html: `
@@ -218,21 +308,42 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
     `,
   };
 
-  console.log('📧 [MAILER] Mail options prepared for password reset');
+  logger.debug('Mail options prepared for password reset', 'MAILER');
 
   try {
-    console.log('📧 [MAILER] Sending password reset email...');
+    logger.debug('Sending password reset email...', 'MAILER');
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ [MAILER] Password reset email sent successfully!');
-    console.log('✅ [MAILER] Message ID:', info.messageId);
-    console.log('✅ [MAILER] Response:', info.response);
-  } catch (error) {
-    console.error('❌ [MAILER] Error sending password reset email:', error);
-    console.error('❌ [MAILER] Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
+    logger.debug('Password reset email sent successfully', 'MAILER', {
+      messageId: info.messageId,
+      response: info.response,
     });
+  } catch (error: unknown) {
+    logger.error('Error sending password reset email:', 'MAILER', error);
+
+    const errorDetails = {
+      message: 'Unknown error',
+      code: undefined as string | undefined,
+      command: undefined as string | undefined,
+    };
+
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const e = error as Record<string, unknown>;
+
+      if (typeof e.code === 'string') {
+        errorDetails.code = e.code;
+      }
+
+      if (typeof e.command === 'string') {
+        errorDetails.command = e.command;
+      }
+    }
+
+    logger.error('Error details:', 'MAILER', errorDetails);
+
     throw error;
   }
 }

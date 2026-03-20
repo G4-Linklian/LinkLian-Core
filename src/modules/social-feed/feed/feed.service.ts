@@ -1,17 +1,26 @@
 // feed.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { GetClassFeedDto, StudentClassFeedResponse, TeacherClassFeedResponse } from './dto/feed.dto';
+import {
+  GetClassFeedDto,
+  StudentClassFeedResponse,
+  TeacherClassFeedResponse,
+} from './dto/feed.dto';
+import { AppLogger } from '../../../common/logger/app-logger.service';
 
 @Injectable()
 export class FeedService {
-  constructor(private dataSource: DataSource) {}
-
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
   /**
    * Get student class feed with schedules
    * Returns all enrolled classes for a student in a semester
    */
-  async getStudentClassFeed(dto: GetClassFeedDto): Promise<StudentClassFeedResponse[]> {
+  async getStudentClassFeed(
+    dto: GetClassFeedDto,
+  ): Promise<StudentClassFeedResponse> {
     const query = `
       SELECT
         s.section_id,
@@ -21,6 +30,12 @@ export class FeedService {
         sub.name_en AS subject_name_en,
         la.learning_area_name,
         sem.semester,
+        (
+          SELECT COUNT(*)::int
+          FROM enrollment e
+          WHERE e.section_id = s.section_id
+            AND e.flag_valid = true
+        ) AS student_count,
         
         -- ใช้ section_name โดยตรง ไม่ต้อง join edu_level
         s.section_name AS display_class_name,
@@ -41,8 +56,7 @@ export class FeedService {
                 'building', jsonb_build_object(
                   'building_id', COALESCE(b.building_id::integer, 0),
                   'building_name', COALESCE(b.building_name::text, ''),
-                  'building_no', COALESCE(b.building_no::text, ''),
-                  'room_format', COALESCE(b.room_format::text, '')
+                  'building_no', COALESCE(b.building_no::text, '')
                 )
               )
               ORDER BY sch.day_of_week ASC, sch.start_time ASC
@@ -95,14 +109,23 @@ export class FeedService {
     `;
 
     try {
-      return await this.dataSource.query(query, [
-        dto.user_id, 
+      const result_feed = await this.dataSource.query(query, [
+        dto.user_id,
         dto.semester_id,
         dto.limit || 10,
-        dto.offset || 0
+        dto.offset || 0,
       ]);
-    } catch (error) {
-      console.error('Error fetching student class feed:', error);
+      return {
+        success: true,
+        message: 'Student class feed retrieved successfully',
+        data: result_feed,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'Error fetching student class feed',
+        'GetStudentClassFeed',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }
@@ -111,7 +134,9 @@ export class FeedService {
    * Get teacher class feed with schedules
    * Returns all sections assigned to a teacher/educator in a semester
    */
-  async getTeacherClassFeed(dto: GetClassFeedDto): Promise<TeacherClassFeedResponse[]> {
+  async getTeacherClassFeed(
+    dto: GetClassFeedDto,
+  ): Promise<TeacherClassFeedResponse> {
     const query = `
       SELECT
         s.section_id,
@@ -122,6 +147,12 @@ export class FeedService {
         la.learning_area_name,
         sem.semester,
         se.position,
+        (
+          SELECT COUNT(*)::int
+          FROM enrollment e
+          WHERE e.section_id = s.section_id
+            AND e.flag_valid = true
+        ) AS student_count,
 
         -- ใช้ section_name โดยตรง ไม่ต้อง join edu_level
         s.section_name AS display_class_name,
@@ -142,8 +173,7 @@ export class FeedService {
                 'building', jsonb_build_object(
                   'building_id', COALESCE(b.building_id::integer, 0),
                   'building_name', COALESCE(b.building_name::text, ''),
-                  'building_no', COALESCE(b.building_no::text, ''),
-                  'room_format', COALESCE(b.room_format::text, '')
+                  'building_no', COALESCE(b.building_no::text, '')
                 )
               )
               ORDER BY sch.day_of_week ASC, sch.start_time ASC
@@ -197,14 +227,23 @@ export class FeedService {
     `;
 
     try {
-      return await this.dataSource.query(query, [
-        dto.user_id, 
+      const result_feed = await this.dataSource.query(query, [
+        dto.user_id,
         dto.semester_id,
         dto.limit || 10,
-        dto.offset || 0
+        dto.offset || 0,
       ]);
-    } catch (error) {
-      console.error('Error fetching teacher class feed:', error);
+      return {
+        success: true,
+        message: 'Teacher class feed retrieved successfully',
+        data: result_feed,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'Error fetching teacher class feed',
+        'GetTeacherClassFeed',
+        error,
+      );
       throw new InternalServerErrorException('Error fetching class feed');
     }
   }

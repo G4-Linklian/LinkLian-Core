@@ -1,11 +1,20 @@
 // profile.service.ts
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { UpdateProfileDto, EducationInfo, ProfileResponse } from './dto/profile.dto';
+import { UpdateProfileDto, EducationInfo } from './dto/profile.dto';
+import { AppLogger } from 'src/common/logger/app-logger.service';
 
 @Injectable()
 export class ProfileService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    private readonly logger: AppLogger,
+  ) {}
 
   /**
    * Get user profile with education info based on role and edu_type
@@ -20,7 +29,6 @@ export class ProfileService {
         u.code,
         u.email,
         u.first_name,
-        u.middle_name,
         u.last_name,
         u.phone,
         u.profile_pic,
@@ -82,12 +90,11 @@ export class ProfileService {
           education,
         },
       };
-
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      console.error('Error querying user profile:', error);
+      this.logger.error('Error querying user profile:', 'GetProfile', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -95,7 +102,10 @@ export class ProfileService {
   /**
    * Get high school education info (level, classroom, study_plan)
    */
-  private async getHighSchoolEducation(userId: number, levelName: string): Promise<EducationInfo> {
+  private async getHighSchoolEducation(
+    userId: number,
+    levelName: string,
+  ): Promise<EducationInfo> {
     // Query class (program) and study plan
     const classQuery = `
       SELECT
@@ -126,7 +136,10 @@ export class ProfileService {
   /**
    * Get university education info (level, classroom, faculty, department)
    */
-  private async getUniversityEducation(userId: number, levelName: string): Promise<EducationInfo> {
+  private async getUniversityEducation(
+    userId: number,
+    levelName: string,
+  ): Promise<EducationInfo> {
     // Query class info for program_name (classroom)
     const classQuery = `
       SELECT
@@ -175,7 +188,7 @@ export class ProfileService {
       type: 'university',
       level: levelName,
       classroom: programName,
-      faculty: faculty,
+      faculty,
       program: department,
       display: `${levelName} ${department} ${sectionName}`,
     };
@@ -242,14 +255,16 @@ export class ProfileService {
       }
 
       // Remove password from response
-      const { password, ...userData } = result[0];
+      const { password: _password, ...userData } = result[0];
       return { message: 'Profile updated successfully', data: userData };
-
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      console.error('Error updating profile:', error);
+      this.logger.error('Error updating profile:', 'UpdateProfile', error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -267,35 +282,47 @@ export class ProfileService {
         s.section_name,
         subj.subject_code,
         subj.name_th AS subject_name,
-        ss.room_location_id
+        b.building_name,
+        rl.room_number
       FROM section_schedule ss
       LEFT JOIN section s ON s.section_id = ss.section_id
       LEFT JOIN section_educator se ON se.section_id = s.section_id
       LEFT JOIN subject subj ON subj.subject_id = s.subject_id
+      LEFT JOIN room_location rl ON rl.room_location_id = ss.room_location_id
+      LEFT JOIN building b ON b.building_id = rl.building_id
       WHERE se.educator_id = $1 AND se.flag_valid = true AND ss.flag_valid = true
       ORDER BY ss.day_of_week ASC, ss.start_time ASC
     `;
 
     try {
       const schedules = await this.dataSource.query(query, [educatorId]);
-      
+
       return {
         success: true,
         message: 'Teaching schedules retrieved successfully',
-        data: schedules.map(schedule => ({
+        data: schedules.map((schedule) => ({
           scheduleId: schedule.schedule_id,
           dayOfWeek: schedule.day_of_week,
           startTime: schedule.start_time,
           endTime: schedule.end_time,
-          className: schedule.section_name,
+          className: schedule.section_name ?? '-',
           subjectName: schedule.subject_name,
           subjectCode: schedule.subject_code,
-          building: schedule.room_location_id || '-',
+          building:
+            schedule.building_name && schedule.room_number
+              ? `${schedule.building_name} ห้อง ${schedule.room_number}`
+              : (schedule.building_name ?? '-'),
         })),
       };
     } catch (error) {
-      console.error('Error fetching teaching schedule:', error);
-      throw new InternalServerErrorException('Failed to fetch teaching schedule');
+      this.logger.error(
+        'Error fetching teaching schedule:',
+        'GetTeachingSchedule',
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to fetch teaching schedule',
+      );
     }
   }
 }
