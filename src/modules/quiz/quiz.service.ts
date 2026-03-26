@@ -46,6 +46,7 @@ export class QuizService {
       difficulty: dto.difficulty,
       question_count: dto.question_count,
       mode: dto.mode,
+      quiz_title: dto.title,
     });
 
     return this.quizRepo.save(quiz);
@@ -66,20 +67,21 @@ export class QuizService {
     const quizzes = await this.quizRepo.find({
       where: { ai_chat_id: aiChatId },
       order: { created_at: 'ASC' },
+      select: [
+        'quiz_id',
+        'ai_chat_id',
+        'quiz_detail',
+        'difficulty',
+        'question_count',
+        'mode',
+        'quiz_title',
+        'created_at',
+      ],
     });
 
     return quizzes;
   }
 
-  // async getQuizByChat(aiChatId: number, userId: number) {
-
-  //   const quizzes = await this.quizRepo.find({
-  //     where: { ai_chat_id: aiChatId, user_sys_id: userId, },
-  //     order: { created_at: 'ASC' },
-  //   });
-
-  //   return quizzes;
-  // }
   async saveAttempt(dto: CreateQuizAttemptDto, userId: number) {
 
     const attempt = this.quizAttemptRepo.create({

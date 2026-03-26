@@ -19,6 +19,9 @@ export class Quiz {
   @Column({ type: 'varchar', length: 10 })
   difficulty: string;
 
+  @Column({ type: 'text', nullable: true })
+  quiz_title: string;
+
   @Column({
     type: 'varchar',
     default: 'exam',

@@ -13,6 +13,10 @@ export class CreateQuizDto {
 
   @ApiProperty()
   @IsString()
+  title: string;
+
+  @ApiProperty()
+  @IsString()
   mode: 'exam' | 'learning';
 
   @ApiProperty()
