@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppLogger } from '../../common/logger/app-logger.service';
@@ -11,7 +12,7 @@ export class BookmarkService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   /**
    * Get all bookmarks for a user (similar to old getBookmark with filters)
@@ -94,6 +95,14 @@ export class BookmarkService {
    * Toggle bookmark (create if not exists, delete if exists) - similar to old createBookmark
    */
   async toggleBookmark(userId: number, postId: number) {
+    const user = await this.dataSource.query(
+      `SELECT 1 FROM user_sys WHERE user_sys_id = $1`,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
     if (!userId || !postId) {
       throw new BadRequestException(
         'Missing required fields: user_sys_id, post_id',

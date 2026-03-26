@@ -14,6 +14,21 @@ export class CommunityCommentService {
     private readonly logger: AppLogger,
   ) {}
 
+  private async ensureActiveUser(userId: number) {
+    const user = await this.dataSource.query(
+      `
+      SELECT 1
+      FROM user_sys
+      WHERE user_sys_id = $1
+      `,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
+  }
+
   async getComments(dto: any) {
     const { post_commu_id, limit = 10, offset = 0 } = dto;
 
@@ -60,8 +75,11 @@ export class CommunityCommentService {
         AND flag_valid = true
     ) AS children_count,
 
-    CONCAT(u.first_name,' ',u.last_name) AS display_name,
-    u.profile_pic
+    CASE
+      WHEN u.user_sys_id IS NULL THEN 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว'
+      ELSE CONCAT(u.first_name,' ',u.last_name)
+    END AS display_name,
+    COALESCE(u.profile_pic, '') AS profile_pic
 
   FROM community_comment c
   LEFT JOIN user_sys u
@@ -125,8 +143,11 @@ export class CommunityCommentService {
             AND flag_valid=true
         ) AS children_count,
 
-        CONCAT(u.first_name,' ',u.last_name) AS display_name,
-        u.profile_pic
+        CASE
+          WHEN u.user_sys_id IS NULL THEN 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว'
+          ELSE CONCAT(u.first_name,' ',u.last_name)
+        END AS display_name,
+        COALESCE(u.profile_pic, '') AS profile_pic
 
       FROM community_comment c
       LEFT JOIN user_sys u
@@ -152,6 +173,8 @@ export class CommunityCommentService {
     );
   }
   async createComment(userId: number, dto: any) {
+    await this.ensureActiveUser(userId);
+
     const { post_commu_id, comment_text, parent_id } = dto;
 
     if (!post_commu_id || !comment_text) {
@@ -254,6 +277,8 @@ export class CommunityCommentService {
   }
 
   async updateComment(userId: number, dto: any) {
+    await this.ensureActiveUser(userId);
+
     const { comment_id, comment_text } = dto;
     const post = await this.dataSource.query(
       `
@@ -301,6 +326,8 @@ export class CommunityCommentService {
   }
 
   async hardDeleteComment(userId: number, commentId: number) {
+    await this.ensureActiveUser(userId);
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

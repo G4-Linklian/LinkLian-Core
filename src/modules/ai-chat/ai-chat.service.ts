@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ForbiddenException,
     Inject,
     Injectable,
     InternalServerErrorException,
@@ -32,6 +33,21 @@ export class AiChatService {
         @Inject(forwardRef(() => AiService))
         private readonly aiService: AiService,
     ) { }
+
+    private async ensureActiveUser(userId: number) {
+        const user = await this.dataSource.query(
+            `
+            SELECT 1
+            FROM user_sys
+            WHERE user_sys_id = $1
+            `,
+            [userId],
+        );
+
+        if (!user.length) {
+            throw new ForbiddenException('Account deleted');
+        }
+    }
 
     async findAiChatById(id: number) {
         const chat = await this.aiChatRepo.findOne({
@@ -120,9 +136,15 @@ export class AiChatService {
     //         throw new InternalServerErrorException('Error creating AI chat');
     //     }
     // }
-    async createAiChat(dto: CreateAiChatDto) {
+    async createAiChat(dto: CreateAiChatDto, userId: number) {
+        await this.ensureActiveUser(userId);
+
         let existing = await this.aiChatRepo.findOne({
-            where: { post_content_id: dto.post_content_id, flag_valid: true },
+            where: {
+                post_content_id: dto.post_content_id,
+                user_sys_id: userId,
+                flag_valid: true,
+            },
         });
 
         if (existing) {
@@ -166,6 +188,7 @@ export class AiChatService {
             aiResult?.data?.document_title || postData.title;
 
         const chat = await this.aiChatRepo.save({
+            user_sys_id: userId,
             post_content_id: dto.post_content_id,
             chat_title: documentTitle,
             summary_text: summary,
@@ -291,9 +314,15 @@ export class AiChatService {
         }
     }
 
-    async createAiMessage(dto: CreateAiMessageDto) {
+    async createAiMessage(dto: CreateAiMessageDto, userId: number) {
+        await this.ensureActiveUser(userId);
+
         const chat = await this.aiChatRepo.findOne({
-            where: { ai_chat_id: dto.ai_chat_id, flag_valid: true },
+            where: {
+                ai_chat_id: dto.ai_chat_id,
+                user_sys_id: userId,
+                flag_valid: true,
+            },
         });
 
         if (!chat) {

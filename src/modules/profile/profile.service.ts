@@ -44,7 +44,18 @@ export class ProfileService {
       const profileResult = await this.dataSource.query(profileQuery, [userId]);
 
       if (profileResult.length === 0) {
-        throw new NotFoundException('Profile not found');
+        return {
+          success: true,
+          message: 'Profile retrieved successfully',
+          data: {
+            user_sys_id: userId,
+            first_name: 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว',
+            last_name: '',
+            profile_pic: null,
+            role_group: null,
+            education: null,
+          },
+        };
       }
 
       const profile = profileResult[0];

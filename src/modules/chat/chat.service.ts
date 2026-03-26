@@ -2,6 +2,7 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -36,6 +37,21 @@ export class ChatService {
     private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
   ) { }
+
+  private async ensureActiveUser(userId: number) {
+    const user = await this.dataSource.query(
+      `
+      SELECT 1
+      FROM user_sys
+      WHERE user_sys_id = $1
+      `,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
+  }
 
   // ========== Chat Methods ==========
 
@@ -328,6 +344,8 @@ export class ChatService {
     if (!dto.chat_id || !dto.sender_id || !dto.content) {
       throw new BadRequestException('Missing required fields!');
     }
+
+    await this.ensureActiveUser(dto.sender_id);
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

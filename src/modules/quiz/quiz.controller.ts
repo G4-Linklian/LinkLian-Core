@@ -11,13 +11,25 @@ export class QuizController {
   constructor(private quizService: QuizService) { }
 
   @Post()
-  async generateQuiz(@Body() dto: CreateQuizDto) {
-    return this.quizService.generateQuiz(dto);
+  async generateQuiz(@Body() dto: CreateQuizDto, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.quizService.generateQuiz(dto, userId);
   }
 
   @Get('by-chat/:aiChatId')
-  async getQuizByChat(@Param('aiChatId') aiChatId: number) {
-    return this.quizService.getQuizByChat(Number(aiChatId));
+  async getQuizByChat(@Param('aiChatId') aiChatId: number, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.quizService.getQuizByChat(Number(aiChatId), userId);
   }
   @Post('attempt')
   async saveAttempt(

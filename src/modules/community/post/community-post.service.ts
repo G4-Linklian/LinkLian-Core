@@ -34,7 +34,24 @@ export class CommunityPostService {
     private readonly logger: AppLogger,
   ) {}
 
+  private async ensureActiveUser(userId: number) {
+    const user = await this.dataSource.query(
+      `
+      SELECT 1
+      FROM user_sys
+      WHERE user_sys_id = $1
+      `,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
+  }
+
   async createPost(userId: number, dto: any, files?: Express.Multer.File[]) {
+    await this.ensureActiveUser(userId);
+
     if (!dto || !dto.content?.trim()) {
       throw new BadRequestException('Content required');
     }
@@ -132,9 +149,9 @@ export class CommunityPostService {
     cp.user_sys_id,
     cp.content,
     cp.created_at,
-    u.first_name,
-    u.last_name,
-    u.profile_pic,
+    COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+    COALESCE(u.last_name, '') AS last_name,
+    COALESCE(u.profile_pic, '') AS profile_pic,
     COALESCE(
       (
         SELECT json_agg(
@@ -151,7 +168,7 @@ export class CommunityPostService {
       '[]'
     ) AS attachments
   FROM post_in_community cp
-  JOIN user_sys u
+  LEFT JOIN user_sys u
     ON u.user_sys_id = cp.user_sys_id
   WHERE cp.post_commu_id = $1
   `,
@@ -190,9 +207,9 @@ export class CommunityPostService {
       cp.user_sys_id,
       cp.content,
       cp.created_at,
-      u.first_name,
-      u.last_name,
-      u.profile_pic,
+      COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+      COALESCE(u.last_name, '') AS last_name,
+      COALESCE(u.profile_pic, '') AS profile_pic,
 
 COALESCE(
   (
@@ -211,7 +228,7 @@ COALESCE(
 ) AS attachments
 
     FROM post_in_community cp
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON u.user_sys_id=cp.user_sys_id
 
     WHERE cp.community_id=$1
@@ -234,6 +251,8 @@ COALESCE(
   }
 
   async hardDeletePost(userId: number, postId: number) {
+    await this.ensureActiveUser(userId);
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -349,6 +368,8 @@ COALESCE(
     dto: any,
     files?: Express.Multer.File[],
   ) {
+    await this.ensureActiveUser(userId);
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -478,9 +499,9 @@ COALESCE(
         cp.user_sys_id,
         cp.content,
         cp.created_at,
-        u.first_name,
-        u.last_name,
-        u.profile_pic,
+        COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+        COALESCE(u.last_name, '') AS last_name,
+        COALESCE(u.profile_pic, '') AS profile_pic,
         COALESCE(
           (
             SELECT json_agg(
@@ -497,7 +518,7 @@ COALESCE(
           '[]'
         ) AS attachments
       FROM post_in_community cp
-      JOIN user_sys u
+      LEFT JOIN user_sys u
         ON u.user_sys_id = cp.user_sys_id
       WHERE cp.post_commu_id = $1
       `,
@@ -533,9 +554,9 @@ COALESCE(
       cp.community_id,
       cp.content,
       cp.created_at,
-      u.first_name,
-      u.last_name,
-      u.profile_pic,
+      COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+      COALESCE(u.last_name, '') AS last_name,
+      COALESCE(u.profile_pic, '') AS profile_pic,
 
       COALESCE(
       (
@@ -553,7 +574,7 @@ COALESCE(
       ) AS attachments
 
     FROM post_in_community cp
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON u.user_sys_id = cp.user_sys_id
 
     WHERE cp.community_id = $1

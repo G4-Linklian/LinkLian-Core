@@ -150,7 +150,7 @@ export class CommunityBookmarkService {
       FROM community_bookmark cb
       JOIN post_in_community p
         ON p.post_commu_id=cb.post_commu_id
-      JOIN user_sys u
+      LEFTJOIN user_sys u
         ON u.user_sys_id=p.user_sys_id
       WHERE cb.user_sys_id=$1
       ORDER BY cb.saved_at DESC
