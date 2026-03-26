@@ -12,6 +12,10 @@ export class CreateQuizDto {
   difficulty: string;
 
   @ApiProperty()
+  @IsString()
+  mode: 'exam' | 'learning';
+
+  @ApiProperty()
   @IsInt()
   question_count: number;
 

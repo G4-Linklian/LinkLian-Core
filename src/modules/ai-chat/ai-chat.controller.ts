@@ -9,6 +9,8 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -44,8 +46,13 @@ export class AiChatController {
   @ApiOperation({ summary: 'Create AI chat' })
   @ApiBody({ type: CreateAiChatDto })
   @ApiResponse({ status: 201, description: 'AI chat created successfully' })
-  async createAiChat(@Body() dto: CreateAiChatDto) {
-    return this.aiChatService.createAiChat(dto);
+  async createAiChat(@Body() dto: CreateAiChatDto, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.aiChatService.createAiChat(dto, userId);
   }
 
   @Put(':id')
@@ -78,8 +85,13 @@ export class AiChatController {
   @ApiOperation({ summary: 'Create AI message' })
   @ApiBody({ type: CreateAiMessageDto })
   @ApiResponse({ status: 201, description: 'AI message created successfully' })
-  async createAiMessage(@Body() dto: CreateAiMessageDto) {
-    return this.aiChatService.createAiMessage(dto);
+  async createAiMessage(@Body() dto: CreateAiMessageDto, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+    //return this.aiChatService.createAiMessage(dto, userId);
+    return this.aiChatService.createAiMessage(dto, userId);
   }
 
   @Delete('messages/:id')
@@ -95,12 +107,23 @@ export class AiChatController {
   @ApiParam({ name: 'id', type: Number, description: 'AI chat ID' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiResponse({ status: 404, description: 'AI chat not found' })
-  async getAiChatById(@Param('id') id: number) {
-    //return this.aiChatService.findAiChatById(Number(id));
-    return this.aiChatService.getAiChat(Number(id));
+  async getAiChatById(@Param('id') id: number, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.aiChatService.getAiChat(Number(id), userId);
   }
+
   @Get()
-  async getAiChats() {
-    return this.aiChatService.getAll();
+  async getAiChats(@Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.aiChatService.getAll(userId);
   }
 }
