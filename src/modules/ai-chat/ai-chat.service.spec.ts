@@ -105,7 +105,7 @@ describe('AiChatService', () => {
     mockQb.limit.mockReturnThis();
     mockQb.offset.mockReturnThis();
     mockQb.where.mockReturnThis();
-    mockQb.getMany.mockReset && mockQb.getMany.mockReset();
+    mockQb.getMany.mockReset();
   });
 
   // ─── findAiChatById ────────────────────────────────────────────────────────
