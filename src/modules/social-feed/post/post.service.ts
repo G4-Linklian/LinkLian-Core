@@ -256,10 +256,10 @@ export class PostService {
       JOIN post_content pc
         ON pic.post_content_id = pc.post_content_id
 
-      JOIN user_sys u
+      LEFT JOIN user_sys u
         ON pc.user_sys_id = u.user_sys_id
 
-      JOIN role r
+      LEFT JOIN role r
         ON u.role_id = r.role_id
        AND r.flag_valid = true
 
@@ -311,18 +311,16 @@ export class PostService {
         );
       }
 
-      // Transform result to handle anonymous posts
+      // Transform result to handle anonymous posts and deleted-user posts
       const sanitizedRows = result.filter((row: any) => {
         const postId = Number(row?.post_id);
         const postContentId = Number(row?.post_content_id);
-        const userSysId = Number(row?._user_sys_id);
+        // user_sys_id may be null when the user account has been deleted — that is valid
         const isValid =
           Number.isFinite(postId) &&
           postId > 0 &&
           Number.isFinite(postContentId) &&
-          postContentId > 0 &&
-          Number.isFinite(userSysId) &&
-          userSysId > 0;
+          postContentId > 0;
 
         if (!isValid) {
           this.logger.warn(
@@ -341,12 +339,16 @@ export class PostService {
 
       const posts = sanitizedRows.map((row: any) => {
         const isAnonymous = row.is_anonymous;
-        const userSysId = Number(row._user_sys_id);
+        const rawUserSysId = row._user_sys_id;
+        const isUserDeleted = rawUserSysId == null;
+        const userSysId = isUserDeleted ? null : Number(rawUserSysId);
         const sectionId = dto.section_id;
 
-        const displayName = isAnonymous
-          ? generateAnonymousName(userSysId, sectionId)
-          : row._display_name;
+        const displayName = isUserDeleted
+          ? 'ไม่มีบัญชีผู้ใช้งาน'
+          : isAnonymous
+            ? generateAnonymousName(userSysId as number, sectionId)
+            : row._display_name;
 
         return {
           post_id: row.post_id,
@@ -355,25 +357,18 @@ export class PostService {
           content: row.content,
           post_type: row.post_type,
           is_anonymous: isAnonymous,
+          is_user_deleted: isUserDeleted,
           created_at: row.created_at,
           due_date: row.due_date || null,
           max_score: row.max_score ? Number(row.max_score) : null,
           is_group: row.is_group ?? null,
-          user: isAnonymous
-            ? {
-              user_sys_id: userSysId,
-              email: null,
-              profile_pic: null,
-              display_name: displayName,
-              role_name: null,
-            }
-            : {
-              user_sys_id: userSysId,
-              email: row._email,
-              profile_pic: row._profile_pic,
-              display_name: row._display_name,
-              role_name: row._role_name,
-            },
+          user: {
+            user_sys_id: userSysId,
+            email: isAnonymous || isUserDeleted ? null : row._email,
+            profile_pic: isAnonymous || isUserDeleted ? null : row._profile_pic,
+            display_name: displayName,
+            role_name: isAnonymous || isUserDeleted ? null : row._role_name,
+          },
           attachments: row.attachments || [],
         };
       });
@@ -1714,9 +1709,9 @@ a.is_group,
     FROM post_in_class pic
     JOIN post_content pc
       ON pic.post_content_id = pc.post_content_id
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON pc.user_sys_id = u.user_sys_id
-    JOIN role r
+    LEFT JOIN role r
       ON u.role_id = r.role_id
     LEFT JOIN post_attachment pa
       ON pc.post_content_id = pa.post_content_id
@@ -1748,12 +1743,16 @@ a.is_group,
     const row = result[0];
 
     const isAnonymous = row.is_anonymous;
-    const userSysId = Number(row._user_sys_id);
+    const rawUserSysId = row._user_sys_id;
+    const isUserDeleted = rawUserSysId == null;
+    const userSysId = isUserDeleted ? null : Number(rawUserSysId);
     const sectionId = row.section_id;
 
-    const displayName = isAnonymous
-      ? generateAnonymousName(userSysId, sectionId)
-      : row._display_name;
+    const displayName = isUserDeleted
+      ? 'ไม่มีบัญชีผู้ใช้งาน'
+      : isAnonymous
+        ? generateAnonymousName(userSysId as number, sectionId)
+        : row._display_name;
 
     const post = {
       post_id: row.post_id,
@@ -1762,26 +1761,19 @@ a.is_group,
       content: row.content,
       post_type: row.post_type,
       is_anonymous: isAnonymous,
+      is_user_deleted: isUserDeleted,
       created_at: row.created_at,
       due_date: row.due_date || null,
       max_score: row.max_score ? Number(row.max_score) : null,
       is_group: row.is_group ?? null,
 
-      user: isAnonymous
-        ? {
-          user_sys_id: userSysId,
-          email: null,
-          profile_pic: null,
-          display_name: displayName,
-          role_name: null,
-        }
-        : {
-          user_sys_id: userSysId,
-          email: row._email,
-          profile_pic: row._profile_pic,
-          display_name: row._display_name,
-          role_name: row._role_name,
-        },
+      user: {
+        user_sys_id: userSysId,
+        email: isAnonymous || isUserDeleted ? null : row._email,
+        profile_pic: isAnonymous || isUserDeleted ? null : row._profile_pic,
+        display_name: displayName,
+        role_name: isAnonymous || isUserDeleted ? null : row._role_name,
+      },
 
       attachments: row.attachments || [],
     };
