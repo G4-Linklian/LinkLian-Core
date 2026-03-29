@@ -649,12 +649,15 @@ export class PostService {
             const sectionForPost = sectionIds[postIds.indexOf(postId)];
 
             // Get all enrolled students in this section
+            // กรองเฉพาะ Active เพื่อข้าม Inactive และ student_id IS NOT NULL เพื่อข้าม deleted users
             const enrolledStudents = await queryRunner.query(
               `
-              SELECT student_id
-              FROM enrollment
-              WHERE section_id = $1
-                AND flag_valid = true
+              SELECT e.student_id
+              FROM enrollment e
+              JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
+              WHERE e.section_id = $1
+                AND e.flag_valid = true
+                AND e.student_id IS NOT NULL
             `,
               [sectionForPost],
             );
@@ -1039,9 +1042,18 @@ export class PostService {
           );
 
           const assignmentIds = assignmentRows.map((r) => r.assignment_id);
+          // ใช้ Boolean() เพื่อให้ comparison ถูกต้องไม่ว่า PostgreSQL จะ return ค่าเป็น boolean หรือ string
           const isChangingType =
             dto.is_group !== undefined &&
-            assignmentRows.some((r) => r.is_group !== dto.is_group);
+            assignmentRows.some(
+              (r) => Boolean(r.is_group) !== Boolean(dto.is_group),
+            );
+
+          this.logger.log('Assignment type change check', 'UpdatePost', {
+            isChangingType,
+            dto_is_group: dto.is_group,
+            current_is_group: assignmentRows.map((r) => r.is_group),
+          });
 
           if (assignmentIds.length > 0 && isChangingType) {
             // Business rule: once there is a submission, assignment type cannot be changed.
@@ -1065,6 +1077,7 @@ export class PostService {
             }
 
             // Clear all old groups/members before rebuilding type-specific groups.
+            // ทำงานทั้งสองทิศทาง: group→individual และ individual→group
             await this.dataSource.query(
               `
                 DELETE FROM group_member
@@ -1083,16 +1096,26 @@ export class PostService {
               [assignmentIds],
             );
 
+            this.logger.log(
+              'Cleared all existing groups before type switch',
+              'UpdatePost',
+              { assignmentIds, switching_to: dto.is_group ? 'group' : 'individual' },
+            );
+
             // Switching to individual assignment => recreate one-person groups.
+            // individual→group: ไม่สร้างอะไร นักเรียนสร้างกลุ่มเอง
             if (dto.is_group === false) {
               for (const row of assignmentRows) {
+                // กรองเฉพาะ Active และ student_id IS NOT NULL เพื่อข้าม Inactive / deleted users
                 const enrolledStudents: Array<{ student_id: number }> =
                   await this.dataSource.query(
                     `
-                      SELECT student_id::int AS student_id
-                      FROM enrollment
-                      WHERE section_id = $1
-                        AND flag_valid = true
+                      SELECT e.student_id::int AS student_id
+                      FROM enrollment e
+                      JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
+                      WHERE e.section_id = $1
+                        AND e.flag_valid = true
+                        AND e.student_id IS NOT NULL
                     `,
                     [row.section_id],
                   );

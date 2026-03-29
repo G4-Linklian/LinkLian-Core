@@ -117,7 +117,7 @@ export class ClassInfoService {
           CONCAT(u.first_name, ' ', u.last_name) as display_name,
           u.profile_pic
         FROM enrollment e
-        JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true
+        JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
         WHERE e.section_id = $1
           AND e.flag_valid = true
           AND e.student_id IS NOT NULL

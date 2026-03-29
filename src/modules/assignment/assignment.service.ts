@@ -1866,6 +1866,11 @@ WHERE e.section_id = pic.section_id
 
         WHERE e.section_id = $2
           AND e.flag_valid = true
+          AND (
+            e.student_id IS NULL           -- user ถูกลบ FK เป็น null → แสดง deleted pattern
+            OR u.user_sys_id IS NULL       -- user ถูกลบออกจาก user_sys → แสดง deleted pattern
+            OR u.user_status = 'Active'    -- user ปกติ → แสดงตามปกติ
+          )
 
         ORDER BY
           CASE WHEN u.user_sys_id IS NULL THEN 1 ELSE 0 END,
