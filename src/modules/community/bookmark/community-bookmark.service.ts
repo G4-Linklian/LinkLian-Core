@@ -13,7 +13,7 @@ export class CommunityBookmarkService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   async toggleBookmark(userId: number, postCommuId: number) {
     if (!postCommuId) throw new BadRequestException('post_commu_id required');
@@ -150,7 +150,7 @@ export class CommunityBookmarkService {
       FROM community_bookmark cb
       JOIN post_in_community p
         ON p.post_commu_id=cb.post_commu_id
-      LEFTJOIN user_sys u
+      LEFT JOIN user_sys u
         ON u.user_sys_id=p.user_sys_id
       WHERE cb.user_sys_id=$1
       ORDER BY cb.saved_at DESC

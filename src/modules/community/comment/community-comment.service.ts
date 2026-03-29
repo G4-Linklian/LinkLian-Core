@@ -12,7 +12,7 @@ export class CommunityCommentService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   private async ensureActiveUser(userId: number) {
     const user = await this.dataSource.query(
@@ -76,7 +76,7 @@ export class CommunityCommentService {
     ) AS children_count,
 
     CASE
-      WHEN u.user_sys_id IS NULL THEN 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว'
+      WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
       ELSE CONCAT(u.first_name,' ',u.last_name)
     END AS display_name,
     COALESCE(u.profile_pic, '') AS profile_pic
@@ -144,7 +144,7 @@ export class CommunityCommentService {
         ) AS children_count,
 
         CASE
-          WHEN u.user_sys_id IS NULL THEN 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว'
+          WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
           ELSE CONCAT(u.first_name,' ',u.last_name)
         END AS display_name,
         COALESCE(u.profile_pic, '') AS profile_pic

@@ -32,7 +32,7 @@ export class CommunityPostService {
     private communityService: CommunityService,
     private fileStorageService: FileStorageService,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   private async ensureActiveUser(userId: number) {
     const user = await this.dataSource.query(
@@ -143,35 +143,35 @@ export class CommunityPostService {
 
       const fullPost = await this.dataSource.query(
         `
-  SELECT
-    cp.post_commu_id,
-    cp.community_id,
-    cp.user_sys_id,
-    cp.content,
-    cp.created_at,
-    COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
-    COALESCE(u.last_name, '') AS last_name,
-    COALESCE(u.profile_pic, '') AS profile_pic,
-    COALESCE(
-      (
-        SELECT json_agg(
-          json_build_object(
-            'url', ca.file_url,
-            'type', ca.file_type,
-            'original_name', ca.original_name
-          )
-        )
-        FROM community_attachment ca
-        WHERE ca.post_commu_id = cp.post_commu_id
-          AND ca.flag_valid = true
-      ),
-      '[]'
-    ) AS attachments
-  FROM post_in_community cp
-  LEFT JOIN user_sys u
-    ON u.user_sys_id = cp.user_sys_id
-  WHERE cp.post_commu_id = $1
-  `,
+        SELECT
+          cp.post_commu_id,
+          cp.community_id,
+          cp.user_sys_id,
+          cp.content,
+          cp.created_at,
+          COALESCE(u.first_name, 'ไม่มีบัญชีผู้ใช้งาน') AS first_name,
+          COALESCE(u.last_name, '') AS last_name,
+          COALESCE(u.profile_pic, '') AS profile_pic,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'url', ca.file_url,
+                  'type', ca.file_type,
+                  'original_name', ca.original_name
+                )
+              )
+              FROM community_attachment ca
+              WHERE ca.post_commu_id = cp.post_commu_id
+                AND ca.flag_valid = true
+            ),
+            '[]'
+          ) AS attachments
+        FROM post_in_community cp
+        LEFT JOIN user_sys u
+          ON u.user_sys_id = cp.user_sys_id
+        WHERE cp.post_commu_id = $1
+        `,
         [postId],
       );
 
@@ -207,7 +207,7 @@ export class CommunityPostService {
       cp.user_sys_id,
       cp.content,
       cp.created_at,
-      COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+      COALESCE(u.first_name, 'ไม่มีบัญชีผู้ใช้งาน') AS first_name,
       COALESCE(u.last_name, '') AS last_name,
       COALESCE(u.profile_pic, '') AS profile_pic,
 
@@ -272,19 +272,18 @@ COALESCE(
 
       // if (post[0].user_sys_id !== userId)
       //   throw new ForbiddenException('Not allowed');
-      // ถ้าไม่ใช่เจ้าของโพสต์
       if (Number(post[0].user_sys_id) !== Number(userId)) {
-        // เช็คว่าเป็น owner ของ community ไหม
+
         const owner = await queryRunner.query(
           `
-    SELECT 1
-    FROM community_member
-    WHERE community_id=$1
-      AND user_sys_id=$2
-      AND role='owner'
-      AND status='active'
-      AND flag_valid=true
-  `,
+        SELECT 1
+        FROM community_member
+        WHERE community_id=$1
+          AND user_sys_id=$2
+          AND role='owner'
+          AND status='active'
+          AND flag_valid=true
+      `,
           [post[0].community_id, userId],
         );
 
@@ -293,7 +292,7 @@ COALESCE(
         }
       }
 
-      // 1. delete comment_path
+      // delete comment_path
       await queryRunner.query(
         `
       DELETE FROM community_comment_path
@@ -306,7 +305,7 @@ COALESCE(
         [postId],
       );
 
-      // 2. delete comments
+      // delete comments
       await queryRunner.query(
         `
       DELETE FROM community_comment
@@ -315,7 +314,7 @@ COALESCE(
         [postId],
       );
 
-      // 3. delete bookmark
+      // delete bookmark
       await queryRunner.query(
         `
       DELETE FROM community_bookmark
@@ -324,7 +323,7 @@ COALESCE(
         [postId],
       );
 
-      // 4. delete attachment
+      // delete attachment
       await queryRunner.query(
         `
       DELETE FROM community_attachment
@@ -333,7 +332,7 @@ COALESCE(
         [postId],
       );
 
-      // 5. delete post
+      // delete post
       await queryRunner.query(
         `
       DELETE FROM post_in_community
@@ -375,12 +374,10 @@ COALESCE(
     await queryRunner.startTransaction();
 
     try {
-      // 🔹 parse keep_attachments ถ้าส่งมาเป็น string
       if (typeof dto.keep_attachments === 'string') {
         dto.keep_attachments = JSON.parse(dto.keep_attachments);
       }
 
-      // 🔹 ตรวจสอบโพสต์
       const post = await queryRunner.query(
         `
       SELECT user_sys_id, community_id
@@ -404,7 +401,6 @@ COALESCE(
         throw new ForbiddenException('Not allowed');
       }
 
-      // 🔹 update content ถ้ามี
       if (dto.content !== undefined) {
         await queryRunner.query(
           `
@@ -417,7 +413,6 @@ COALESCE(
         );
       }
 
-      // 🔥 ลบ attachment ทั้งหมดก่อน
       await queryRunner.query(
         `
       DELETE FROM community_attachment
@@ -426,7 +421,6 @@ COALESCE(
         [postId],
       );
 
-      // 🔹 ใส่ attachment เดิมที่ user เลือกเก็บไว้
       if (dto.keep_attachments?.length) {
         for (const file of dto.keep_attachments) {
           await queryRunner.query(
@@ -440,11 +434,23 @@ COALESCE(
         }
       }
 
-      // 🔹 ใส่ link ใหม่จาก content
       if (dto.content !== undefined) {
         const detectedUrls = extractUrls(dto.content.trim());
 
-        for (const url of detectedUrls) {
+
+
+
+
+        const existingUrls = (dto.keep_attachments || [])
+          .filter((f) => f.type === 'link')
+          .map((f) => f.url);
+
+        const newUrls = detectedUrls.filter(
+          (url) => !existingUrls.includes(url),
+        );
+
+
+        for (const url of newUrls) {
           const domainName = getDomainFromUrl(url);
 
           await queryRunner.query(
@@ -458,7 +464,6 @@ COALESCE(
         }
       }
 
-      // 🔹 ใส่ไฟล์ใหม่ที่ upload มา
       if (files?.length) {
         const uploadResult = await this.fileStorageService.uploadFiles(
           'community',
@@ -490,7 +495,6 @@ COALESCE(
 
       await queryRunner.commitTransaction();
 
-      // 🔹 return full post
       const fullPost = await this.dataSource.query(
         `
       SELECT
@@ -499,7 +503,7 @@ COALESCE(
         cp.user_sys_id,
         cp.content,
         cp.created_at,
-        COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+        COALESCE(u.first_name, 'ไม่มีบัญชีผู้ใช้งาน') AS first_name,
         COALESCE(u.last_name, '') AS last_name,
         COALESCE(u.profile_pic, '') AS profile_pic,
         COALESCE(
@@ -554,7 +558,7 @@ COALESCE(
       cp.community_id,
       cp.content,
       cp.created_at,
-      COALESCE(u.first_name, 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว') AS first_name,
+      COALESCE(u.first_name, 'ไม่มีบัญชีผู้ใช้งาน') AS first_name,
       COALESCE(u.last_name, '') AS last_name,
       COALESCE(u.profile_pic, '') AS profile_pic,
 

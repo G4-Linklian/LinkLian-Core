@@ -14,7 +14,7 @@ export class ProfileService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   /**
    * Get user profile with education info based on role and edu_type
@@ -49,7 +49,7 @@ export class ProfileService {
           message: 'Profile retrieved successfully',
           data: {
             user_sys_id: userId,
-            first_name: 'ผู้ใช้นี้ไม่ได้ใช้งานแล้ว',
+            first_name: 'ไม่มีบัญชีผู้ใช้งาน',
             last_name: '',
             profile_pic: null,
             role_group: null,
