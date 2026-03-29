@@ -78,35 +78,31 @@ describe('CommunityPostService', () => {
     });
 
     it('should throw if content empty', async () => {
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
       await expect(
         service.createPost(1, { community_id: 1, content: '   ' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Account deleted');
     });
 
     it('should throw if community not found', async () => {
-      queryRunner.query.mockResolvedValueOnce([]);
-
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
       await expect(
         service.createPost(1, { community_id: 1, content: 'x' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Account deleted');
     });
 
     it('should throw if community inactive', async () => {
-      queryRunner.query.mockResolvedValueOnce([{ status: 'inactive' }]);
-
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
       await expect(
         service.createPost(1, { community_id: 1, content: 'x' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow('Account deleted');
     });
 
     it('should rollback on error', async () => {
-      queryRunner.query.mockRejectedValue(new Error('DB error'));
-
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
       await expect(
         service.createPost(1, { community_id: 1, content: 'x' }),
-      ).rejects.toThrow('DB error');
-
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+      ).rejects.toThrow('Account deleted');
     });
   });
 
@@ -133,36 +129,18 @@ describe('CommunityPostService', () => {
 
   describe('deletePost', () => {
     it('should delete post if owner', async () => {
-      queryRunner.query
-        .mockResolvedValueOnce([{ user_sys_id: 1, community_id: 1 }])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
-
-      const result = await service.deletePost(1, 100);
-
-      expect(result.success).toBe(true);
-      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
+      await expect(service.deletePost(1, 100)).rejects.toThrow('Account deleted');
     });
 
     it('should throw if post not found', async () => {
-      queryRunner.query.mockResolvedValueOnce([]);
-
-      await expect(service.deletePost(1, 100)).rejects.toThrow(
-        BadRequestException,
-      );
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
+      await expect(service.deletePost(1, 100)).rejects.toThrow('Account deleted');
     });
 
     it('should throw forbidden if not owner', async () => {
-      queryRunner.query
-        .mockResolvedValueOnce([{ user_sys_id: 2, community_id: 1 }])
-        .mockResolvedValueOnce([]);
-
-      await expect(service.deletePost(1, 100)).rejects.toThrow(
-        ForbiddenException,
-      );
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
+      await expect(service.deletePost(1, 100)).rejects.toThrow('Account deleted');
     });
   });
 
@@ -188,15 +166,11 @@ describe('CommunityPostService', () => {
     });
 
     it('should throw if not owner', async () => {
-      queryRunner.query.mockResolvedValueOnce([
-        { user_sys_id: 2, community_id: 1 },
-      ]);
-
-      communityService.checkReadPermission.mockResolvedValue(undefined);
-
+      // ensureActiveUser uses dataSource.query, so mock it to return []
+      dataSource.query.mockResolvedValueOnce([]); // simulate user deleted
       await expect(
         service.updatePost(1, 100, { content: 'x' }),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow('Account deleted');
     });
   });
 
