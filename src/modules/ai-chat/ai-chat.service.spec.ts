@@ -228,7 +228,7 @@ describe('AiChatService', () => {
       mockDataSource.query.mockResolvedValueOnce([{ title: 'Post', content: 'Content' }]);
       mockAiService.postSummary.mockResolvedValueOnce({ data: {} });
 
-      await expect(service.createAiChat(dto, 1)).rejects.toThrow('Post not found');
+      await expect(service.createAiChat(dto, 1)).rejects.toThrow('AI summary not ready');
     });
 
     it('should create new chat using final_summary from AI result', async () => {
