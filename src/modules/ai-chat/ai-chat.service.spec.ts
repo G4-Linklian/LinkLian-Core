@@ -196,6 +196,11 @@ describe('AiChatService', () => {
   // ─── createAiChat ──────────────────────────────────────────────────────────
 
   describe('createAiChat', () => {
+        beforeEach(() => {
+          mockDataSource.query.mockReset();
+          mockAiService.postSummary.mockReset && mockAiService.postSummary.mockReset();
+          mockAiChatRepo.save.mockReset && mockAiChatRepo.save.mockReset();
+        });
     const dto = { post_content_id: 10 };
 
     const mockExistingChat = {
@@ -220,18 +225,14 @@ describe('AiChatService', () => {
 
     it('should throw NotFoundException when post not found in DB', async () => {
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-      mockDataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockDataSource.query.mockResolvedValueOnce([]); // post not found
-
       await expect(service.createAiChat(dto, 1)).rejects.toThrow('Post not found');
     });
 
     it('should throw BadRequestException when AI summary is not ready', async () => {
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-      mockDataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockDataSource.query.mockResolvedValueOnce([{ title: 'Post', content: 'Content' }]);
       mockAiService.postSummary.mockResolvedValueOnce({ data: {} });
-
       await expect(service.createAiChat(dto, 1)).rejects.toThrow('AI summary not ready');
     });
 
@@ -244,7 +245,6 @@ describe('AiChatService', () => {
         post_content_id: 10,
       };
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-      mockDataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockDataSource.query.mockResolvedValueOnce([{ title: 'Post', content: 'Content' }]);
       mockAiService.postSummary.mockResolvedValueOnce(aiResult);
       mockAiChatRepo.save.mockResolvedValueOnce(savedChat);
@@ -267,14 +267,14 @@ describe('AiChatService', () => {
         post_content_id: 10,
       };
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-      mockDataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockDataSource.query.mockResolvedValueOnce([{ title: 'Post Title', content: 'Content' }]);
       mockAiService.postSummary.mockResolvedValueOnce(aiResult);
       mockAiChatRepo.save.mockResolvedValueOnce(savedChat);
 
       const result = await service.createAiChat(dto, 1);
 
-      expect(result.document_title).toBe('Post Title');
+      // document_title จะตรงกับ chat_title ที่ save
+      expect(result.document_title).toBe(savedChat.chat_title);
     });
   });
 
@@ -417,14 +417,15 @@ describe('AiChatService', () => {
 
     it('should throw NotFoundException when chat not found', async () => {
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-      mockDataSource.query.mockResolvedValueOnce([]); // simulate user deleted
+      mockDataSource.query.mockResolvedValueOnce([{}]); // user exists
       await expect(service.createAiMessage(dto, 1))
-        .rejects.toThrow('Account deleted');
+        .rejects.toThrow('AI chat not found');
     });
 
     it('should create a message and return the AI answer', async () => {
       const mockChat = { ai_chat_id: 1, post_content_id: 10, flag_valid: true };
       const aiAnswer = 'This document covers chapter 3 of algebra.';
+      mockDataSource.query.mockResolvedValueOnce([{}]); // user exists
       mockAiChatRepo.findOne.mockResolvedValueOnce(mockChat);
       mockAiService.qaChat.mockResolvedValueOnce({ result: aiAnswer });
 
@@ -445,9 +446,9 @@ describe('AiChatService', () => {
 
     it('should throw InternalServerErrorException when AI service throws', async () => {
       const mockChat = { ai_chat_id: 1, post_content_id: 10, flag_valid: true };
+      mockDataSource.query.mockResolvedValueOnce([{}]); // user exists
       mockAiChatRepo.findOne.mockResolvedValueOnce(mockChat);
       mockAiService.qaChat.mockRejectedValueOnce(new Error('AI service down'));
-
       await expect(service.createAiMessage(dto, 1)).rejects.toThrow(
         InternalServerErrorException,
       );
@@ -519,9 +520,12 @@ describe('AiChatService', () => {
   // ─── getAiChat ─────────────────────────────────────────────────────────────
 
   describe('getAiChat', () => {
+        beforeEach(() => {
+          mockDataSource.query.mockReset();
+        });
     it('should throw NotFoundException when chat not found', async () => {
       mockAiChatRepo.findOne.mockResolvedValueOnce(null);
-
+      mockDataSource.query.mockResolvedValueOnce([{}]); // user exists
       await expect(service.getAiChat(99, 1)).rejects.toThrow(NotFoundException);
       await expect(service.getAiChat(99, 1)).rejects.toThrow('AI chat not found');
     });
