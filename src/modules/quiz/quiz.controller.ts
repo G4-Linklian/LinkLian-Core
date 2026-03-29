@@ -31,6 +31,7 @@ export class QuizController {
 
     return this.quizService.getQuizByChat(Number(aiChatId), userId);
   }
+
   @Post('attempt')
   async saveAttempt(
     @Body() dto: CreateQuizAttemptDto,
@@ -59,4 +60,14 @@ export class QuizController {
     return this.quizService.getUserAttempt(quizId, userId);
   }
 
+  @Post('check-answer')
+  async checkAnswer(@Body() body: any, @Req() req) {
+    const userId = Number(req.headers['x-user-id']);
+
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.quizService.checkAnswer(body, userId);
+  }
 }

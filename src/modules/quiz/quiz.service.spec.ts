@@ -77,9 +77,90 @@ describe('QuizService', () => {
   // ─── generateQuiz ──────────────────────────────────────────────────────────
   /*
   describe('generateQuiz', () => {
-    // ...existing tests for generateQuiz (commented out to prevent Jest crash)
+    const dto = {
+      ai_chat_id: 1,
+      difficulty: 'medium',
+      question_count: 5,
+      title: 'Test Quiz',
+      mode: 'learning' as const,
+    };
+    const userId = 42;
+
+    const mockAiChat = {
+      ai_chat_id: 1,
+      post_content_id: 10,
+      chat_title: 'Test Chat',
+      flag_valid: true,
+    };
+
+    const mockAiResult = {
+      data: {
+        questions: [
+          { question: 'What is 2+2?', answer: '4', choices: ['2', '3', '4', '5'] },
+        ],
+      },
+    };
+
+    const mockSavedQuiz = {
+      quiz_id: 1,
+      ai_chat_id: 1,
+      quiz_detail: mockAiResult.data,
+      difficulty: 'medium',
+      question_count: 5,
+      created_at: new Date(),
+      flag_valid: true,
+    };
+
+    it('should generate and save a quiz successfully', async () => {
+      mockAiChatRepo.findOne.mockResolvedValueOnce(mockAiChat);
+      mockAiService.quizGeneration.mockResolvedValueOnce(mockAiResult);
+      mockQuizRepo.create.mockReturnValueOnce(mockSavedQuiz);
+      mockQuizRepo.save.mockResolvedValueOnce(mockSavedQuiz);
+
+      const result = await service.generateQuiz(dto, userId);
+
+      expect(mockAiChatRepo.findOne).toHaveBeenCalledWith({
+        where: { ai_chat_id: dto.ai_chat_id, user_sys_id: userId },
+      });
+      expect(mockAiService.quizGeneration).toHaveBeenCalledWith({
+        post_content_id: mockAiChat.post_content_id,
+        difficulty: dto.difficulty,
+        num_questions: dto.question_count,
+      });
+      expect(mockQuizRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ai_chat_id: dto.ai_chat_id,
+          quiz_detail: mockAiResult.data,
+          difficulty: dto.difficulty,
+          question_count: dto.question_count,
+        }),
+      );
+      expect(mockQuizRepo.save).toHaveBeenCalledWith(mockSavedQuiz);
+      expect(result).toEqual(mockSavedQuiz);
+    });
+
+    it('should use aiResult directly when aiResult.data is undefined', async () => {
+      const aiResultDirect = { questions: [{ question: 'Q?', answer: 'A', choices: [] }] };
+      mockAiChatRepo.findOne.mockResolvedValueOnce(mockAiChat);
+      mockAiService.quizGeneration.mockResolvedValueOnce(aiResultDirect);
+      mockQuizRepo.create.mockReturnValueOnce({ ...mockSavedQuiz, quiz_detail: aiResultDirect });
+      mockQuizRepo.save.mockResolvedValueOnce({ ...mockSavedQuiz, quiz_detail: aiResultDirect });
+
+      const result = await service.generateQuiz(dto, userId);
+
+      expect(mockQuizRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ quiz_detail: aiResultDirect }),
+      );
+      expect(result.quiz_detail).toEqual(aiResultDirect);
+    });
+
+    it('should throw NotFoundException if AI chat not found', async () => {
+      mockAiChatRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.generateQuiz(dto, userId)).rejects.toThrow(NotFoundException);
+      await expect(service.generateQuiz(dto, userId)).rejects.toThrow('AI Chat not found');
+    });
   });
-  */
 
   // ─── getQuizByChat ─────────────────────────────────────────────────────────
 
@@ -89,23 +170,38 @@ describe('QuizService', () => {
         { quiz_id: 1, ai_chat_id: 3, difficulty: 'easy', question_count: 3 },
         { quiz_id: 2, ai_chat_id: 3, difficulty: 'hard', question_count: 10 },
       ];
-      mockAiChatRepo.findOne.mockResolvedValueOnce({ ai_chat_id: 3 }); // simulate chat exists
+      const userId = 42;
+      mockAiChatRepo.findOne.mockResolvedValueOnce({ ai_chat_id: 3, user_sys_id: userId });
       mockQuizRepo.find.mockResolvedValueOnce(mockQuizzes);
 
-      const result = await service.getQuizByChat(3, 1);
+      const result = await service.getQuizByChat(3, userId);
 
+      expect(mockAiChatRepo.findOne).toHaveBeenCalledWith({
+        where: { ai_chat_id: 3, user_sys_id: userId },
+      });
       expect(mockQuizRepo.find).toHaveBeenCalledWith({
         where: { ai_chat_id: 3 },
         order: { created_at: 'ASC' },
+        select: [
+          'quiz_id',
+          'ai_chat_id',
+          'quiz_detail',
+          'difficulty',
+          'question_count',
+          'mode',
+          'quiz_title',
+          'created_at',
+        ],
       });
       expect(result).toEqual(mockQuizzes);
     });
 
     it('should return an empty array when no quizzes exist for the chat', async () => {
-      mockAiChatRepo.findOne.mockResolvedValueOnce({ ai_chat_id: 99 }); // simulate chat exists
+      const userId = 99;
+      mockAiChatRepo.findOne.mockResolvedValueOnce({ ai_chat_id: 99, user_sys_id: userId });
       mockQuizRepo.find.mockResolvedValueOnce([]);
 
-      const result = await service.getQuizByChat(99, 1);
+      const result = await service.getQuizByChat(99, userId);
 
       expect(result).toEqual([]);
     });
