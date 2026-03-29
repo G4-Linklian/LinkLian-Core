@@ -212,7 +212,6 @@ describe('AiChatService', () => {
       mockDataSource.query.mockResolvedValueOnce([{}]);
 
       const result = await service.createAiChat(dto, 1);
-      const result = await service.createAiChat(dto, 1);
 
       expect(result.ai_chat_id).toBe(5);
       expect(result.title).toBe('Existing Title');

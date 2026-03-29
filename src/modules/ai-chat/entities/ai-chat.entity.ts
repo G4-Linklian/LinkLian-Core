@@ -9,8 +9,8 @@ export class AiChat {
   @PrimaryGeneratedColumn('increment')
   ai_chat_id!: number;
 
-  @Column({ name: 'user_sys_id', type: 'int', nullable: true })
-  user_sys_id?: number | null;
+  // @Column({ name: 'user_sys_id', type: 'int', nullable: true })
+  // user_sys_id?: number | null;
 
   @Column({ name: 'post_content_id', type: 'int' })
   post_content_id!: number;
