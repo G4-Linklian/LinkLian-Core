@@ -258,5 +258,51 @@ describe('ClassInfoService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('membersQuery should filter only Active users (not Inactive)', async () => {
+      mockQuery
+        .mockResolvedValueOnce([]) // roomQuery
+        .mockResolvedValueOnce([]) // schedulesQuery
+        .mockResolvedValueOnce([]) // membersQuery
+        .mockResolvedValueOnce([]); // educatorsQuery
+
+      await service.getClassInfo(1);
+
+      // membersQuery is the 3rd call (index 2)
+      const membersQuery: string = mockQuery.mock.calls[2][0];
+      expect(membersQuery).toContain("user_status = 'Active'");
+    });
+
+    it('membersQuery should filter out null student_id (deleted users)', async () => {
+      mockQuery
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      await service.getClassInfo(1);
+
+      const membersQuery: string = mockQuery.mock.calls[2][0];
+      expect(membersQuery).toContain('student_id IS NOT NULL');
+    });
+
+    it('should not include Inactive students in members result', async () => {
+      // SQL level filter — Inactive users ไม่ผ่าน JOIN condition
+      // ในการทดสอบจะ verify ว่า result ไม่มี user ที่ DB ไม่ return มา
+      const activeOnly = [
+        { student_id: 8, user_sys_id: 8, student_code: '202600', display_name: 'กิตติกร พิมเทศ', profile_pic: null },
+        // นที (Inactive) ไม่ถูก return มาจาก DB เนื่องจาก JOIN filter
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activeOnly)
+        .mockResolvedValueOnce([]);
+
+      const result = await service.getClassInfo(1);
+      expect(result.data.members).toHaveLength(1);
+      expect(result.data.members[0].user_sys_id).toBe(8);
+    });
   });
 });
