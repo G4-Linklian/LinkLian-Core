@@ -136,7 +136,7 @@ export class ChatService {
     // Sort
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${dto.sort_order}`;
+      query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
     }
 
     // Pagination
