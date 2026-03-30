@@ -232,6 +232,42 @@ describe('AssignmentService', () => {
       expect(result!.data.submission.submission_id).toBe(1);
     });
 
+    it('should return student group with deleted member pattern', async () => {
+      const mockGroup = {
+        group_id: 10,
+        group_name: 'Group A',
+        members: [
+          {
+            user_sys_id: 8,
+            first_name: 'กิตติกร',
+            last_name: 'พิมเทศ',
+            profile_pic: null,
+            name: 'กิตติกร พิมเทศ',
+          },
+          {
+            user_sys_id: null,
+            first_name: '',
+            last_name: '',
+            profile_pic: null,
+            name: 'ไม่มีบัญชีผู้ใช้งาน',
+          },
+        ],
+      };
+
+      mockQuery
+        .mockResolvedValueOnce([mockPost])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([mockGroup]);
+
+      const result = await service.getPostAssignment(1, 2, 'uni student');
+      expect(result!.data.group.group_id).toBe(10);
+      expect(result!.data.group.members[1].user_sys_id).toBeNull();
+      expect(result!.data.group.members[1].name).toBe(
+        'ไม่มีบัญชีผู้ใช้งาน',
+      );
+    });
+
     it('should return null submission when student has not submitted', async () => {
       mockQuery
         .mockResolvedValueOnce([mockPost])
@@ -419,6 +455,34 @@ describe('AssignmentService', () => {
       const result = await service.getGroup(1, 1);
       expect(result.data).toEqual(mockGroup);
     });
+
+    it('should keep deleted members in group data', async () => {
+      const mockGroup = {
+        group_id: 1,
+        group_name: 'Group A',
+        members: [
+          {
+            user_sys_id: 8,
+            first_name: 'กิตติกร',
+            last_name: 'พิมเทศ',
+            profile_pic: null,
+            name: 'กิตติกร พิมเทศ',
+          },
+          {
+            user_sys_id: null,
+            first_name: '',
+            last_name: '',
+            profile_pic: null,
+            name: 'ไม่มีบัญชีผู้ใช้งาน',
+          },
+        ],
+      };
+      mockQuery.mockResolvedValueOnce([mockGroup]);
+      const result = await service.getGroup(8, 1);
+      expect(result.data.members).toHaveLength(2);
+      expect(result.data.members[1].user_sys_id).toBeNull();
+      expect(result.data.members[1].first_name).toBe('');
+    });
   });
 
   // ─── getAllGroups ──────────────────────────────────────────────────────────
@@ -440,6 +504,29 @@ describe('AssignmentService', () => {
       mockQuery.mockResolvedValueOnce([]);
       const result = await service.getAllGroups(1);
       expect(result.data).toHaveLength(0);
+    });
+
+    it('should include deleted members in group list', async () => {
+      const mockGroups = [
+        {
+          group_id: 1,
+          group_name: 'Group A',
+          members: [
+            {
+              user_sys_id: null,
+              code: null,
+              first_name: '',
+              last_name: '',
+              profile_pic: null,
+              name: 'ไม่มีบัญชีผู้ใช้งาน',
+            },
+          ],
+        },
+      ];
+      mockQuery.mockResolvedValueOnce(mockGroups);
+      const result = await service.getAllGroups(1);
+      expect(result.data[0].members[0].user_sys_id).toBeNull();
+      expect(result.data[0].members[0].name).toBe('ไม่มีบัญชีผู้ใช้งาน');
     });
   });
 
@@ -593,6 +680,26 @@ describe('AssignmentService', () => {
 
       const result = await service.getSubmission(1, 1);
       expect(result.data.attachments).toHaveLength(1);
+    });
+
+    it('should return deleted members in submission detail', async () => {
+      const deletedMember = {
+        user_sys_id: null,
+        first_name: '',
+        last_name: '',
+        profile_pic: null,
+        name: 'ไม่มีบัญชีผู้ใช้งาน',
+      };
+      mockQuery
+        .mockResolvedValueOnce([mockSubmissionRow])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ group_id: 10 }])
+        .mockResolvedValueOnce([deletedMember]);
+
+      const result = await service.getSubmission(1, 1);
+      expect(result.data.members[0].user_sys_id).toBeNull();
+      expect(result.data.members[0].name).toBe('ไม่มีบัญชีผู้ใช้งาน');
+      expect(result.data.members[0].first_name).toBe('');
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
@@ -1152,26 +1259,25 @@ describe('AssignmentService', () => {
       expect(result.data).toHaveLength(1);
       expect(result.data[0].user_sys_id).toBe(8);
       expect(result.data[0].submission_status).toBe('submitted');
-      expect(result.data[0].is_deleted).toBe(false);
-      expect(result.data[0].display_name).toBe('กิตติกร พิมเทศ');
+      expect(result.data[0].first_name).toBe('กิตติกร');
+      expect(result.data[0].last_name).toBe('พิมเทศ');
     });
 
     it('should show deleted pattern when user_sys_id is null (user removed)', async () => {
       const deletedRow = {
-        user_sys_id: 55,
-        first_name: null,
-        last_name: null,
+        user_sys_id: null,
+        first_name: '',
+        last_name: '',
         profile_pic: null,
         code: null,
-        is_deleted: true,
-        submission_id: null,
-        submitted_at: null,
+        submission_id: 12,
+        submitted_at: new Date(),
         score: null,
         feedback: null,
         marked_at: null,
-        group_id: null,
-        group_name: null,
-        submission_status: 'not_submitted',
+        group_id: 10,
+        group_name: 'Group Deleted',
+        submission_status: 'submitted',
       };
 
       mockQuery
@@ -1179,10 +1285,12 @@ describe('AssignmentService', () => {
         .mockResolvedValueOnce([deletedRow]);
 
       const result = await service.getStudentsSubmissionStatus(1);
-      expect(result.data[0].is_deleted).toBe(true);
-      expect(result.data[0].display_name).toBe('ไม่มีบัญชีผู้ใช้งาน');
-      expect(result.data[0].first_name).toBeNull();
+      expect(result.data[0].user_sys_id).toBeNull();
+      expect(result.data[0].first_name).toBe('');
+      expect(result.data[0].last_name).toBe('');
       expect(result.data[0].profile_pic).toBeNull();
+      expect(result.data[0].submission_status).toBe('submitted');
+      expect(result.data[0].group_name).toBe('Group Deleted');
     });
 
     it('should not include Inactive users (Inactive filtered at SQL level)', async () => {
