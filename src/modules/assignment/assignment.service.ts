@@ -476,11 +476,15 @@ LIMIT 1
       json_agg(
         jsonb_build_object(
           'user_sys_id', gm.user_sys_id,
-          'name', CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน' ELSE CONCAT(u.first_name, ' ', u.last_name) END,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
           'profile_pic', u.profile_pic,
-          'is_deleted', (u.user_sys_id IS NULL)
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name NULLS LAST
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
@@ -518,11 +522,15 @@ LIMIT 1
       json_agg(
         jsonb_build_object(
           'user_sys_id', gm.user_sys_id,
-          'name', CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน' ELSE CONCAT(u.first_name, ' ', u.last_name) END,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
           'profile_pic', u.profile_pic,
-          'is_deleted', (u.user_sys_id IS NULL)
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name NULLS LAST
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
@@ -914,14 +922,16 @@ WHERE e.section_id = pic.section_id
       sg.group_name,
       json_agg(
         jsonb_build_object(
-          'user_sys_id', gm.user_sys_id,
-          'first_name', u.first_name,
-          'last_name', u.last_name,
-          'profile_pic', u.profile_pic,
-          'name', CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน' ELSE CONCAT(u.first_name, ' ', u.last_name) END,
-          'is_deleted', (u.user_sys_id IS NULL)
-        )
-        ORDER BY u.first_name NULLS LAST
+  'user_sys_id', gm.user_sys_id,
+  'first_name', COALESCE(u.first_name, ''),
+  'last_name', COALESCE(u.last_name, ''),
+  'profile_pic', u.profile_pic,
+  'name', CASE
+            WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+            ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          END
+)
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
@@ -969,13 +979,15 @@ WHERE e.section_id = pic.section_id
         jsonb_build_object(
           'user_sys_id', gm.user_sys_id,
           'code', u.code,
-          'first_name', u.first_name,
-          'last_name', u.last_name,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
           'profile_pic', u.profile_pic,
-          'name', CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน' ELSE CONCAT(u.first_name, ' ', u.last_name) END,
-          'is_deleted', (u.user_sys_id IS NULL)
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name NULLS LAST
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
@@ -1232,16 +1244,18 @@ WHERE e.section_id = pic.section_id
       const membersQuery = `
         SELECT
           gm.user_sys_id,
-          u.first_name,
-          u.last_name,
+          COALESCE(u.first_name, '') AS first_name,
+          COALESCE(u.last_name, '') AS last_name,
           u.profile_pic,
-          CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน' ELSE CONCAT(u.first_name, ' ', u.last_name) END AS name,
-          (u.user_sys_id IS NULL) AS is_deleted
+          CASE
+            WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+            ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          END AS name
         FROM group_member gm
         LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
         WHERE gm.group_id = $1
           AND gm.flag_valid = true
-        ORDER BY u.first_name NULLS LAST
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       `;
 
       const members = await this.dataSource.query(membersQuery, [
@@ -1822,61 +1836,75 @@ WHERE e.section_id = pic.section_id
       const sectionId = Number(assignmentResult[0].section_id);
 
       const query = `
-        SELECT
-          COALESCE(u.user_sys_id, e.student_id) AS user_sys_id,
-          u.first_name,
-          u.last_name,
-          u.profile_pic,
-          u.code,
-          (u.user_sys_id IS NULL) AS is_deleted,
-
-          sb.submission_id,
-          sb.submitted_at,
-          sb.score,
-          sb.feedback,
-          sb.marked_at,
-
-          sb.group_id,
-          sb.group_name,
-
-          CASE
-            WHEN sb.submission_id IS NOT NULL THEN 'submitted'
-            ELSE 'not_submitted'
-          END AS submission_status
-
-        FROM enrollment e
-        LEFT JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true
-
-        LEFT JOIN (
-          SELECT DISTINCT ON (gm.user_sys_id)
+        WITH submitted_rows AS (
+          SELECT DISTINCT ON (COALESCE(gm.user_sys_id, -sub.submission_id))
             gm.user_sys_id,
+            u.first_name,
+            u.last_name,
+            u.profile_pic,
+            u.code,
             sub.submission_id,
             sub.submitted_at,
             sub.score,
             sub.feedback,
             sub.marked_at,
             grp.group_id,
-            grp.group_name
+            grp.group_name,
+            COALESCE(gm.user_sys_id, -sub.submission_id) AS match_key
           FROM submission sub
           JOIN student_group grp ON sub.group_id = grp.group_id AND grp.flag_valid = true
           JOIN group_member gm ON grp.group_id = gm.group_id AND gm.flag_valid = true
+          LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
           WHERE sub.assignment_id = $1 AND sub.flag_valid = true
-          ORDER BY gm.user_sys_id, sub.submitted_at DESC
-        ) sb ON sb.user_sys_id = e.student_id
+          ORDER BY COALESCE(gm.user_sys_id, -sub.submission_id), sub.submitted_at DESC
+        ),
+        enrolled_rows AS (
+          SELECT
+            e.student_id AS enrolled_user_sys_id,
+            u.user_sys_id,
+            u.first_name,
+            u.last_name,
+            u.profile_pic,
+            u.code
+          FROM enrollment e
+          LEFT JOIN user_sys u
+            ON e.student_id = u.user_sys_id
+           AND u.flag_valid = true
+           AND u.user_status = 'Active'
+          WHERE e.section_id = $2
+            AND e.flag_valid = true
+        )
+        SELECT
+          COALESCE(er.user_sys_id, sr.user_sys_id) AS user_sys_id,
+          COALESCE(er.first_name, sr.first_name) AS first_name,
+          COALESCE(er.last_name, sr.last_name) AS last_name,
+          COALESCE(er.profile_pic, sr.profile_pic) AS profile_pic,
+          COALESCE(er.code, sr.code) AS code,
 
-        WHERE e.section_id = $2
-          AND e.flag_valid = true
-          AND (
-            e.student_id IS NULL           -- user ถูกลบ FK เป็น null → แสดง deleted pattern
-            OR u.user_sys_id IS NULL       -- user ถูกลบออกจาก user_sys → แสดง deleted pattern
-            OR u.user_status = 'Active'    -- user ปกติ → แสดงตามปกติ
-          )
+          sr.submission_id,
+          sr.submitted_at,
+          sr.score,
+          sr.feedback,
+          sr.marked_at,
+
+          sr.group_id,
+          sr.group_name,
+
+          CASE
+            WHEN sr.submission_id IS NOT NULL THEN 'submitted'
+            ELSE 'not_submitted'
+          END AS submission_status
+
+        FROM enrolled_rows er
+        FULL OUTER JOIN submitted_rows sr
+          ON er.enrolled_user_sys_id = sr.user_sys_id
+        WHERE er.enrolled_user_sys_id IS NOT NULL
+           OR sr.submission_id IS NOT NULL
 
         ORDER BY
-          CASE WHEN u.user_sys_id IS NULL THEN 1 ELSE 0 END,
-          CASE WHEN sb.submitted_at IS NOT NULL THEN 0 ELSE 1 END,
-          sb.submitted_at DESC NULLS LAST,
-          u.first_name ASC NULLS LAST
+          CASE WHEN sr.submitted_at IS NOT NULL THEN 0 ELSE 1 END,
+          sr.submitted_at DESC NULLS LAST,
+          COALESCE(er.first_name, sr.first_name, '') ASC
       `;
 
       const result = await this.dataSource.query(query, [
@@ -1890,15 +1918,14 @@ WHERE e.section_id = pic.section_id
       );
 
       const data = result.map((row: any) => ({
-        user_sys_id: row.user_sys_id ? Number(row.user_sys_id) : null,
-        first_name: row.is_deleted ? null : row.first_name,
-        last_name: row.is_deleted ? null : row.last_name,
-        display_name: row.is_deleted
-          ? 'ไม่มีบัญชีผู้ใช้งาน'
-          : `${row.first_name} ${row.last_name}`,
-        profile_pic: row.is_deleted ? null : row.profile_pic,
-        code: row.is_deleted ? null : row.code,
-        is_deleted: row.is_deleted,
+        user_sys_id:
+          row.user_sys_id !== null && row.user_sys_id !== undefined
+            ? Number(row.user_sys_id)
+            : null,
+        first_name: row.first_name ?? '',
+        last_name: row.last_name ?? '',
+        profile_pic: row.profile_pic,
+        code: row.code,
         submission_id: row.submission_id ? Number(row.submission_id) : null,
         submitted_at: row.submitted_at,
         score: row.score,
