@@ -6,7 +6,6 @@ import {
   IsInt,
   IsEmail,
   IsNotEmpty,
-  IsNumber,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
