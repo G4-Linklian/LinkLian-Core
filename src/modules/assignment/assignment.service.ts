@@ -475,16 +475,22 @@ LIMIT 1
       sg.group_name,
       json_agg(
         jsonb_build_object(
-          'user_sys_id', u.user_sys_id,
-          'name', CONCAT(u.first_name, ' ', u.last_name)
+          'user_sys_id', gm.user_sys_id,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
+          'profile_pic', u.profile_pic,
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
       ON sg.group_id = gm.group_id
      AND gm.flag_valid = true
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON gm.user_sys_id = u.user_sys_id
      AND u.flag_valid = true
     WHERE sg.assignment_id = $1
@@ -515,16 +521,22 @@ LIMIT 1
       sg.group_name,
       json_agg(
         jsonb_build_object(
-          'user_sys_id', u.user_sys_id,
-          'name', CONCAT(u.first_name, ' ', u.last_name)
+          'user_sys_id', gm.user_sys_id,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
+          'profile_pic', u.profile_pic,
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
       ON sg.group_id = gm.group_id
      AND gm.flag_valid = true
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON gm.user_sys_id = u.user_sys_id
      AND u.flag_valid = true
     WHERE sg.assignment_id = $1
@@ -779,8 +791,23 @@ WHERE e.section_id = pic.section_id
       }
 
       // VALIDATION: สมาชิกต้อง Active และอยู่ใน section
-      const validMembers = await manager.query(
-        `
+      // สมาชิกที่อยู่ในกลุ่มเดิมแล้ว (แม้ถูกลบแล้ว) ยังคงอยู่ในกลุ่มได้
+      // เฉพาะสมาชิกใหม่ที่จะเพิ่มเข้ามาเท่านั้นที่ต้อง validate
+      const currentGroupMembers = await manager.query(
+        `SELECT user_sys_id FROM group_member WHERE group_id = $1`,
+        [group_id],
+      );
+      const currentMemberIds = currentGroupMembers.map(
+        (m: any) => m.user_sys_id,
+      );
+
+      const newMemberIds = member_ids.filter(
+        (id) => !currentMemberIds.includes(id),
+      );
+
+      if (newMemberIds.length > 0) {
+        const validNewMembers = await manager.query(
+          `
 SELECT u.user_sys_id
 FROM user_sys u
 JOIN enrollment e ON u.user_sys_id = e.student_id
@@ -792,13 +819,14 @@ WHERE e.section_id = pic.section_id
   AND e.flag_valid = true
   AND u.flag_valid = true
 `,
-        [assignment_id, member_ids],
-      );
-
-      if (validMembers.length !== member_ids.length) {
-        throw new BadRequestException(
-          'Some members are inactive or not enrolled in this section',
+          [assignment_id, newMemberIds],
         );
+
+        if (validNewMembers.length !== newMemberIds.length) {
+          throw new BadRequestException(
+            'Some members are inactive or not enrolled in this section',
+          );
+        }
       }
 
       /**
@@ -894,21 +922,24 @@ WHERE e.section_id = pic.section_id
       sg.group_name,
       json_agg(
         jsonb_build_object(
-  'user_sys_id', u.user_sys_id,
-  'first_name', u.first_name,
-  'last_name', u.last_name,
+  'user_sys_id', gm.user_sys_id,
+  'first_name', COALESCE(u.first_name, ''),
+  'last_name', COALESCE(u.last_name, ''),
   'profile_pic', u.profile_pic,
-  'name', CONCAT(u.first_name, ' ', u.last_name)
+  'name', CASE
+            WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+            ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          END
 )
-        ORDER BY u.first_name
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
       ON sg.group_id = gm.group_id
      AND gm.flag_valid = true
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON gm.user_sys_id = u.user_sys_id
-     AND u.user_status = 'Active'
+     AND u.flag_valid = true
     WHERE sg.assignment_id = $1
       AND sg.flag_valid = true
       AND EXISTS (
@@ -946,22 +977,25 @@ WHERE e.section_id = pic.section_id
       sg.group_name,
       json_agg(
         jsonb_build_object(
-          'user_sys_id', u.user_sys_id,
+          'user_sys_id', gm.user_sys_id,
           'code', u.code,
-          'first_name', u.first_name,
-          'last_name', u.last_name,
+          'first_name', COALESCE(u.first_name, ''),
+          'last_name', COALESCE(u.last_name, ''),
           'profile_pic', u.profile_pic,
-          'name', CONCAT(u.first_name, ' ', u.last_name)
+          'name', CASE
+                    WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+                    ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+                  END
         )
-        ORDER BY u.first_name
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       ) AS members
     FROM student_group sg
     JOIN group_member gm
       ON sg.group_id = gm.group_id
      AND gm.flag_valid = true
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON gm.user_sys_id = u.user_sys_id
-     AND u.user_status = 'Active'
+     AND u.flag_valid = true
     WHERE sg.assignment_id = $1
       AND sg.flag_valid = true
     GROUP BY sg.group_id, sg.group_name
@@ -1209,16 +1243,19 @@ WHERE e.section_id = pic.section_id
       // 5. Get group members
       const membersQuery = `
         SELECT
-          u.user_sys_id,
-          u.first_name,
-          u.last_name,
+          gm.user_sys_id,
+          COALESCE(u.first_name, '') AS first_name,
+          COALESCE(u.last_name, '') AS last_name,
           u.profile_pic,
-          CONCAT(u.first_name, ' ', u.last_name) AS name
+          CASE
+            WHEN gm.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+            ELSE CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))
+          END AS name
         FROM group_member gm
-        JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
+        LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
         WHERE gm.group_id = $1
           AND gm.flag_valid = true
-        ORDER BY u.first_name
+        ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')
       `;
 
       const members = await this.dataSource.query(membersQuery, [
@@ -1671,7 +1708,26 @@ WHERE e.section_id = pic.section_id
 
       const submission = submissionResult[0];
 
-      // 2. Validate score does not exceed max_score
+      // 2. Guard: งานเดี่ยว — ถ้า submitter ถูกลบแล้ว ห้ามให้คะแนน
+      if (!submission.is_group) {
+        const deletedCheck = await this.dataSource.query(
+          `SELECT 1
+           FROM group_member gm
+           LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
+           WHERE gm.group_id = $1
+             AND gm.flag_valid = true
+             AND u.user_sys_id IS NULL
+           LIMIT 1`,
+          [submission.group_id],
+        );
+        if (deletedCheck.length) {
+          throw new BadRequestException(
+            'ไม่มีบัญชีผู้ใช้งาน ไม่สามารถให้คะแนนและข้อแนะนำได้',
+          );
+        }
+      }
+
+      // 3. Validate score does not exceed max_score
       if (
         score !== undefined &&
         submission.max_score !== null &&
@@ -1686,7 +1742,7 @@ WHERE e.section_id = pic.section_id
         throw new BadRequestException('Score cannot be negative');
       }
 
-      // 3. Build dynamic SET clause
+      // 4. Build dynamic SET clause
       const setClauses: string[] = ['marked_at = NOW()'];
       const params: any[] = [submission_id];
       let paramIndex = 2;
@@ -1703,7 +1759,7 @@ WHERE e.section_id = pic.section_id
         paramIndex++;
       }
 
-      // 4. Update submission
+      // 5. Update submission
       const updateQuery = `
         UPDATE submission
         SET ${setClauses.join(', ')}
@@ -1780,54 +1836,75 @@ WHERE e.section_id = pic.section_id
       const sectionId = Number(assignmentResult[0].section_id);
 
       const query = `
-        SELECT
-          u.user_sys_id,
-          u.first_name,
-          u.last_name,
-          u.profile_pic,
-          u.code,
-
-          sb.submission_id,
-          sb.submitted_at,
-          sb.score,
-          sb.feedback,
-          sb.marked_at,
-
-          sb.group_id,
-          sb.group_name,
-
-          CASE
-            WHEN sb.submission_id IS NOT NULL THEN 'submitted'
-            ELSE 'not_submitted'
-          END AS submission_status
-
-        FROM enrollment e
-        JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
-
-        LEFT JOIN (
-          SELECT DISTINCT ON (gm.user_sys_id)
+        WITH submitted_rows AS (
+          SELECT DISTINCT ON (COALESCE(gm.user_sys_id, -sub.submission_id))
             gm.user_sys_id,
+            u.first_name,
+            u.last_name,
+            u.profile_pic,
+            u.code,
             sub.submission_id,
             sub.submitted_at,
             sub.score,
             sub.feedback,
             sub.marked_at,
             grp.group_id,
-            grp.group_name
+            grp.group_name,
+            COALESCE(gm.user_sys_id, -sub.submission_id) AS match_key
           FROM submission sub
           JOIN student_group grp ON sub.group_id = grp.group_id AND grp.flag_valid = true
           JOIN group_member gm ON grp.group_id = gm.group_id AND gm.flag_valid = true
+          LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
           WHERE sub.assignment_id = $1 AND sub.flag_valid = true
-          ORDER BY gm.user_sys_id, sub.submitted_at DESC
-        ) sb ON sb.user_sys_id = u.user_sys_id
+          ORDER BY COALESCE(gm.user_sys_id, -sub.submission_id), sub.submitted_at DESC
+        ),
+        enrolled_rows AS (
+          SELECT
+            e.student_id AS enrolled_user_sys_id,
+            u.user_sys_id,
+            u.first_name,
+            u.last_name,
+            u.profile_pic,
+            u.code
+          FROM enrollment e
+          LEFT JOIN user_sys u
+            ON e.student_id = u.user_sys_id
+           AND u.flag_valid = true
+           AND u.user_status = 'Active'
+          WHERE e.section_id = $2
+            AND e.flag_valid = true
+        )
+        SELECT
+          COALESCE(er.user_sys_id, sr.user_sys_id) AS user_sys_id,
+          COALESCE(er.first_name, sr.first_name) AS first_name,
+          COALESCE(er.last_name, sr.last_name) AS last_name,
+          COALESCE(er.profile_pic, sr.profile_pic) AS profile_pic,
+          COALESCE(er.code, sr.code) AS code,
 
-        WHERE e.section_id = $2
-          AND e.flag_valid = true
+          sr.submission_id,
+          sr.submitted_at,
+          sr.score,
+          sr.feedback,
+          sr.marked_at,
+
+          sr.group_id,
+          sr.group_name,
+
+          CASE
+            WHEN sr.submission_id IS NOT NULL THEN 'submitted'
+            ELSE 'not_submitted'
+          END AS submission_status
+
+        FROM enrolled_rows er
+        FULL OUTER JOIN submitted_rows sr
+          ON er.enrolled_user_sys_id = sr.user_sys_id
+        WHERE er.enrolled_user_sys_id IS NOT NULL
+           OR sr.submission_id IS NOT NULL
 
         ORDER BY
-          CASE WHEN sb.submitted_at IS NOT NULL THEN 0 ELSE 1 END,
-          sb.submitted_at DESC NULLS LAST,
-          u.first_name ASC
+          CASE WHEN sr.submitted_at IS NOT NULL THEN 0 ELSE 1 END,
+          sr.submitted_at DESC NULLS LAST,
+          COALESCE(er.first_name, sr.first_name, '') ASC
       `;
 
       const result = await this.dataSource.query(query, [
@@ -1841,9 +1918,12 @@ WHERE e.section_id = pic.section_id
       );
 
       const data = result.map((row: any) => ({
-        user_sys_id: Number(row.user_sys_id),
-        first_name: row.first_name,
-        last_name: row.last_name,
+        user_sys_id:
+          row.user_sys_id !== null && row.user_sys_id !== undefined
+            ? Number(row.user_sys_id)
+            : null,
+        first_name: row.first_name ?? '',
+        last_name: row.last_name ?? '',
         profile_pic: row.profile_pic,
         code: row.code,
         submission_id: row.submission_id ? Number(row.submission_id) : null,
@@ -1923,6 +2003,36 @@ WHERE e.section_id = pic.section_id
       const attachments = await this.dataSource.query(attachmentQuery, [
         submissionId,
       ]);
+
+      // Get submitter(s) info with deleted user pattern
+      const membersQuery = `
+        SELECT
+          gm.user_sys_id,
+          u.first_name,
+          u.last_name,
+          u.profile_pic,
+          CASE WHEN u.user_sys_id IS NULL THEN 'ไม่มีบัญชีผู้ใช้งาน'
+               ELSE CONCAT(u.first_name, ' ', u.last_name) END AS display_name,
+          (u.user_sys_id IS NULL) AS is_deleted
+        FROM group_member gm
+        LEFT JOIN user_sys u ON gm.user_sys_id = u.user_sys_id AND u.flag_valid = true
+        WHERE gm.group_id = $1
+          AND gm.flag_valid = true
+        ORDER BY u.first_name NULLS LAST
+      `;
+      const members = await this.dataSource.query(membersQuery, [
+        submission.group_id,
+      ]);
+
+      // สำหรับงานเดี่ยว: ห้ามให้คะแนนถ้า submitter ถูกลบแล้ว
+      const isGroup = submission.is_group;
+      const hasDeletedMember = members.some((m: any) => m.is_deleted);
+      const can_grade = !(isGroup === false && hasDeletedMember);
+      const grade_disabled_reason =
+        !can_grade
+          ? 'ไม่มีบัญชีผู้ใช้งาน ไม่สามารถให้คะแนนและข้อแนะนำได้'
+          : null;
+
       const data_result = {
         submission_id: Number(submission.submission_id),
         assignment_id: Number(submission.assignment_id),
@@ -1936,6 +2046,9 @@ WHERE e.section_id = pic.section_id
         due_date: submission.due_date,
         is_group: submission.is_group,
         attachments,
+        members,
+        can_grade,
+        grade_disabled_reason,
       };
 
       return {
