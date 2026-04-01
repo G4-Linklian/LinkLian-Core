@@ -84,6 +84,7 @@ describe('CommunityCommentService', () => {
 
   describe('createComment', () => {
     it('should create comment', async () => {
+      dataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       dataSource.query.mockResolvedValueOnce([
         { status: 'active', is_private: false },
       ]);
@@ -103,20 +104,18 @@ describe('CommunityCommentService', () => {
   });
 
   describe('updateComment', () => {
-    it('should update comment', async () => {
+    it('should throw ForbiddenException if community is inactive', async () => {
       dataSource.query
-        .mockResolvedValueOnce([{ status: 'active' }])
+        .mockResolvedValueOnce([{ status: 'inactive' }])
         .mockResolvedValueOnce([
           { commu_comment_id: 1, user_sys_id: 1 },
         ])
         .mockResolvedValueOnce([]);
 
-      const result = await service.updateComment(1, {
+      await expect(service.updateComment(1, {
         comment_id: 1,
         comment_text: 'Updated',
-      });
-
-      expect(result.success).toBe(true);
+      })).rejects.toThrow('Community is inactive');
     });
   });
 

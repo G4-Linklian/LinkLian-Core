@@ -280,9 +280,10 @@ describe('ChatService', () => {
 
       await service.searchMessages({ sender_id: 3 });
 
-      expect(mockQb.andWhere).toHaveBeenCalledWith('m.sender_id = :senderId', {
-        senderId: 3,
-      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(m.sender_id = :senderId OR m.sender_id IS NULL)',
+        { senderId: 3 },
+      );
     });
 
     it('should apply ILIKE filter for content search', async () => {
@@ -350,6 +351,8 @@ describe('ChatService', () => {
     });
 
     it('should save message, update chat, and publish to RabbitMQ', async () => {
+      // mock ensureActiveUser ให้ return array เสมอ
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
       mockRabbitMQService.publish.mockResolvedValueOnce(undefined);
@@ -370,6 +373,7 @@ describe('ChatService', () => {
     });
 
     it('should still commit when RabbitMQ publish fails (degraded gracefully)', async () => {
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
       mockRabbitMQService.publish.mockRejectedValueOnce(new Error('RabbitMQ down'));
@@ -381,6 +385,7 @@ describe('ChatService', () => {
     });
 
     it('should rollback and throw InternalServerErrorException on DB error', async () => {
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockRejectedValueOnce(new Error('DB error'));
 
       await expect(service.createMessage(dto)).rejects.toThrow(

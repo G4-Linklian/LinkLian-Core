@@ -1,6 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { AiService } from '../ai/ai.service';
 import { AiChat } from '../ai-chat/entities/ai-chat.entity';
@@ -22,12 +28,33 @@ export class QuizService {
 
     @InjectRepository(QuizAttempt)
     private quizAttemptRepo: Repository<QuizAttempt>,
+
+    private dataSource: DataSource,
   ) { }
 
+  private async ensureActiveUser(userId: number) {
+    const user = await this.dataSource.query(
+      `
+      SELECT 1
+      FROM user_sys
+      WHERE user_sys_id = $1
+      `,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
+  }
+
   async generateQuiz(dto: CreateQuizDto, userId: number) {
+    await this.ensureActiveUser(userId);
 
     const aiChat = await this.aiChatRepo.findOne({
-      where: { ai_chat_id: dto.ai_chat_id, user_sys_id: userId, },
+      where: {
+        ai_chat_id: dto.ai_chat_id,
+        user_sys_id: userId,
+      } as any,
     });
 
     if (!aiChat) {
@@ -51,17 +78,17 @@ export class QuizService {
 
     return this.quizRepo.save(quiz);
   }
-  async getQuizByChat(aiChatId: number, userId: number) {
 
+  async getQuizByChat(aiChatId: number, userId: number) {
     const chat = await this.aiChatRepo.findOne({
       where: {
         ai_chat_id: aiChatId,
         user_sys_id: userId,
-      },
+      } as any,
     });
 
     if (!chat) {
-      throw new NotFoundException('Chat not found');
+      throw new UnauthorizedException('Unauthorized access to this chat');
     }
 
     const quizzes = await this.quizRepo.find({
@@ -83,6 +110,7 @@ export class QuizService {
   }
 
   async saveAttempt(dto: CreateQuizAttemptDto, userId: number) {
+    await this.ensureActiveUser(userId);
 
     const attempt = this.quizAttemptRepo.create({
       quiz_id: dto.quiz_id,
@@ -95,6 +123,7 @@ export class QuizService {
     return this.quizAttemptRepo.save(attempt);
   }
   async getUserAttempt(quizId: number, userId: number) {
+    await this.ensureActiveUser(userId);
 
     return this.quizAttemptRepo.findOne({
       where: {

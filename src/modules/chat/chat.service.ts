@@ -2,6 +2,7 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -37,6 +38,21 @@ export class ChatService {
     private readonly fileStorageService: FileStorageService,
   ) { }
 
+  private async ensureActiveUser(userId: number) {
+    const user = await this.dataSource.query(
+      `
+      SELECT 1
+      FROM user_sys
+      WHERE user_sys_id = $1
+      `,
+      [userId],
+    );
+
+    if (!user.length) {
+      throw new ForbiddenException('Account deleted');
+    }
+  }
+
   // ========== Chat Methods ==========
 
   /**
@@ -71,9 +87,15 @@ export class ChatService {
 
     // Build raw query for complex joins
     let query = `
-      SELECT c.*, us.first_name, us.last_name, us.profile_pic 
+      SELECT DISTINCT ON (c.chat_id)
+      c.*, 
+      COALESCE(us.first_name, '') as first_name,
+      COALESCE(us.last_name, '') as last_name,
+      us.profile_pic
       FROM chat c
-      JOIN user_sys_chat_normalize uscn ON c.chat_id = uscn.chat_id
+      LEFT JOIN user_sys_chat_normalize uscn 
+      ON c.chat_id = uscn.chat_id
+      AND uscn.user_sys_id <> $1
       LEFT JOIN user_sys us ON uscn.user_sys_id = us.user_sys_id
       WHERE 1=1
     `;
@@ -89,17 +111,16 @@ export class ChatService {
     // Filter chats that include the specified user
     if (dto.user_sys_id) {
       query += `
-        AND uscn.chat_id IN (
-          SELECT chat_id 
-          FROM user_sys_chat_normalize
-          WHERE user_sys_id = $${index++}
-        )
-      `;
+    AND EXISTS (
+      SELECT 1
+      FROM user_sys_chat_normalize uscn2
+      WHERE uscn2.chat_id = c.chat_id
+        AND uscn2.user_sys_id = $${index}
+    )
+  `;
       values.push(dto.user_sys_id);
+      index++;
 
-      // Exclude the requesting user from the result (show only other participants)
-      query += ` AND uscn.user_sys_id <> $${index++}`;
-      values.push(dto.user_sys_id);
     }
 
     if (typeof dto.is_ai_chat === 'boolean') {
@@ -115,7 +136,7 @@ export class ChatService {
     // Sort
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY c.${dto.sort_by} ${order}`;
+      query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
     }
 
     // Pagination
@@ -274,8 +295,14 @@ export class ChatService {
       query.andWhere('m.chat_id = :chatId', { chatId: dto.chat_id });
     }
 
+    // if (dto.sender_id) {
+    //   query.andWhere('m.sender_id = :senderId', { senderId: dto.sender_id });
+    // }
     if (dto.sender_id) {
-      query.andWhere('m.sender_id = :senderId', { senderId: dto.sender_id });
+      query.andWhere(
+        '(m.sender_id = :senderId OR m.sender_id IS NULL)',
+        { senderId: dto.sender_id }
+      );
     }
 
     // Content search with ILIKE for case-insensitive partial match
@@ -328,6 +355,8 @@ export class ChatService {
     if (!dto.chat_id || !dto.sender_id || !dto.content) {
       throw new BadRequestException('Missing required fields!');
     }
+
+    await this.ensureActiveUser(dto.sender_id);
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
