@@ -316,6 +316,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       user_id: user.user_sys_id,
       role_name: roleName,
       inst_id: user.inst_id || 0,
+      is_repassword: user.is_repassword ?? false,
     };
   }
 
@@ -348,22 +349,6 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const user = await this.findUserByEmail(username);
     this.validateUserGroup(user_group, Number(user.role_id));
     await this.verifyUserPassword(user, password);
-
-    if (user.flag_valid === false) {
-      this.logger.log(
-        'flag_valid is false - require password reset',
-        'Auth Login',
-        {
-          user_id: user.user_sys_id,
-        },
-      );
-      return {
-        success: true,
-        message: 'Please reset your password',
-        user_id: user.user_sys_id,
-        require_reset_password: true,
-      };
-    }
 
     // Check if user has valid token (skip OTP)
     if (this.hasValidToken(authorization, user.user_sys_id)) {
@@ -498,8 +483,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
           user_id: user.user_sys_id,
           username: user.email,
           role_id: user.role_id,
-          role_name: '',
-          inst_id: user.inst_id || 0,
+          role_name: decoded.role_name,
+          inst_id: user.inst_id ?? parseInt(decoded.inst_id),
           otp_verified: true,
         },
       };
@@ -511,8 +496,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
-    const { email, password, new_password, confirm_password } = dto;
+  async resetPassword(userId: number, dto: ResetPasswordDto) {
+    const { new_password, confirm_password } = dto;
 
     if (new_password !== confirm_password) {
       throw new BadRequestException(
@@ -527,35 +512,31 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     }
 
     const user = await this.userRepo.findOne({
-      where: { email },
+      where: { user_sys_id: userId },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    // Verify current password (initial password)
-    await this.verifyUserPassword(user, password);
-
     // Hash new password
     const hashedPassword = await hashPassword(new_password);
 
-    // Update password + set flag_valid = true
+    // Update password + set is_repassword = true
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
-      flag_valid: true,
+      is_repassword: true,
       updated_at: new Date(),
     });
 
     this.logger.log(`Password reset successfully`, 'Auth Reset Password', {
-      detail: 'flag_valid set to true - user can login with new password',
+      detail: 'is_repassword set to true - user has reset their password',
       email: user.email,
     });
 
     return {
       success: true,
-      message:
-        'Password reset successful. Please login with your new password.',
+      message: 'Password reset successful.',
     };
   }
 
@@ -573,10 +554,10 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const tempPassword = generateInitialPassword();
     const hashedPassword = await hashPassword(tempPassword);
 
-    // Update password + set flag_valid = false (ต้อง reset password ก่อนใช้งาน)
+    // Update password + set is_repassword = false (ต้อง reset password ก่อนใช้งาน)
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
-      flag_valid: false,
+      is_repassword: false,
       updated_at: new Date(),
     });
 
@@ -599,8 +580,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     } catch (error: any) {
       this.logger.error(
         'Failed to send temp password email',
-        error,
         'Auth Forgot Password',
+        { message: error instanceof Error ? error.message : String(error), code: error?.code },
       );
     }
 

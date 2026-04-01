@@ -36,6 +36,7 @@ export interface IVerifyResponse {
   user_id: number;
   role_name: string;
   inst_id: number;
+  is_repassword: boolean;
 }
 
 /**

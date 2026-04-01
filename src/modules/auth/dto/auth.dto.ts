@@ -93,16 +93,6 @@ export class ResendOTPDto {
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ description: 'Email' })
-  @IsString()
-  @IsNotEmpty()
-  email: string;
-
-  @ApiProperty({ description: 'Current/Initial Password' })
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
   @ApiProperty({ description: 'New Password' })
   @IsString()
   @IsNotEmpty()

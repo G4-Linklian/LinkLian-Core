@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Headers,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -142,15 +143,16 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reset initial password',
-    description:
-      '⚠️ No authorization required - Use for first-time password change',
+    description: '🔒 Requires Authorization header - Use after OTP verification',
   })
   @ApiResponse({ status: 200, description: 'Password reset successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto);
+  @ApiResponse({ status: 401, description: 'Invalid or missing token' })
+  async resetPassword(@Req() req: any, @Body() dto: ResetPasswordDto) {
+    const userId = Number((req['user'] as { user_id: string }).user_id);
+    return this.authService.resetPassword(userId, dto);
   }
 
   @Post('forgot-password')
