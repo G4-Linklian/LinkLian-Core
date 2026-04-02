@@ -428,13 +428,13 @@ describe('AuthService', () => {
 
     it('should throw BadRequestException when new_password != confirm_password', async () => {
       await expect(
-        service.resetPassword({ ...baseDto, confirm_password: 'Different@1' }),
+        service.resetPassword(1, { ...baseDto, confirm_password: 'Different@1' }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when new_password is too short', async () => {
       await expect(
-        service.resetPassword({
+        service.resetPassword(1, {
           ...baseDto,
           new_password: 'Short',
           confirm_password: 'Short',
@@ -445,7 +445,7 @@ describe('AuthService', () => {
     it('should throw NotFoundException when email not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.resetPassword(baseDto)).rejects.toThrow(
+      await expect(service.resetPassword(1, baseDto)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -454,7 +454,7 @@ describe('AuthService', () => {
       userRepo.findOne.mockResolvedValue(mockUser());
       (authUtil.verifyPassword as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.resetPassword(baseDto)).rejects.toThrow(
+      await expect(service.resetPassword(1, baseDto)).rejects.toThrow(
         UnauthorizedException,
       );
     });
@@ -463,7 +463,7 @@ describe('AuthService', () => {
       userRepo.findOne.mockResolvedValue(mockUser());
       userRepo.update.mockResolvedValue({ affected: 1 } as any);
 
-      const result = await service.resetPassword(baseDto);
+      const result = await service.resetPassword(1, baseDto);
 
       expect(authUtil.hashPassword).toHaveBeenCalledWith(baseDto.new_password);
       expect(userRepo.update).toHaveBeenCalledWith(

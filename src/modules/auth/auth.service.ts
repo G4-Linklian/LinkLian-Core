@@ -350,6 +350,14 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     this.validateUserGroup(user_group, Number(user.role_id));
     await this.verifyUserPassword(user, password);
 
+    if (user.flag_valid === false) {
+      return {
+        success: true,
+        message: 'Password reset required',
+        require_reset_password: true,
+      };
+    }
+
     // Check if user has valid token (skip OTP)
     if (this.hasValidToken(authorization, user.user_sys_id)) {
       const token = await this.generateUserToken(user, remember_me);
@@ -562,10 +570,11 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const tempPassword = generateInitialPassword();
     const hashedPassword = await hashPassword(tempPassword);
 
-    // Update password + set is_repassword = false (ต้อง reset password ก่อนใช้งาน)
+    // Update password + set is_repassword = false and flag_valid = false (ต้อง reset password ก่อนใช้งาน)
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
       is_repassword: false,
+      flag_valid: false,
       updated_at: new Date(),
     });
 
