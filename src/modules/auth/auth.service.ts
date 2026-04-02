@@ -519,13 +519,21 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('User not found');
     }
 
+    if (dto.password) {
+      const isValid = await verifyPassword(dto.password!, user.password!);
+      if (!isValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    }
+
     // Hash new password
     const hashedPassword = await hashPassword(new_password);
 
-    // Update password + set is_repassword = true
+    // Update password + set is_repassword = true and flag_valid = true
     await this.userRepo.update(user.user_sys_id, {
       password: hashedPassword,
       is_repassword: true,
+      flag_valid: true,
       updated_at: new Date(),
     });
 
