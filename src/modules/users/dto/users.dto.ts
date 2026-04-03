@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsInt,
   IsEmail,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -287,4 +288,11 @@ export class UpdateUserSysDto {
   @IsOptional()
   @IsInt()
   program_id?: number;
+}
+
+export class DeleteUserSysDto {
+  @ApiProperty({ description: 'User System ID', example: 1 })
+  @IsNotEmpty()
+  @IsInt()
+  user_sys_id!: number;
 }

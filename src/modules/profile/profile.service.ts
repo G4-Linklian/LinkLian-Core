@@ -14,7 +14,7 @@ export class ProfileService {
   constructor(
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-  ) {}
+  ) { }
 
   /**
    * Get user profile with education info based on role and edu_type
@@ -44,7 +44,18 @@ export class ProfileService {
       const profileResult = await this.dataSource.query(profileQuery, [userId]);
 
       if (profileResult.length === 0) {
-        throw new NotFoundException('Profile not found');
+        return {
+          success: true,
+          message: 'Profile retrieved successfully',
+          data: {
+            user_sys_id: userId,
+            first_name: 'ไม่มีบัญชีผู้ใช้งาน',
+            last_name: '',
+            profile_pic: null,
+            role_group: null,
+            education: null,
+          },
+        };
       }
 
       const profile = profileResult[0];

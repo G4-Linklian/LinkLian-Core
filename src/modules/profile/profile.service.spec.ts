@@ -90,12 +90,13 @@ describe('ProfileService', () => {
       expect(result.data.education.type).toBe('university');
     });
 
-    it('should throw NotFound if profile not found', async () => {
+    it('should return default profile if not found', async () => {
+      dataSource.query.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       dataSource.query.mockResolvedValueOnce([]);
 
-      await expect(service.getUserProfile(1)).rejects.toThrow(
-        NotFoundException,
-      );
+      const result = await service.getUserProfile(1);
+      expect(result.success).toBe(true);
+      expect(result.data.role_group).toBe('student');
     });
 
     it('should throw InternalServerError on unexpected error', async () => {

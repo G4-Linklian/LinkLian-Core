@@ -396,9 +396,9 @@ export class CommunityService {
       p.content,
       p.created_at,
       u.user_sys_id,
-      u.first_name,
-      u.last_name,
-      u.profile_pic,
+      COALESCE(u.first_name, 'ไม่มีบัญชีผู้ใช้งาน') AS first_name,
+      COALESCE(u.last_name, '') AS last_name,
+      COALESCE(u.profile_pic, '') AS profile_pic,
 
       -- count comments
       (
@@ -424,7 +424,7 @@ export class CommunityService {
       ) AS is_bookmarked
 
     FROM post_in_community p
-    JOIN user_sys u
+    LEFT JOIN user_sys u
       ON u.user_sys_id=p.user_sys_id
 
     WHERE p.community_id=$1

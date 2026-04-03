@@ -48,6 +48,7 @@ export class AiChatController {
   @ApiResponse({ status: 201, description: 'AI chat created successfully' })
   async createAiChat(@Body() dto: CreateAiChatDto, @Req() req) {
     const userId = Number(req.headers['x-user-id']);
+
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
@@ -87,10 +88,11 @@ export class AiChatController {
   @ApiResponse({ status: 201, description: 'AI message created successfully' })
   async createAiMessage(@Body() dto: CreateAiMessageDto, @Req() req) {
     const userId = Number(req.headers['x-user-id']);
+
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    //return this.aiChatService.createAiMessage(dto, userId);
+
     return this.aiChatService.createAiMessage(dto, userId);
   }
 

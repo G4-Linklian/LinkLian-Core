@@ -521,17 +521,19 @@ export class UsersService {
    * Delete a user by ID
    */
   async delete(id: number) {
-    // Check if user exists
     const existingUser = await this.userSysRepo.findOne({
       where: { user_sys_id: id },
     });
 
     if (!existingUser) {
-      throw new NotFoundException('ไม่มีผู้ใช้นี้ในระบบ');
+      throw new NotFoundException('no user_sys in system');
     }
 
     try {
-      await this.userSysRepo.delete({ user_sys_id: id });
+      await this.dataSource.query(`DELETE FROM user_sys WHERE user_sys_id = $1`, [
+        id,
+      ]);
+
       const { password: _password, ...userData } = existingUser;
       return {
         success: true,

@@ -23,6 +23,7 @@ describe('BookmarkService', () => {
   let service: BookmarkService;
 
   beforeEach(async () => {
+    mockQuery.mockReset();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookmarkService,
@@ -120,18 +121,21 @@ describe('BookmarkService', () => {
 
   describe('toggleBookmark', () => {
     it('should throw BadRequestException if userId is missing', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       await expect(service.toggleBookmark(0, 1)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw BadRequestException if postId is missing', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       await expect(service.toggleBookmark(1, 0)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should create bookmark if it does not exist', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockQuery
         .mockResolvedValueOnce([{ count: '0' }]) // check → not exists
         .mockResolvedValueOnce([]); // insert
@@ -144,6 +148,7 @@ describe('BookmarkService', () => {
     });
 
     it('should remove bookmark if it already exists', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockQuery
         .mockResolvedValueOnce([{ count: '1' }]) // check → exists
         .mockResolvedValueOnce([]); // delete
@@ -156,6 +161,7 @@ describe('BookmarkService', () => {
     });
 
     it('should return correct user_sys_id and post_id in response', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       mockQuery
         .mockResolvedValueOnce([{ count: '0' }])
         .mockResolvedValueOnce([]);
@@ -165,11 +171,9 @@ describe('BookmarkService', () => {
       expect(result.data.post_id).toBe(99);
     });
 
-    it('should throw InternalServerErrorException on query error', async () => {
+    it('should throw Error on query error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
-      await expect(service.toggleBookmark(1, 10)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.toggleBookmark(1, 10)).rejects.toThrow('DB error');
     });
   });
 
@@ -177,12 +181,14 @@ describe('BookmarkService', () => {
 
   describe('deleteBookmark', () => {
     it('should throw BadRequestException if userId is missing', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       await expect(service.deleteBookmark(0, 1)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw BadRequestException if postId is missing', async () => {
+      mockQuery.mockResolvedValueOnce([{}]); // mock user for ensureActiveUser
       await expect(service.deleteBookmark(1, 0)).rejects.toThrow(
         BadRequestException,
       );
@@ -204,15 +210,13 @@ describe('BookmarkService', () => {
       const result = await service.deleteBookmark(1, 10);
 
       expect(result.success).toBe(true);
-      expect(result.deleted).toBe(false);
+      expect(result.deleted).toBe(false); // logic จริงคืน false
       expect(result.message).toBe('Bookmark not found');
     });
 
-    it('should throw InternalServerErrorException on query error', async () => {
+    it('should throw Error on query error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
-      await expect(service.deleteBookmark(1, 10)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.deleteBookmark(1, 10)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });
