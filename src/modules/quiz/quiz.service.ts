@@ -78,6 +78,7 @@ export class QuizService {
 
     return this.quizRepo.save(quiz);
   }
+  async getQuizByChat(aiChatId: number, userId: number) {
 
   async getQuizByChat(aiChatId: number, userId: number) {
     const chat = await this.aiChatRepo.findOne({
