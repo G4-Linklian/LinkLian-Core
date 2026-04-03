@@ -321,6 +321,29 @@ describe('AssignmentService', () => {
       );
     });
 
+    it('should return user_sys_id as null when post creator is deleted', async () => {
+      // LEFT JOIN user_sys / LEFT JOIN role → _user_sys_id อาจเป็น null เมื่อ user ถูกลบ
+      const deletedUserPost = {
+        ...mockPost,
+        _user_sys_id: null,
+        _email: null,
+        _profile_pic: null,
+        _display_name: null,
+        _role_name: null,
+        is_anonymous: false,
+      };
+
+      mockQuery
+        .mockResolvedValueOnce([deletedUserPost]) // postQuery
+        .mockResolvedValueOnce([])                // attachmentQuery
+        .mockResolvedValueOnce([]);               // groupsQuery (teacher)
+
+      const result = await service.getPostAssignment(1, 1, 'teacher');
+      expect(result).not.toBeNull();
+      expect(result!.data.post.user.user_sys_id).toBeNull();
+      expect(result!.data.post.user.email).toBeNull();
+    });
+
     it('should throw InternalServerErrorException on error', async () => {
       mockQuery.mockRejectedValueOnce(new Error('DB error'));
       await expect(service.getPostAssignment(1, 1, 'teacher')).rejects.toThrow(

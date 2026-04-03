@@ -353,11 +353,11 @@ JOIN assignment a
   ON a.post_id = pic.post_id
  AND a.flag_valid = true
 
-JOIN user_sys u
+LEFT JOIN user_sys u
   ON pc.user_sys_id = u.user_sys_id
  AND u.flag_valid = true
 
-JOIN role r
+LEFT JOIN role r
   ON u.role_id = r.role_id
  AND r.flag_valid = true
 
@@ -560,7 +560,7 @@ LIMIT 1
           updated_at: post.updated_at,
           section_id: sectionId,
           user: {
-            user_sys_id: Number(post._user_sys_id),
+            user_sys_id: post._user_sys_id != null ? Number(post._user_sys_id) : null,
             display_name: displayName,
             email: post._email,
             profile_pic: post._profile_pic,
@@ -1694,7 +1694,7 @@ WHERE e.section_id = pic.section_id
     try {
       // 1. Validate submission exists
       const submissionResult = await this.dataSource.query(
-        `SELECT sb.submission_id, sb.assignment_id, sb.group_id, a.max_score
+        `SELECT sb.submission_id, sb.assignment_id, sb.group_id, a.max_score, a.is_group
          FROM submission sb
          JOIN assignment a ON sb.assignment_id = a.assignment_id AND a.flag_valid = true
          WHERE sb.submission_id = $1
