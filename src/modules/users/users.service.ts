@@ -266,6 +266,11 @@ export class UsersService {
     const initialPassword: string = generateInitialPassword();
     const hashedPassword: string = await hashPassword(initialPassword);
 
+    this.logger.debug('Generated initial password for new user', 'CreateUser', {
+      email: dto.email,
+      initial_password: initialPassword,
+    });
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -273,9 +278,9 @@ export class UsersService {
     try {
       // Insert user
       const insertQuery = `
-        INSERT INTO user_sys 
-        (email, password, first_name, middle_name, last_name, phone, role_id, code, edu_lev_id, inst_id, user_status, profile_pic, flag_valid, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+        INSERT INTO user_sys
+        (email, password, first_name, middle_name, last_name, phone, role_id, code, edu_lev_id, inst_id, user_status, profile_pic, flag_valid, is_repassword, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
         RETURNING *
       `;
 
@@ -293,6 +298,7 @@ export class UsersService {
         dto.user_status || null,
         dto.profile_pic || null,
         true,
+        false,
       ];
 
       const result: UserSysFields[] = await queryRunner.query(

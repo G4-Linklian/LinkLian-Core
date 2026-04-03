@@ -169,6 +169,7 @@ export class AiChatService {
             post_content_id: dto.post_content_id,
             chat_title: documentTitle,
             summary_text: summary,
+            user_sys_id: userId,
             created_at: new Date(),
             flag_valid: true,
         });
