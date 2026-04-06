@@ -4,7 +4,7 @@ import {
     InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { QaQuestionUpvote } from './entities/qa_question_upvote.entity';
 import { QAQuestion } from '../qa_question/entities/qa_question.entity';
 import {

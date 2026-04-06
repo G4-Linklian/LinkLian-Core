@@ -42,7 +42,7 @@ export class QnaRedisService {
     try {
       return JSON.parse(value) as QALiveLog;
     } catch (error) {
-      this.logger.warn('Invalid QA active slide payload in redis', 'QnaRedisService');
+      this.logger.error('Invalid QA active slide payload in redis', 'QnaRedisService', error);
       await this.redis.del(key);
       return null;
     }
@@ -82,7 +82,8 @@ export class QnaRedisService {
 
     try {
       return JSON.parse(value) as QAQuestion;
-    } catch {
+    } catch (error) {
+      this.logger.error('Invalid QA question payload in redis', 'QnaRedisService', error);
       await this.redis.del(key);
       return null;
     }
@@ -99,7 +100,8 @@ export class QnaRedisService {
     try {
       const questions = JSON.parse(value) as QAQuestion[];
       return Array.isArray(questions) ? questions : null;
-    } catch {
+    } catch (error) {
+      this.logger.error('Invalid QA question list payload in redis', 'QnaRedisService', error);
       await this.redis.del(key);
       return null;
     }
