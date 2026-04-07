@@ -98,7 +98,7 @@ export class QALiveService {
             );
 
             try {
-                const updatedQuestion = await this.qaQuestionRepo.findOne({
+                const updatedQuestion = await queryRunner.manager.findOne(QAQuestion, {
                     where: { qa_question_id: dto.qa_question_id },
                 });
 
@@ -167,7 +167,7 @@ export class QALiveService {
             );
 
             try {
-                const updatedQuestion = await this.qaQuestionRepo.findOne({
+                const updatedQuestion = await queryRunner.manager.findOne(QAQuestion, {
                     where: { qa_question_id: dto.qa_question_id },
                 });
 
