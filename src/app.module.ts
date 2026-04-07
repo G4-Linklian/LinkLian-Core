@@ -44,6 +44,7 @@ import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
+import { QnaModule } from './modules/qna/qna.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { AssetsModule } from './modules/asset/asset.module';
     BullMQModule,
     RedisModule,
     AssetsModule,
+    QnaModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
