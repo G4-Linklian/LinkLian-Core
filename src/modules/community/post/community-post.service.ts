@@ -9,6 +9,8 @@ import { DataSource } from 'typeorm';
 import { CommunityService } from '../core/community.service';
 import { FileStorageService } from '../../file-storage/file-storage.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 function extractUrls(text: string): string[] {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -31,6 +33,7 @@ export class CommunityPostService {
     private dataSource: DataSource,
     private communityService: CommunityService,
     private fileStorageService: FileStorageService,
+    private readonly bullmq: BullMQService,
     private readonly logger: AppLogger,
   ) { }
 
@@ -175,10 +178,23 @@ export class CommunityPostService {
         [postId],
       );
 
+      this.bullmq.addJob({
+        queue: NOTIFICATION_QUEUE,
+        job: JobType.COMMUNITY_POST_CREATED,
+        data: {
+          type: JobType.COMMUNITY_POST_CREATED,
+          actor_id: userId,
+          community_id: dto.community_id,
+          post_id: postId,
+          post_type: 'post',
+          title: dto.content?.trim().slice(0, 100) ?? '',
+        },
+      });
+
       return {
         success: true,
         data: fullPost[0],
-        message: 'Post updated successfully',
+        message: 'Post created successfully',
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -528,6 +544,19 @@ COALESCE(
       `,
         [postId],
       );
+
+      this.bullmq.addJob({
+        queue: NOTIFICATION_QUEUE,
+        job: JobType.COMMUNITY_POST_UPDATED,
+        data: {
+          type: JobType.COMMUNITY_POST_UPDATED,
+          actor_id: userId,
+          community_id: post[0].community_id,
+          post_id: postId,
+          post_type: 'post',
+          title: dto.content?.trim().slice(0, 100) ?? '',
+        },
+      });
 
       return {
         success: true,

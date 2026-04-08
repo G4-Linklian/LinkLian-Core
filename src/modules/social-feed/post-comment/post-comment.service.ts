@@ -19,6 +19,8 @@ import {
 } from './dto/post-comment.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { AppLogger } from '../../../common/logger/app-logger.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 @Injectable()
 export class PostCommentService {
   constructor(
@@ -27,6 +29,7 @@ export class PostCommentService {
     @InjectRepository(PostCommentPath)
     private postCommentPathRepo: Repository<PostCommentPath>,
     private dataSource: DataSource,
+    private readonly bullmq: BullMQService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -331,6 +334,29 @@ export class PostCommentService {
       }
 
       await queryRunner.commitTransaction();
+
+      // หา post_content_id และ owner สำหรับ notification
+      const postOwnerRow = await this.dataSource.query(
+        `SELECT pic.post_content_id, pc.user_sys_id AS owner_id
+         FROM post_in_class pic
+         JOIN post_content pc ON pc.post_content_id = pic.post_content_id
+         WHERE pic.post_id = $1 AND pic.flag_valid = true
+         LIMIT 1`,
+        [post_id],
+      );
+
+      if (postOwnerRow.length > 0) {
+        this.bullmq.addJob({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.SOCIAL_FEED_COMMENT,
+          data: {
+            type: JobType.SOCIAL_FEED_COMMENT,
+            actor_id: userId,
+            post_content_id: postOwnerRow[0].post_content_id,
+            post_owner_id: postOwnerRow[0].owner_id,
+          },
+        });
+      }
 
       return {
         success: true,

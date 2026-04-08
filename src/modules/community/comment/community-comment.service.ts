@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 @Injectable()
 export class CommunityCommentService {
   constructor(
     private dataSource: DataSource,
+    private readonly bullmq: BullMQService,
     private readonly logger: AppLogger,
   ) { }
 
@@ -261,12 +264,34 @@ export class CommunityCommentService {
       }
 
       await queryRunner.commitTransaction();
-      const commentData = { comment_id: newId };
+
+      // หา post_owner_id สำหรับ notification
+      const postOwnerRow = await this.dataSource.query(
+        `SELECT user_sys_id AS owner_id, community_id
+         FROM post_in_community
+         WHERE post_commu_id = $1 AND flag_valid = true
+         LIMIT 1`,
+        [post_commu_id],
+      );
+
+      if (postOwnerRow.length > 0) {
+        this.bullmq.addJob({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.COMMUNITY_COMMENT,
+          data: {
+            type: JobType.COMMUNITY_COMMENT,
+            actor_id: userId,
+            post_id: post_commu_id,
+            post_owner_id: postOwnerRow[0].owner_id,
+            community_id: postOwnerRow[0].community_id,
+          },
+        });
+      }
 
       return {
         success: true,
         message: 'Comment created successfully',
-        data: commentData,
+        data: { comment_id: newId },
       };
     } catch (e) {
       await queryRunner.rollbackTransaction();
