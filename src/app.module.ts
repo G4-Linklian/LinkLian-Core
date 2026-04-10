@@ -44,6 +44,7 @@ import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
+import { QnaModule } from './modules/qna/qna.module';
 import { WorkerModule } from './worker/worker.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
@@ -102,6 +103,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullMQModule,
     RedisModule,
     AssetsModule,
+    QnaModule,
     WorkerModule,
     NotificationModule,
     JwtModule.register({
