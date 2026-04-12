@@ -112,7 +112,7 @@ export class CommunityWorker {
       actorId: actor_id,
       type: 'post-created',
       feature: 'community',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post', community_id: String(community_id) },
     });
 
     await saveReceivers(this.dataSource, notificationId, receiverIds);
@@ -129,13 +129,19 @@ export class CommunityWorker {
           body,
           ref_id: String(post_id),
           ref_type: 'community-post',
+          feature: 'community',
+          community_id: String(community_id),
         },
       })),
       sendFCMInBatches(this.dataSource, receiverIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_id),
         ref_type: 'community-post',
+        feature: 'community',
         notification_id: String(notificationId),
+        community_id: String(community_id),
       }),
     ]);
 
@@ -162,7 +168,7 @@ export class CommunityWorker {
       actorId: actor_id,
       type: 'post-updated',
       feature: 'community',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post', community_id: String(community_id) },
     });
 
     await saveReceivers(this.dataSource, notificationId, receiverIds);
@@ -179,13 +185,19 @@ export class CommunityWorker {
           body,
           ref_id: String(post_id),
           ref_type: 'community-post',
+          feature: 'community',
+          community_id: String(community_id),
         },
       })),
       sendFCMInBatches(this.dataSource, receiverIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_id),
         ref_type: 'community-post',
+        feature: 'community',
         notification_id: String(notificationId),
+        community_id: String(community_id),
       }),
     ]);
 
@@ -193,7 +205,7 @@ export class CommunityWorker {
   }
 
   private async handleComment(job: Job<CommunityCommentData>): Promise<void> {
-    const { actor_id, post_id, post_owner_id } = job.data;
+    const { actor_id, post_id, post_owner_id, community_id } = job.data;
     const ctx = 'CommunityWorker:comment';
 
     if (actor_id === post_owner_id) return;
@@ -206,7 +218,7 @@ export class CommunityWorker {
       actorId: actor_id,
       type: 'comment',
       feature: 'community',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post', community_id: String(community_id) },
     });
 
     await saveReceivers(this.dataSource, notificationId, [post_owner_id]);
@@ -224,13 +236,19 @@ export class CommunityWorker {
           body,
           ref_id: String(post_id),
           ref_type: 'community-post',
+          feature: 'community',
+          community_id: String(community_id),
         },
       }),
       sendFCMInBatches(this.dataSource, [post_owner_id], {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_id),
         ref_type: 'community-post',
+        feature: 'community',
         notification_id: String(notificationId),
+        community_id: String(community_id),
       }),
     ]);
 
@@ -275,13 +293,17 @@ export class CommunityWorker {
             body,
             ref_id: String(community_id),
             ref_type: 'community',
+            feature: 'community',
           },
         }),
       ),
       sendFCMInBatches(this.dataSource, ownerIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(community_id),
         ref_type: 'community',
+        feature: 'community',
         notification_id: String(notificationId),
       }),
     ]);
@@ -320,12 +342,16 @@ export class CommunityWorker {
           body,
           ref_id: String(community_id),
           ref_type: 'community',
+          feature: 'community',
         },
       }),
       sendFCMInBatches(this.dataSource, [target_user_id], {
         title, body,
+        actor_id: String(approver_id),
+        actor_name: resolvedApproverName,
         ref_id: String(community_id),
         ref_type: 'community',
+        feature: 'community',
         notification_id: String(notificationId),
       }),
     ]);

@@ -26,6 +26,8 @@ import { PostContent } from 'src/modules/social-feed/post/entities/post-content.
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { QnaRedisService } from '../redis/qna-redis.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 @Injectable()
 export class QALiveService {
@@ -38,6 +40,7 @@ export class QALiveService {
         private readonly logger: AppLogger,
         private readonly rabbitMQService: RabbitMQService,
         private readonly qnaRedisService: QnaRedisService,
+        private readonly bullmq: BullMQService,
     ) { }
 
     async findQALiveById(qa_live_id: number) {
@@ -181,6 +184,18 @@ export class QALiveService {
             } catch (error) {
                 this.logger.error('Error publishing QA Live started event', 'Create QA Live', error);
             }
+
+            this.bullmq.addJob({
+              queue: NOTIFICATION_QUEUE,
+              job: JobType.QNA_LIVE_STARTED,
+              data: {
+                type: JobType.QNA_LIVE_STARTED,
+                actor_id: dto.live_by,
+                qa_live_id: savedLive.qa_live_id,
+                section_id: dto.section_id,
+                live_title: dto.live_title,
+              },
+            });
 
             await queryRunner.commitTransaction();
 

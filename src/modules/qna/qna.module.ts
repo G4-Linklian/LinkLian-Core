@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'src/common/logger/logger.module';
 import { RabbitMQModule } from 'src/common/rabbitmq/rabbitmq.module';
 import { RedisModule } from 'src/common/redis/redis.module';
+import { BullMQModule } from 'src/common/bullmq/bullmq.module';
 import { QALiveController } from './qa_live/qa_live.controller';
 import { QALiveService } from './qa_live/qa_live.service';
 import { QALive } from './qa_live/entities/qa_live.entity';
@@ -26,6 +27,7 @@ import { QnaRedisService } from './redis/qna-redis.service';
 		LoggerModule,
 		RabbitMQModule,
 		RedisModule,
+		BullMQModule,
 	],
 	controllers: [QALiveController, QAQuestionController, QAUpvoteController],
 	providers: [QALiveService, QAQuestionService, QAUpvoteService, QnaRedisService],

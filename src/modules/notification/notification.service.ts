@@ -103,6 +103,39 @@ export class NotificationService {
   }
 
   /**
+   * บันทึก FCM token — upsert ตาม receiver_id + token
+   */
+  async registerFCMToken(userId: number, token: string, deviceType: string) {
+    await this.dataSource.query(
+      `INSERT INTO notification_fcm (receiver_id, token, device_type, flag_valid, created_at)
+       VALUES ($1, $2, $3, true, NOW())
+       ON CONFLICT (receiver_id, token)
+       DO UPDATE SET flag_valid = true, device_type = $3`,
+      [userId, token, deviceType],
+    );
+
+    this.logger.log('FCM token registered', 'NotificationService', { userId, deviceType });
+
+    return { success: true, message: 'FCM token registered' };
+  }
+
+  /**
+   * ลบ FCM token เมื่อ logout
+   */
+  async removeFCMToken(userId: number, token: string) {
+    await this.dataSource.query(
+      `UPDATE notification_fcm
+       SET flag_valid = false
+       WHERE receiver_id = $1 AND token = $2`,
+      [userId, token],
+    );
+
+    this.logger.log('FCM token removed', 'NotificationService', { userId });
+
+    return { success: true, message: 'FCM token removed' };
+  }
+
+  /**
    * Mark ทุก notification ของ user เป็นอ่านแล้ว
    */
   async markAllAsRead(userId: number) {

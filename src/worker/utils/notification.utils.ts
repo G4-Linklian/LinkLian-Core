@@ -15,6 +15,8 @@ export interface NotiData {
   actor_name: string;
   ref_id: string;
   ref_type: string;
+  section_id?: string;    // feed-post: section ที่โพสต์สังกัด (สำหรับ navigate ไป ClassDetailPage)
+  community_id?: string;  // community-post: community ที่โพสต์สังกัด (สำหรับ navigate ไป CommunityDetailPage)
 }
 
 // ─── DB Utils ─────────────────────────────────────────────────────────────────

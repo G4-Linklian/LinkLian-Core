@@ -37,6 +37,7 @@ export type SocialFeedCommentData = {
   actor_id: number;
   post_content_id: number;
   post_owner_id: number;
+  section_ids: number[];
 };
 
 export type SocialFeedJobData =
@@ -73,9 +74,10 @@ export class SocialFeedWorker {
     const { actor_id, post_content_id, post_type, title, section_ids } = job.data;
     const ctx = 'SocialFeedWorker:post-created';
 
-    const [actorName, receiverIds] = await Promise.all([
+    const [actorName, receiverIds, postContent] = await Promise.all([
       getActorName(this.dataSource, actor_id),
       this.getReceiversFromSections(section_ids, actor_id),
+      this.getPostContent(this.dataSource, post_content_id),
     ]);
 
     if (receiverIds.length === 0) {
@@ -83,14 +85,14 @@ export class SocialFeedWorker {
       return;
     }
 
-    const body = `${actorName} โพสต์ ${post_type} ใหม่`;
+    const body = `${actorName} โพสต์ ${post_type}: ${postContent}`;
 
     // sequential: ต้องได้ notification_id ก่อน ถึงจะบันทึก receivers ได้
     const notificationId = await saveNotification(this.dataSource, {
       actorId: actor_id,
       type: 'post-created',
       feature: 'social-feed',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post', section_id: String(section_ids[0]) },
     });
 
     await saveReceivers(this.dataSource, notificationId, receiverIds);
@@ -107,13 +109,19 @@ export class SocialFeedWorker {
           body,
           ref_id: String(post_content_id),
           ref_type: 'feed-post',
+          feature: 'social-feed',
+          section_id: String(section_ids[0]),
         },
       })),
       sendFCMInBatches(this.dataSource, receiverIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_content_id),
         ref_type: 'feed-post',
+        feature: 'social-feed',
         notification_id: String(notificationId),
+        section_id: String(section_ids[0]),
       }),
     ]);
 
@@ -124,9 +132,10 @@ export class SocialFeedWorker {
     const { actor_id, post_content_id, post_type, title, section_ids } = job.data;
     const ctx = 'SocialFeedWorker:post-updated';
 
-    const [actorName, receiverIds] = await Promise.all([
+    const [actorName, receiverIds, postContent] = await Promise.all([
       getActorName(this.dataSource, actor_id),
       this.getReceiversFromSections(section_ids, actor_id),
+      this.getPostContent(this.dataSource, post_content_id),
     ]);
 
     if (receiverIds.length === 0) {
@@ -134,13 +143,13 @@ export class SocialFeedWorker {
       return;
     }
 
-    const body = `${actorName} อัปเดต ${post_type}`;
+    const body = `${actorName} อัปเดต ${post_type}: ${postContent}`;
 
     const notificationId = await saveNotification(this.dataSource, {
       actorId: actor_id,
       type: 'post-updated',
       feature: 'social-feed',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post', section_id: String(section_ids[0]) },
     });
 
     await saveReceivers(this.dataSource, notificationId, receiverIds);
@@ -157,13 +166,19 @@ export class SocialFeedWorker {
           body,
           ref_id: String(post_content_id),
           ref_type: 'feed-post',
+          feature: 'social-feed',
+          section_id: String(section_ids[0]),
         },
       })),
       sendFCMInBatches(this.dataSource, receiverIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_content_id),
         ref_type: 'feed-post',
+        feature: 'social-feed',
         notification_id: String(notificationId),
+        section_id: String(section_ids[0]),
       }),
     ]);
 
@@ -171,52 +186,89 @@ export class SocialFeedWorker {
   }
 
   private async handleComment(job: Job<SocialFeedCommentData>): Promise<void> {
-    const { actor_id, post_content_id, post_owner_id } = job.data;
+    const { actor_id, post_content_id, post_owner_id, section_ids } = job.data;
     const ctx = 'SocialFeedWorker:comment';
 
-    if (actor_id === post_owner_id) return;
+    const [actorName, educatorIds] = await Promise.all([
+      getActorName(this.dataSource, actor_id),
+      this.getEducatorsFromSections(section_ids),
+    ]);
 
-    const actorName = await getActorName(this.dataSource, actor_id);
+    // รวม post_owner + ครูใน section แล้วกรอง actor ออก
+    const receiverSet = new Set([post_owner_id, ...educatorIds]);
+    receiverSet.delete(actor_id);
+    const receiverIds = Array.from(receiverSet);
+
+    if (receiverIds.length === 0) return;
+
     const title = 'มีคอมเมนต์ใหม่';
-    const body = `${actorName} แสดงความคิดเห็นในโพสต์ของคุณ`;
+    const body = `${actorName} แสดงความคิดเห็นในโพสต์`;
 
     const notificationId = await saveNotification(this.dataSource, {
       actorId: actor_id,
       type: 'comment',
       feature: 'social-feed',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_content_id), ref_type: 'feed-post', section_id: String(section_ids[0]) },
     });
 
-    await saveReceivers(this.dataSource, notificationId, [post_owner_id]);
+    await saveReceivers(this.dataSource, notificationId, receiverIds);
     await job.updateProgress(50);
 
     await Promise.all([
-      this.rabbitmq.publish('linklian_events', 'notification.send', {
+      publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
         type: 'NOTIFICATION',
         payload: {
           notification_id: String(notificationId),
-          receive_user_id: String(post_owner_id),
+          receive_user_id: String(userId),
           actor_id: String(actor_id),
           actor_name: actorName,
           title,
           body,
           ref_id: String(post_content_id),
           ref_type: 'feed-post',
+          feature: 'social-feed',
+          section_id: String(section_ids[0]),
         },
-      }),
-      sendFCMInBatches(this.dataSource, [post_owner_id], {
+      })),
+      sendFCMInBatches(this.dataSource, receiverIds, {
         title, body,
+        actor_id: String(actor_id),
+        actor_name: actorName,
         ref_id: String(post_content_id),
         ref_type: 'feed-post',
+        feature: 'social-feed',
         notification_id: String(notificationId),
+        section_id: String(section_ids[0]),
       }),
     ]);
 
     await job.updateProgress(100);
-    this.logger.log('Completed', ctx, { post_content_id });
+    this.logger.log('Completed', ctx, { post_content_id, total: receiverIds.length });
   }
 
   // ─── Queries ───────────────────────────────────────────────────────────────
+
+  private async getEducatorsFromSections(sectionIds: number[]): Promise<number[]> {
+    if (sectionIds.length === 0) return [];
+    const placeholders = sectionIds.map((_, i) => `$${i + 1}`).join(', ');
+    const rows = await this.dataSource.query(
+      `SELECT DISTINCT se.educator_id AS user_id
+       FROM section_educator se
+       JOIN user_sys u ON se.educator_id = u.user_sys_id
+         AND u.flag_valid = true AND u.user_status = 'Active'
+       WHERE se.section_id IN (${placeholders}) AND se.flag_valid = true`,
+      [...sectionIds],
+    );
+    return rows.map((r: { user_id: number }) => r.user_id);
+  }
+
+  private async getPostContent(dataSource: DataSource, postContentId: number): Promise<string> {
+    const rows = await dataSource.query(
+      `SELECT content FROM post_content WHERE post_content_id = $1`,
+      [postContentId],
+    );
+    return rows[0]?.content ?? '';
+  }
 
   private async getReceiversFromSections(
     sectionIds: number[],
@@ -226,16 +278,26 @@ export class SocialFeedWorker {
 
     const placeholders = sectionIds.map((_, i) => `$${i + 2}`).join(', ');
     const rows = await this.dataSource.query(
-      `SELECT DISTINCT e.student_id AS user_id
-       FROM enrollment e
-       JOIN user_sys u
-         ON e.student_id = u.user_sys_id
-         AND u.flag_valid = true
-         AND u.user_status = 'Active'
-       WHERE e.section_id IN (${placeholders})
-         AND e.flag_valid = true
-         AND e.student_id IS NOT NULL
-         AND e.student_id != $1`,
+      `SELECT DISTINCT user_id FROM (
+         -- นักเรียนใน section
+         SELECT e.student_id AS user_id
+         FROM enrollment e
+         JOIN user_sys u ON e.student_id = u.user_sys_id
+           AND u.flag_valid = true AND u.user_status = 'Active'
+         WHERE e.section_id IN (${placeholders})
+           AND e.flag_valid = true AND e.student_id IS NOT NULL
+
+         UNION
+
+         -- ครูใน section
+         SELECT se.educator_id AS user_id
+         FROM section_educator se
+         JOIN user_sys u ON se.educator_id = u.user_sys_id
+           AND u.flag_valid = true AND u.user_status = 'Active'
+         WHERE se.section_id IN (${placeholders})
+           AND se.flag_valid = true
+       ) AS receivers
+       WHERE user_id != $1`,
       [excludeActorId, ...sectionIds],
     );
     return rows.map((r: { user_id: number }) => r.user_id);

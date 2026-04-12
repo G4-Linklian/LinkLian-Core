@@ -6,13 +6,15 @@ import { NOTIFICATION_QUEUE, WORKER_CONCURRENCY, JobType } from './worker.consta
 import { SocialFeedWorker, SocialFeedJobData } from './social-feed/social-feed.worker';
 import { CommunityWorker, CommunityJobData } from './community/community.worker';
 import { ChatWorker, ChatJobData } from './chat/chat.worker';
+import { QnaWorker, QnaJobData } from './qna/qna.worker';
 
 // ─── Union ของ Job ทั้งหมด ────────────────────────────────────────────────────
 
 export type NotificationJobData =
   | SocialFeedJobData
   | CommunityJobData
-  | ChatJobData;
+  | ChatJobData
+  | QnaJobData;
 
 // ─── Main Dispatcher Worker ───────────────────────────────────────────────────
 
@@ -23,6 +25,7 @@ export class NotificationWorker implements OnModuleInit {
     private readonly socialFeedWorker: SocialFeedWorker,
     private readonly communityWorker: CommunityWorker,
     private readonly chatWorker: ChatWorker,
+    private readonly qnaWorker: QnaWorker,
     private readonly logger: AppLogger,
   ) {}
 
@@ -61,6 +64,12 @@ export class NotificationWorker implements OnModuleInit {
       case JobType.COMMUNITY_MEMBER_JOINED:
       case JobType.COMMUNITY_MEMBER_APPROVED:
         return this.communityWorker.handle(job as Job<CommunityJobData>);
+
+      // ── QnA ──────────────────────────────────────────────────────────────
+      case JobType.QNA_LIVE_STARTED:
+      case JobType.QNA_QUESTION_CREATED:
+      case JobType.QNA_QUESTION_UPDATED:
+        return this.qnaWorker.handle(job as Job<QnaJobData>);
 
       // ── Chat ─────────────────────────────────────────────────────────────
       case JobType.CHAT_MESSAGE:

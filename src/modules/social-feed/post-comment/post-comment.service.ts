@@ -337,10 +337,11 @@ export class PostCommentService {
 
       // หา post_content_id และ owner สำหรับ notification
       const postOwnerRow = await this.dataSource.query(
-        `SELECT pic.post_content_id, pc.user_sys_id AS owner_id
+        `SELECT pic.post_content_id, pc.user_sys_id AS owner_id, ARRAY_AGG(pic.section_id) AS section_ids
          FROM post_in_class pic
          JOIN post_content pc ON pc.post_content_id = pic.post_content_id
          WHERE pic.post_id = $1 AND pic.flag_valid = true
+         GROUP BY pic.post_content_id, pc.user_sys_id
          LIMIT 1`,
         [post_id],
       );
@@ -354,6 +355,7 @@ export class PostCommentService {
             actor_id: userId,
             post_content_id: postOwnerRow[0].post_content_id,
             post_owner_id: postOwnerRow[0].owner_id,
+            section_ids: postOwnerRow[0].section_ids ?? [],
           },
         });
       }

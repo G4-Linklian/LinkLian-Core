@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Headers, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Headers, Query, Body } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { Access } from 'src/common/decorators/access.decorator';
 
@@ -54,5 +54,31 @@ export class NotificationController {
   @Patch('read-all')
   markAllAsRead(@Headers('x-user-id') userId: string) {
     return this.service.markAllAsRead(Number(userId));
+  }
+
+  /**
+   * POST /notification/fcm-token
+   * บันทึก FCM token ของ device
+   */
+  @Access('notification', 'create')
+  @Post('fcm-token')
+  registerFCMToken(
+    @Headers('x-user-id') userId: string,
+    @Body() body: { token: string; device_type: string },
+  ) {
+    return this.service.registerFCMToken(Number(userId), body.token, body.device_type);
+  }
+
+  /**
+   * DELETE /notification/fcm-token
+   * ลบ FCM token เมื่อ logout
+   */
+  @Access('notification', 'delete')
+  @Delete('fcm-token')
+  removeFCMToken(
+    @Headers('x-user-id') userId: string,
+    @Body() body: { token: string },
+  ) {
+    return this.service.removeFCMToken(Number(userId), body.token);
   }
 }

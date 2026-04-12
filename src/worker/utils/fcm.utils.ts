@@ -25,9 +25,14 @@ function getFirebaseApp(): admin.app.App {
 export interface FCMPayload {
   title: string;
   body: string;
+  actor_id: string;
+  actor_name: string;
   ref_id: string;
   ref_type: string;
+  feature: string;
   notification_id: string;
+  section_id?: string;
+  community_id?: string;
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -83,8 +88,15 @@ export async function sendFCMInBatches(
       },
       data: {
         notification_id: payload.notification_id,
+        actor_id: payload.actor_id,
+        actor_name: payload.actor_name,
+        title: payload.title,
+        body: payload.body,
         ref_id: payload.ref_id,
         ref_type: payload.ref_type,
+        feature: payload.feature,
+        ...(payload.section_id ? { section_id: payload.section_id } : {}),
+        ...(payload.community_id ? { community_id: payload.community_id } : {}),
       },
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },

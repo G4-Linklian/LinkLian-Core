@@ -4,6 +4,7 @@ import { NotificationWorker } from './notification.worker';
 import { SocialFeedWorker } from './social-feed/social-feed.worker';
 import { CommunityWorker } from './community/community.worker';
 import { ChatWorker } from './chat/chat.worker';
+import { QnaWorker } from './qna/qna.worker';
 
 @Module({
   imports: [LoggerModule],
@@ -14,6 +15,7 @@ import { ChatWorker } from './chat/chat.worker';
     SocialFeedWorker,
     CommunityWorker,
     ChatWorker,
+    QnaWorker,
   ],
 })
 export class WorkerModule {}
