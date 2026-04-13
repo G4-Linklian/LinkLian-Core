@@ -45,6 +45,7 @@ import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
 import { QnaModule } from './modules/qna/qna.module';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { QnaModule } from './modules/qna/qna.module';
     RedisModule,
     AssetsModule,
     QnaModule,
+    ReportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
