@@ -64,11 +64,12 @@ export async function getAssignmentDeadline(targetDate: Date) {
         SELECT a.due_date, a.is_group, gm.*, pic.section_id, pc.title, pc.content, s.section_name, sj.subject_code, sj.name_th FROM assignment a
         LEFT JOIN student_group sg ON a.assignment_id = sg.assignment_id
         LEFT JOIN group_member gm ON sg.group_id = gm.group_id
+        LEFT JOIN submission sm ON gm.group_id = sm.group_id
         LEFT JOIN post_in_class pic ON a.post_id = pic.post_id
         LEFT JOIN post_content pc ON pc.post_content_id = pic.post_content_id
         LEFT JOIN section s ON pic.section_id = s.section_id
         LEFT JOIN subject sj ON s.subject_id = sj.subject_id
-        WHERE a.due_date = $1::timestamp
+        WHERE a.due_date = $1::timestamp AND gm.user_sys_id IS NOT NULL AND sm.submission_id IS NULL
     `
 
   try {
