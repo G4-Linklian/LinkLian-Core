@@ -37,3 +37,11 @@ export class SearchDashboardDto {
     @IsBoolean()
     flag_valid?: boolean;
 }
+
+export class ReportMonthDto {
+    @ApiPropertyOptional({ description: 'User System ID', example: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    user_sys_id?: number;
+}

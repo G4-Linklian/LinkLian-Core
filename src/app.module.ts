@@ -139,6 +139,8 @@ export class AppModule implements NestModule {
         { path: 'auth/resend-otp', method: RequestMethod.ALL },
         { path: 'auth/verify', method: RequestMethod.ALL },
         { path: 'auth/forgot-password', method: RequestMethod.ALL },
+        { path: 'dashboard/(.*)', method: RequestMethod.ALL },
+        { path: 'dashboard', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )
       .forRoutes('*');

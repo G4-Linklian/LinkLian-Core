@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dashboard } from './entities/dashboard.entity';
-import { SearchDashboardDto } from './dto/dashboard.dto';
+import { SearchDashboardDto, ReportMonthDto } from './dto/dashboard.dto';
 import { AppLogger } from '../../common/logger/app-logger.service';
 
 @Injectable()
@@ -87,6 +87,34 @@ export class DashboardService {
         }
 
         return { success: true, data: dashboard };
+    }
+
+    async getReportMonths(dto: ReportMonthDto) {
+        const queryBuilder = this.dashboardRepo.createQueryBuilder('md');
+
+        if (dto.user_sys_id) {
+            queryBuilder.andWhere('md.user_sys_id = :userSysId', {
+                userSysId: dto.user_sys_id,
+            });
+        }
+
+        queryBuilder
+        .select('DISTINCT md.report_month', 'report_month')
+        .orderBy('md.report_month', 'DESC');
+
+        try {
+            const rawResult = await queryBuilder.getRawMany();
+            const result = rawResult.map((row) => row.report_month);
+            
+            return { success: true, data: result };
+        } catch (error: unknown) {
+            this.logger.error(
+                'Error executing get report months query:',
+                'DashboardService',
+                error,
+            );
+            throw new InternalServerErrorException('Error fetching report months');
+        }
     }
 }
 
