@@ -14,7 +14,7 @@ export const semesterTask = schedules.task({
   cron: "0 21 * * *",
   // Set an optional maxDuration to prevent tasks from running indefinitely
   maxDuration: 3500,
-  run: async (payload, { ctx }) => {
+  run: async () => {
     const dateNow = new Date();
 
     const thaiDate = new Date(

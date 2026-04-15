@@ -14,7 +14,7 @@ export const deadlineProcessTask = schedules.task({
   cron: "0 20 * * *",
   // Set an optional maxDuration to prevent tasks from running indefinitely
   maxDuration: 3500,
-  run: async (payload, { ctx }) => {
+  run: async () => {
     const now = new Date();
 
     // change to Thai time

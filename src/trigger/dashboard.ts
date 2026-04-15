@@ -17,7 +17,7 @@ export const dashboardTask = schedules.task({
     cron: "0 20 1 * *",
     // Set an optional maxDuration to prevent tasks from running indefinitely
     maxDuration: 7200,
-    run: async (payload, { ctx }) => {
+    run: async () => {
         const dateNow = new Date();
 
         const thaiDate = new Date(
