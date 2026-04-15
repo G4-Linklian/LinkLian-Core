@@ -1,5 +1,5 @@
 import { logger, schedules } from "@trigger.dev/sdk/v3";
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { triggerDataSourceOptions } from "./trigger-db";
 import { AppLogger } from 'src/common/logger/app-logger.service';
 
