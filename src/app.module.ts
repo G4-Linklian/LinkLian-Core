@@ -46,6 +46,7 @@ import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
 import { QnaModule } from './modules/qna/qna.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     AssetsModule,
     QnaModule,
     DashboardModule,
+    ReportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -127,6 +129,8 @@ export class AppModule implements NestModule {
         { path: 'institution', method: RequestMethod.ALL },
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'admin', method: RequestMethod.ALL },
+        { path: 'report/(.*)', method: RequestMethod.ALL },
+        { path: 'report', method: RequestMethod.ALL },
         { path: 'assets/(.*)', method: RequestMethod.ALL },
         { path: 'assets', method: RequestMethod.ALL },
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
