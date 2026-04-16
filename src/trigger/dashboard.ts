@@ -217,7 +217,8 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                     jsonb_build_object(
                         'post_content_id', ranked_posts.post_content_id,
                         'title', ranked_posts.title,
-                        'bookmark_count', ranked_posts.bookmark_count
+                        'bookmark_count', ranked_posts.bookmark_count,
+                        'class_names', ranked_posts.class_names
                     ) ORDER BY ranked_posts.bookmark_count DESC
                 ) as posts
             FROM (
@@ -232,6 +233,13 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                             ON b.post_id = pic.post_id 
                         WHERE pic.post_content_id = pc.post_content_id
                     ) as bookmark_count,
+                    (
+                        SELECT COALESCE(jsonb_agg(DISTINCT s.section_name), '[]'::jsonb)
+                        FROM post_in_class pic
+                        JOIN section s 
+                            ON pic.section_id = s.section_id
+                        WHERE pic.post_content_id = pc.post_content_id
+                    ) as class_names,
 
                     ROW_NUMBER() OVER (
                         PARTITION BY pc.user_sys_id 
