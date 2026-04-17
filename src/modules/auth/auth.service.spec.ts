@@ -156,14 +156,15 @@ describe('AuthService', () => {
       );
     });
 
-    it('should return require_reset_password when flag_valid is false', async () => {
-      userRepo.findOne.mockResolvedValue(mockUser({ flag_valid: false }));
+    it('should return is_repassword state in login response when token is valid', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ is_repassword: false }));
 
-      const result = await service.login(loginDto);
+      const result = await service.login(loginDto, 'Bearer mock.jwt.token');
 
       expect(result).toMatchObject({
         success: true,
-        require_reset_password: true,
+        is_repassword: false,
+        access_token: 'mock.jwt.token',
       });
     });
 
@@ -450,16 +451,18 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw UnauthorizedException when current password is wrong', async () => {
+    it('should reset password even when current password is wrong', async () => {
       userRepo.findOne.mockResolvedValue(mockUser());
+      userRepo.update.mockResolvedValue({ affected: 1 } as any);
       (authUtil.verifyPassword as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.resetPassword(1, baseDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      const result = await service.resetPassword(1, baseDto);
+
+      expect(result).toMatchObject({ success: true });
+      expect(authUtil.verifyPassword).not.toHaveBeenCalled();
     });
 
-    it('should update password and set flag_valid=true on success', async () => {
+    it('should update password and set is_repassword=true on success', async () => {
       userRepo.findOne.mockResolvedValue(mockUser());
       userRepo.update.mockResolvedValue({ affected: 1 } as any);
 
@@ -468,7 +471,7 @@ describe('AuthService', () => {
       expect(authUtil.hashPassword).toHaveBeenCalledWith(baseDto.new_password);
       expect(userRepo.update).toHaveBeenCalledWith(
         1,
-        expect.objectContaining({ flag_valid: true }),
+        expect.objectContaining({ is_repassword: true }),
       );
       expect(result).toMatchObject({ success: true });
     });
@@ -485,7 +488,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should set flag_valid=false and send temp password email', async () => {
+    it('should set is_repassword=false and send temp password email', async () => {
       userRepo.findOne.mockResolvedValue(mockUser());
       userRepo.update.mockResolvedValue({ affected: 1 } as any);
 
@@ -495,7 +498,7 @@ describe('AuthService', () => {
 
       expect(userRepo.update).toHaveBeenCalledWith(
         1,
-        expect.objectContaining({ flag_valid: false }),
+        expect.objectContaining({ is_repassword: false }),
       );
       expect(mailerUtil.sendTempPasswordEmail).toHaveBeenCalledWith(
         'test@example.com',
