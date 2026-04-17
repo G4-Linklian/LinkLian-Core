@@ -159,7 +159,7 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                         SELECT COUNT(*) 
                         FROM qa_live 
                         WHERE live_by = ti.user_sys_id 
-                            AND TO_CHAR(started_at, 'YYYY-MM') = $2 
+                            AND TO_CHAR(started_at, 'YYYY-MM') = $2
                             AND flag_valid = true
                     ),
                     'total_file', (
@@ -176,7 +176,7 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                         JOIN post_content pc 
                             ON pa.post_content_id = pc.post_content_id 
                         WHERE pc.user_sys_id = ti.user_sys_id 
-                            AND TO_CHAR(pc.created_at, 'YYYY-MM') = $2 
+                            AND TO_CHAR(pc.created_at, 'YYYY-MM') = $2
                             AND pa.flag_valid = true
                     ),
                     'total_assignment', (
@@ -203,7 +203,7 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                                 LIMIT 1
                             ) 
                         WHERE pc.user_sys_id = ti.user_sys_id 
-                            AND TO_CHAR(a.due_date, 'YYYY-MM') = $2 
+                            AND TO_CHAR(a.due_date, 'YYYY-MM') = $2
                             AND a.flag_valid = true
                     )
                 ) as assets_data
@@ -218,7 +218,7 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                         'post_content_id', ranked_posts.post_content_id,
                         'title', ranked_posts.title,
                         'bookmark_count', ranked_posts.bookmark_count,
-                        'class_names', ranked_posts.class_names
+                        'section_instances', ranked_posts.section_instances
                     ) ORDER BY ranked_posts.bookmark_count DESC
                 ) as posts
             FROM (
@@ -233,13 +233,23 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                             ON b.post_id = pic.post_id 
                         WHERE pic.post_content_id = pc.post_content_id
                     ) as bookmark_count,
+                    
                     (
-                        SELECT COALESCE(jsonb_agg(DISTINCT s.section_name), '[]'::jsonb)
+                        SELECT COALESCE(jsonb_agg(
+                            jsonb_build_object(
+                                'section_name', s.section_name,
+                                'subject_name', sj.name_th,
+                                'section_id', pic.section_id,
+                                'post_id', pic.post_id
+                            )
+                        ), '[]'::jsonb)
                         FROM post_in_class pic
                         JOIN section s 
                             ON pic.section_id = s.section_id
+                        JOIN subject sj 
+                            ON s.subject_id = sj.subject_id
                         WHERE pic.post_content_id = pc.post_content_id
-                    ) as class_names,
+                    ) as section_instances,
 
                     ROW_NUMBER() OVER (
                         PARTITION BY pc.user_sys_id 
@@ -314,53 +324,69 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
                         ),
                         
                         'qa_live_insight', (
-                            SELECT jsonb_build_object(
-                                'total_live_time_second', COALESCE(SUM(EXTRACT(EPOCH FROM (ql.ended_at - ql.started_at))), 0),
-                                'total_question', COUNT(qq.qa_question_id),
-                                'top_questioned_file', (
-                                    SELECT COALESCE(jsonb_agg(
+                            SELECT 
+                                CASE WHEN agg_sub.total_cnt > 0 THEN
+                                    jsonb_build_object(
+                                        'total_live_count', agg_sub.total_cnt,
+                                        'lives', agg_sub.lives_array
+                                    )
+                                ELSE NULL END
+                            FROM (
+                                SELECT 
+                                    COUNT(ql.qa_live_id) as total_cnt,
+                                    jsonb_agg(
                                         jsonb_build_object(
-                                            'attachment_id', pa.attachment_id,
-                                            'attachment_name', pa.original_name,
-                                            'top_page', (
+                                            'qa_live_id', ql.qa_live_id,
+                                            'title', ql.live_title,
+                                            'started_at', ql.started_at,
+                                            'duration_second', COALESCE(EXTRACT(EPOCH FROM (ql.ended_at - ql.started_at)), 0),
+                                            'total_question', (
+                                                SELECT COUNT(*) 
+                                                FROM qa_question qq 
+                                                WHERE qq.qa_live_id = ql.qa_live_id 
+                                                    AND qq.flag_valid = true
+                                            ),
+                                            'top_questioned_file', (
                                                 SELECT COALESCE(jsonb_agg(
                                                     jsonb_build_object(
-                                                        'page_number', sub_page.slide_number, 
-                                                        'question_count', sub_page.cnt
+                                                        'attachment_id', pa.attachment_id,
+                                                        'attachment_name', pa.original_name,
+                                                        'top_page', (
+                                                            SELECT COALESCE(jsonb_agg(
+                                                                jsonb_build_object(
+                                                                    'page_number', sub_page.slide_number, 
+                                                                    'question_count', sub_page.cnt
+                                                                )
+                                                            ), '[]'::jsonb)
+                                                            FROM (
+                                                                SELECT qq2.slide_number, COUNT(*) as cnt
+                                                                FROM qa_question qq2
+                                                                WHERE qq2.attachment_id = pa.attachment_id 
+                                                                    AND qq2.qa_live_id = ql.qa_live_id 
+                                                                    AND qq2.flag_valid = true
+                                                                GROUP BY qq2.slide_number 
+                                                                ORDER BY cnt DESC LIMIT 5
+                                                            ) sub_page
+                                                        )
                                                     )
                                                 ), '[]'::jsonb)
-                                                FROM (
-                                                    SELECT qq2.slide_number, COUNT(*) as cnt
-                                                    FROM qa_question qq2
-                                                    WHERE qq2.attachment_id = pa.attachment_id 
-                                                        AND qq2.flag_valid = true
-                                                    GROUP BY qq2.slide_number 
-                                                    ORDER BY cnt DESC LIMIT 5
-                                                ) sub_page
+                                                FROM post_attachment pa 
+                                                WHERE pa.flag_valid = true
+                                                    AND EXISTS (
+                                                        SELECT 1 
+                                                        FROM qa_question qcheck 
+                                                        WHERE qcheck.attachment_id = pa.attachment_id 
+                                                            AND qcheck.qa_live_id = ql.qa_live_id
+                                                            AND qcheck.flag_valid = true
+                                                    )
                                             )
-                                        )
-                                    ), '[]'::jsonb)
-                                    FROM post_attachment pa 
-                                    WHERE pa.post_content_id IN (
-                                        SELECT post_content_id 
-                                        FROM post_in_class 
-                                        WHERE section_id = s.section_id
-                                    )
-                                        AND pa.flag_valid = true
-                                        AND EXISTS (
-                                            SELECT 1 
-                                            FROM qa_question qcheck 
-                                            WHERE qcheck.attachment_id = pa.attachment_id 
-                                                AND qcheck.flag_valid = true
-                                            )
-                                )
-                            )
-                            FROM qa_live ql
-                            LEFT JOIN qa_question qq 
-                                ON ql.qa_live_id = qq.qa_live_id
-                            WHERE ql.section_id = s.section_id 
-                                AND TO_CHAR(ql.started_at, 'YYYY-MM') = $2
-                            GROUP BY ql.section_id
+                                        ) ORDER BY ql.started_at DESC
+                                    ) as lives_array
+                                FROM qa_live ql
+                                WHERE ql.section_id = s.section_id 
+                                    AND TO_CHAR(ql.started_at, 'YYYY-MM') = $2
+                                    AND ql.flag_valid = true
+                            ) agg_sub
                         )
                     )
                 ) as sections_data
@@ -390,7 +416,6 @@ export async function getTeacherDashboardData(inst_id: number, report_month: str
         LEFT JOIN teacher_sections ts 
             ON t.user_sys_id = ts.teacher_id;
     `
-
     return await queryRunner.query(query, [inst_id, report_month]);
 }
 
