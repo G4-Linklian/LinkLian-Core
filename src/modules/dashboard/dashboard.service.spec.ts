@@ -24,9 +24,11 @@ const mockDashboard = (overrides: Partial<Dashboard> = {}): Dashboard =>
 
 const mockQb = {
   andWhere: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
   orderBy: jest.fn().mockReturnThis(),
   addOrderBy: jest.fn().mockReturnThis(),
   getMany: jest.fn(),
+  getRawMany: jest.fn(),
 };
 
 describe('DashboardService', () => {
@@ -58,6 +60,7 @@ describe('DashboardService', () => {
     jest.clearAllMocks();
     mockDashboardRepo.createQueryBuilder.mockReturnValue(mockQb);
     mockQb.andWhere.mockReturnThis();
+    mockQb.select.mockReturnThis();
     mockQb.orderBy.mockReturnThis();
     mockQb.addOrderBy.mockReturnThis();
   });
@@ -144,6 +147,43 @@ describe('DashboardService', () => {
       mockDashboardRepo.findOne.mockResolvedValue(null);
 
       await expect(service.findById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getReportMonths', () => {
+    it('should return distinct report months in descending order', async () => {
+      mockQb.getRawMany.mockResolvedValue([
+        { report_month: '2026-03' },
+        { report_month: '2026-02' },
+      ]);
+
+      const result = await service.getReportMonths({});
+
+      expect(result).toEqual({ success: true, data: ['2026-03', '2026-02'] });
+      expect(mockDashboardRepo.createQueryBuilder).toHaveBeenCalledWith('md');
+      expect(mockQb.select).toHaveBeenCalledWith('DISTINCT md.report_month', 'report_month');
+      expect(mockQb.orderBy).toHaveBeenCalledWith('md.report_month', 'DESC');
+      expect(mockQb.andWhere).not.toHaveBeenCalledWith('md.user_sys_id = :userSysId', {
+        userSysId: expect.any(Number),
+      });
+    });
+
+    it('should apply user_sys_id filter when provided', async () => {
+      mockQb.getRawMany.mockResolvedValue([{ report_month: '2026-01' }]);
+
+      await service.getReportMonths({ user_sys_id: 11 });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith('md.user_sys_id = :userSysId', {
+        userSysId: 11,
+      });
+    });
+
+    it('should throw InternalServerErrorException when query fails', async () => {
+      mockQb.getRawMany.mockRejectedValue(new Error('DB error'));
+
+      await expect(service.getReportMonths({})).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });
