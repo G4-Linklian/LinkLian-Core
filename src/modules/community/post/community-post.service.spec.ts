@@ -3,7 +3,6 @@ jest.mock('../../file-storage/file-storage.service');
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import {
-  BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
