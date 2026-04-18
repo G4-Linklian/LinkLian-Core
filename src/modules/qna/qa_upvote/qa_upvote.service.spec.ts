@@ -39,6 +39,7 @@ const mockQueryRunner = {
     increment: jest.fn(),
     decrement: jest.fn(),
     remove: jest.fn(),
+    findOne: jest.fn(),
   },
 };
 
@@ -115,7 +116,7 @@ describe('QAUpvote Service', () => {
       mockQueryRunner.manager.create.mockReturnValueOnce(newUpvote);
       mockQueryRunner.manager.save.mockResolvedValueOnce(newUpvote);
       mockQueryRunner.manager.increment.mockResolvedValueOnce({});
-      mockQaQuestionRepo.findOne.mockResolvedValueOnce(updatedQuestion);
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce(updatedQuestion);
 
       const result = await service.createUpvote(dto as any);
 
@@ -147,7 +148,7 @@ describe('QAUpvote Service', () => {
       mockQaQuestionUpvoteRepo.findOne.mockResolvedValueOnce(existingUpvote);
       mockQueryRunner.manager.remove.mockResolvedValueOnce({});
       mockQueryRunner.manager.decrement.mockResolvedValueOnce({});
-      mockQaQuestionRepo.findOne.mockResolvedValueOnce(updatedQuestion);
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce(updatedQuestion);
 
       const result = await service.deleteUpvote(dto as any);
 

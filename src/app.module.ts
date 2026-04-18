@@ -45,6 +45,7 @@ import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
 import { QnaModule } from './modules/qna/qna.module';
+import { ReportModule } from './modules/report/report.module';
 import { WorkerModule } from './worker/worker.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
@@ -104,6 +105,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     RedisModule,
     AssetsModule,
     QnaModule,
+    ReportModule,
     WorkerModule,
     NotificationModule,
     JwtModule.register({
@@ -129,6 +131,8 @@ export class AppModule implements NestModule {
         { path: 'institution', method: RequestMethod.ALL },
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'admin', method: RequestMethod.ALL },
+        { path: 'report/(.*)', method: RequestMethod.ALL },
+        { path: 'report', method: RequestMethod.ALL },
         { path: 'assets/(.*)', method: RequestMethod.ALL },
         { path: 'assets', method: RequestMethod.ALL },
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
