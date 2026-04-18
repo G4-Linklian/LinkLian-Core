@@ -11,6 +11,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+
+const mockAddJob = jest.fn();
 
 const mockQuery = jest.fn();
 const mockQueryRunner = {
@@ -54,11 +58,13 @@ describe('PostCommentService', () => {
         { provide: AppLogger, useValue: mockLogger },
         { provide: getRepositoryToken(PostComment), useValue: mockRepo },
         { provide: getRepositoryToken(PostCommentPath), useValue: mockRepo },
+        { provide: BullMQService, useValue: { addJob: mockAddJob } },
       ],
     }).compile();
 
     service = module.get<PostCommentService>(PostCommentService);
     jest.clearAllMocks();
+    mockAddJob.mockReset();
     mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
   });
 
@@ -180,7 +186,9 @@ describe('PostCommentService', () => {
     it('should create a root comment successfully', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 1 }]) // insert comment
-        .mockResolvedValueOnce([]); // insert self path
+        .mockResolvedValueOnce([]);                  // insert self path
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -196,8 +204,10 @@ describe('PostCommentService', () => {
     it('should create a reply comment with parent_id', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 2 }]) // insert comment
-        .mockResolvedValueOnce([]) // insert self path
-        .mockResolvedValueOnce([]); // insert reply paths
+        .mockResolvedValueOnce([])                   // insert self path
+        .mockResolvedValueOnce([]);                  // insert reply paths
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -213,6 +223,8 @@ describe('PostCommentService', () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 3 }])
         .mockResolvedValueOnce([]);
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -233,6 +245,66 @@ describe('PostCommentService', () => {
       ).rejects.toThrow(InternalServerErrorException);
 
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should enqueue SOCIAL_FEED_COMMENT notification for root comment', async () => {
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ comment_id: 5 }]) // insert comment
+        .mockResolvedValueOnce([]);                  // insert self path
+
+      // post owner query
+      mockQuery.mockResolvedValueOnce([{
+        post_content_id: 20,
+        owner_id: 3,
+        section_ids: [1, 2],
+      }]);
+
+      await service.createPostComment(1, { post_id: 10, comment_text: 'Hello' });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.SOCIAL_FEED_COMMENT,
+          data: expect.objectContaining({
+            type: JobType.SOCIAL_FEED_COMMENT,
+            actor_id: 1,
+            post_content_id: 20,
+            post_owner_id: 3,
+          }),
+        }),
+      );
+    });
+
+    it('should enqueue SOCIAL_FEED_COMMENT_REPLY notification for reply', async () => {
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ comment_id: 6 }]) // insert comment
+        .mockResolvedValueOnce([])                  // insert self path
+        .mockResolvedValueOnce([]);                 // insert ancestor paths
+
+      // post owner
+      mockQuery
+        .mockResolvedValueOnce([{ post_content_id: 20, owner_id: 3, section_ids: [1] }])
+        // parent comment owner
+        .mockResolvedValueOnce([{ owner_id: 7 }]);
+
+      await service.createPostComment(1, {
+        post_id: 10,
+        comment_text: 'Reply',
+        parent_id: 4,
+      });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.SOCIAL_FEED_COMMENT_REPLY,
+          data: expect.objectContaining({
+            type: JobType.SOCIAL_FEED_COMMENT_REPLY,
+            actor_id: 1,
+            post_content_id: 20,
+            parent_owner_id: 7,
+          }),
+        }),
+      );
     });
   });
 

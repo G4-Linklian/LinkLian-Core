@@ -11,6 +11,10 @@ import { CommunityPostService } from './community-post.service';
 import { CommunityService } from '../core/community.service';
 import { FileStorageService } from '../../file-storage/file-storage.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+
+const mockAddJob = jest.fn();
 
 describe('CommunityPostService', () => {
   let service: CommunityPostService;
@@ -48,9 +52,12 @@ describe('CommunityPostService', () => {
         { provide: DataSource, useValue: dataSource },
         { provide: CommunityService, useValue: communityService },
         { provide: FileStorageService, useValue: fileStorageService },
-        { provide: AppLogger, useValue: { error: jest.fn() } },
+        { provide: AppLogger, useValue: { error: jest.fn(), log: jest.fn(), warn: jest.fn() } },
+        { provide: BullMQService, useValue: { addJob: mockAddJob } },
       ],
     }).compile();
+
+    mockAddJob.mockReset();
 
     service = module.get(CommunityPostService);
   });
@@ -75,6 +82,30 @@ describe('CommunityPostService', () => {
       expect(result.success).toBe(true);
       expect(result.data.post_commu_id).toBe(100);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should enqueue COMMUNITY_POST_CREATED notification after creating post', async () => {
+      queryRunner.query
+        .mockResolvedValueOnce([{ status: 'active' }])
+        .mockResolvedValueOnce([{ post_commu_id: 200 }]);
+
+      communityService.checkReadPermission.mockResolvedValue(undefined);
+      dataSource.query.mockResolvedValue([{ post_commu_id: 200, content: 'test notification' }]);
+
+      await service.createPost(7, { community_id: 3, content: 'test notification' });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.COMMUNITY_POST_CREATED,
+          data: expect.objectContaining({
+            type: JobType.COMMUNITY_POST_CREATED,
+            actor_id: 7,
+            community_id: 3,
+            post_id: 200,
+          }),
+        }),
+      );
     });
 
     it('should throw if content empty', async () => {
@@ -163,6 +194,31 @@ describe('CommunityPostService', () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it('should enqueue COMMUNITY_POST_UPDATED notification after updating post', async () => {
+      queryRunner.query
+        .mockResolvedValueOnce([{ user_sys_id: 1, community_id: 5 }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      communityService.checkReadPermission.mockResolvedValue(undefined);
+      dataSource.query.mockResolvedValue([{ post_commu_id: 100, content: 'updated' }]);
+
+      await service.updatePost(1, 100, { content: 'updated' });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.COMMUNITY_POST_UPDATED,
+          data: expect.objectContaining({
+            type: JobType.COMMUNITY_POST_UPDATED,
+            actor_id: 1,
+            post_id: 100,
+          }),
+        }),
+      );
     });
 
     it('should throw if not owner', async () => {
