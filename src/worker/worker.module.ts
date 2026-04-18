@@ -5,6 +5,7 @@ import { SocialFeedWorker } from './social-feed/social-feed.worker';
 import { CommunityWorker } from './community/community.worker';
 import { ChatWorker } from './chat/chat.worker';
 import { QnaWorker } from './qna/qna.worker';
+import { FCMConsumerService } from './fcm-consumer.service';
 
 @Module({
   imports: [LoggerModule],
@@ -16,6 +17,8 @@ import { QnaWorker } from './qna/qna.worker';
     CommunityWorker,
     ChatWorker,
     QnaWorker,
+    // Background notification consumer (RabbitMQ → Firebase)
+    FCMConsumerService,
   ],
 })
 export class WorkerModule {}

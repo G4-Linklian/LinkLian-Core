@@ -16,12 +16,12 @@ import {
   SearchChatDto,
   CreateMessageDto,
   SearchMessageDto,
-  ChatSendEvent,
   SearchUserForChatDto,
 } from './dto/chat.dto';
 import { AppLogger } from 'src/common/logger/app-logger.service';
-import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
 import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
+import { NOTIFICATION_QUEUE, JobType } from 'src/worker/worker.constants';
 
 @Injectable()
 export class ChatService {
@@ -34,7 +34,7 @@ export class ChatService {
     private userSysChatNormalizeRepo: Repository<UserSysChatNormalize>,
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-    private readonly rabbitMQService: RabbitMQService,
+    private readonly bullmq: BullMQService,
     private readonly fileStorageService: FileStorageService,
   ) { }
 
@@ -532,29 +532,38 @@ export class ChatService {
   }
 
   /**
-   * Send message event to RabbitMQ for socket delivery
+   * Enqueue chat message job via BullMQ
+   * ChatWorker will handle: save notification to DB, publish to RabbitMQ (foreground + background)
    */
   private async sendMessageToRabbitMQ(message: Message): Promise<void> {
-    const eventMessage: ChatSendEvent = {
-      type: 'CHAT_DELIVER',
-      payload: {
-        chat_id: message.chat_id,
-        sender_id: message.sender_id,
-        content: message.content,
-        reply_id: message.reply_id ?? null,
-        file_url: (message.file as object[]) ?? [],
-        created_at: message.created_at,
-      },
-    };
-
-    this.logger.debug(
-      'Publishing message to RabbitMQ:',
-      'ChatService',
-      eventMessage,
+    // Find the other participant in the chat (receiver)
+    const receiverRows = await this.dataSource.query(
+      `SELECT user_sys_id FROM user_sys_chat_normalize
+       WHERE chat_id = $1 AND user_sys_id <> $2
+       LIMIT 1`,
+      [message.chat_id, message.sender_id],
     );
+    const receiveUserId: number = receiverRows?.[0]?.user_sys_id ?? 0;
 
-    await this.rabbitMQService.publish('linklian_events', 'chat.deliver', eventMessage);
+    await this.bullmq.addJob({
+      queue: NOTIFICATION_QUEUE,
+      job: JobType.CHAT_MESSAGE,
+      data: {
+        type: JobType.CHAT_MESSAGE,
+        sender_id: message.sender_id,
+        receiver_ids: receiveUserId ? [receiveUserId] : [],
+        chat_id: message.chat_id,
+        message_id: message.message_id,
+        content: message.content,
+        created_at: message.created_at?.toISOString() ?? new Date().toISOString(),
+        reply_id: message.reply_id ?? undefined,
+      },
+    });
 
-    this.logger.debug('Message published to RabbitMQ successfully', 'ChatService');
+    this.logger.debug('Chat message job enqueued to BullMQ', 'ChatService', {
+      chat_id: message.chat_id,
+      sender_id: message.sender_id,
+      receiver_id: receiveUserId,
+    });
   }
 }

@@ -3,14 +3,14 @@ import { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
 import { RabbitMQService } from '../../common/rabbitmq/rabbitmq.service';
 import { AppLogger } from '../../common/logger/app-logger.service';
-import { JobType } from '../worker.constants';
+import { JobType, RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, RABBITMQ_ROUTING_KEY_FIREBASE } from '../worker.constants';
 import {
   getActorName,
   saveNotification,
   saveReceivers,
   publishInBatches,
+  getMembersFromSections,
 } from '../utils/notification.utils';
-import { sendFCMInBatches } from '../utils/fcm.utils';
 
 // ─── Job Payload Types ────────────────────────────────────────────────────────
 
@@ -97,6 +97,7 @@ export class QnaWorker {
     await saveReceivers(this.dataSource, notificationId, receiverIds);
 
     await Promise.all([
+      // Foreground: Socket → WebSocket banner
       publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
         type: 'NOTIFICATION',
         payload: {
@@ -110,16 +111,22 @@ export class QnaWorker {
           ref_type: 'qna-live',
           feature: 'qna',
         },
-      })),
-      sendFCMInBatches(this.dataSource, receiverIds, {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(qa_live_id),
-        ref_type: 'qna-live',
-        feature: 'qna',
-        notification_id: String(notificationId),
-      }),
+      }), RABBITMQ_ROUTING_KEY_SOCKET),
+      // Background: FCMConsumer → Firebase push notification
+      publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
+        type: 'FCM_SEND',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(userId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(qa_live_id),
+          ref_type: 'qna-live',
+          feature: 'qna',
+        },
+      }), RABBITMQ_ROUTING_KEY_FIREBASE),
     ]);
 
     this.logger.log('Completed', ctx, { qa_live_id, total: receiverIds.length });
@@ -131,7 +138,7 @@ export class QnaWorker {
 
     const [actorName, receiverIds] = await Promise.all([
       getActorName(this.dataSource, actor_id),
-      this.getAllMembersFromSection(section_id, actor_id),
+      getMembersFromSections(this.dataSource, [section_id], actor_id),
     ]);
 
     if (receiverIds.length === 0) {
@@ -146,12 +153,13 @@ export class QnaWorker {
       actorId: actor_id,
       type: 'question-created',
       feature: 'qna',
-      notiData: { title, body, actor_name: actorName, ref_id: String(qa_question_id), ref_type: 'qna-question' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(qa_question_id), ref_type: 'qna-question', qa_live_id: String(qa_live_id) },
     });
 
     await saveReceivers(this.dataSource, notificationId, receiverIds);
 
     await Promise.all([
+      // Foreground: Socket → WebSocket banner
       publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
         type: 'NOTIFICATION',
         payload: {
@@ -165,16 +173,22 @@ export class QnaWorker {
           ref_type: 'qna-question',
           feature: 'qna',
         },
-      })),
-      sendFCMInBatches(this.dataSource, receiverIds, {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(qa_question_id),
-        ref_type: 'qna-question',
-        feature: 'qna',
-        notification_id: String(notificationId),
-      }),
+      }), RABBITMQ_ROUTING_KEY_SOCKET),
+      // Background: FCMConsumer → Firebase push notification
+      publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
+        type: 'FCM_SEND',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(userId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(qa_question_id),
+          ref_type: 'qna-question',
+          feature: 'qna',
+        },
+      }), RABBITMQ_ROUTING_KEY_FIREBASE),
     ]);
 
     this.logger.log('Completed', ctx, { qa_question_id, total: receiverIds.length });
@@ -195,35 +209,34 @@ export class QnaWorker {
       actorId: actor_id,
       type: 'question-updated',
       feature: 'qna',
-      notiData: { title, body, actor_name: actorName, ref_id: String(qa_question_id), ref_type: 'qna-question' },
+      notiData: { title, body, actor_name: actorName, ref_id: String(qa_question_id), ref_type: 'qna-question', qa_live_id: String(qa_live_id) },
     });
 
     await saveReceivers(this.dataSource, notificationId, [asker_id]);
     await job.updateProgress(50);
 
+    const notificationPayload = {
+      notification_id: String(notificationId),
+      receive_user_id: String(asker_id),
+      actor_id: String(actor_id),
+      actor_name: actorName,
+      title,
+      body,
+      ref_id: String(qa_question_id),
+      ref_type: 'qna-question',
+      feature: 'qna',
+    };
+
     await Promise.all([
-      this.rabbitmq.publish('linklian_events', 'notification.send', {
+      // Foreground: Socket → WebSocket banner
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, {
         type: 'NOTIFICATION',
-        payload: {
-          notification_id: String(notificationId),
-          receive_user_id: String(asker_id),
-          actor_id: String(actor_id),
-          actor_name: actorName,
-          title,
-          body,
-          ref_id: String(qa_question_id),
-          ref_type: 'qna-question',
-          feature: 'qna',
-        },
+        payload: notificationPayload,
       }),
-      sendFCMInBatches(this.dataSource, [asker_id], {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(qa_question_id),
-        ref_type: 'qna-question',
-        feature: 'qna',
-        notification_id: String(notificationId),
+      // Background: FCMConsumer → Firebase push notification
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, {
+        type: 'FCM_SEND',
+        payload: notificationPayload,
       }),
     ]);
 
@@ -232,32 +245,6 @@ export class QnaWorker {
   }
 
   // ─── Queries ───────────────────────────────────────────────────────────────
-
-  private async getAllMembersFromSection(
-    sectionId: number,
-    excludeActorId: number,
-  ): Promise<number[]> {
-    const rows = await this.dataSource.query(
-      `SELECT DISTINCT user_id FROM (
-         SELECT e.student_id AS user_id
-         FROM enrollment e
-         JOIN user_sys u ON e.student_id = u.user_sys_id
-           AND u.flag_valid = true AND u.user_status = 'Active'
-         WHERE e.section_id = $1 AND e.flag_valid = true AND e.student_id IS NOT NULL
-
-         UNION
-
-         SELECT se.educator_id AS user_id
-         FROM section_educator se
-         JOIN user_sys u ON se.educator_id = u.user_sys_id
-           AND u.flag_valid = true AND u.user_status = 'Active'
-         WHERE se.section_id = $1 AND se.flag_valid = true
-       ) AS members
-       WHERE user_id != $2`,
-      [sectionId, excludeActorId],
-    );
-    return rows.map((r: { user_id: number }) => r.user_id);
-  }
 
   private async getStudentsFromSection(
     sectionId: number,

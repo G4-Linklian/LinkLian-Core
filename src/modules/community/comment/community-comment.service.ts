@@ -275,17 +275,44 @@ export class CommunityCommentService {
       );
 
       if (postOwnerRow.length > 0) {
-        this.bullmq.addJob({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.COMMUNITY_COMMENT,
-          data: {
-            type: JobType.COMMUNITY_COMMENT,
-            actor_id: userId,
-            post_id: post_commu_id,
-            post_owner_id: postOwnerRow[0].owner_id,
-            community_id: postOwnerRow[0].community_id,
-          },
-        });
+        if (parent_id) {
+          // Reply → แจ้งเจ้าของ parent comment
+          const parentOwnerRow = await this.dataSource.query(
+            `SELECT user_sys_id AS owner_id
+             FROM community_comment
+             WHERE commu_comment_id = $1 AND flag_valid = true
+             LIMIT 1`,
+            [parent_id],
+          );
+
+          if (parentOwnerRow.length > 0) {
+            this.bullmq.addJob({
+              queue: NOTIFICATION_QUEUE,
+              job: JobType.COMMUNITY_COMMENT_REPLY,
+              data: {
+                type: JobType.COMMUNITY_COMMENT_REPLY,
+                actor_id: userId,
+                post_id: post_commu_id,
+                parent_comment_id: parent_id,
+                parent_owner_id: parentOwnerRow[0].owner_id,
+                community_id: postOwnerRow[0].community_id,
+              },
+            });
+          }
+        } else {
+          // Comment ธรรมดา → แจ้งเจ้าของโพสต์
+          this.bullmq.addJob({
+            queue: NOTIFICATION_QUEUE,
+            job: JobType.COMMUNITY_COMMENT,
+            data: {
+              type: JobType.COMMUNITY_COMMENT,
+              actor_id: userId,
+              post_id: post_commu_id,
+              post_owner_id: postOwnerRow[0].owner_id,
+              community_id: postOwnerRow[0].community_id,
+            },
+          });
+        }
       }
 
       return {

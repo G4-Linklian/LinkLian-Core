@@ -15,12 +15,14 @@ import {
 } from '@nestjs/common';
 
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiHeader } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiHeader, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { CommunityPostService } from './community-post.service';
 import { CreateCommunityPostDto } from './dto/create-community-post.dto';
 import { Access } from 'src/common/decorators/access.decorator';
 
+@ApiTags('Community Post')
+@ApiBearerAuth('access-token')
 @Controller('community/post')
 export class CommunityPostController {
   constructor(private service: CommunityPostService) {}

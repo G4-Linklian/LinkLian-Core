@@ -3,14 +3,14 @@ import { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
 import { RabbitMQService } from '../../common/rabbitmq/rabbitmq.service';
 import { AppLogger } from '../../common/logger/app-logger.service';
-import { JobType } from '../worker.constants';
+import { JobType, RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, RABBITMQ_ROUTING_KEY_FIREBASE } from '../worker.constants';
 import {
   getActorName,
   saveNotification,
   saveReceivers,
   publishInBatches,
+  translatePostType,
 } from '../utils/notification.utils';
-import { sendFCMInBatches } from '../utils/fcm.utils';
 
 // ─── Job Payload Types ────────────────────────────────────────────────────────
 
@@ -56,10 +56,20 @@ export type CommunityMemberApprovedData = {
   approver_name?: string;
 };
 
+export type CommunityCommentReplyData = {
+  type: typeof JobType.COMMUNITY_COMMENT_REPLY;
+  actor_id: number;
+  post_id: number;
+  parent_comment_id: number;
+  parent_owner_id: number;
+  community_id: number;
+};
+
 export type CommunityJobData =
   | CommunityPostCreatedData
   | CommunityPostUpdatedData
   | CommunityCommentData
+  | CommunityCommentReplyData
   | CommunityMemberJoinedData
   | CommunityMemberApprovedData;
 
@@ -83,6 +93,8 @@ export class CommunityWorker {
         return this.handlePostUpdated(job as Job<CommunityPostUpdatedData>);
       case JobType.COMMUNITY_COMMENT:
         return this.handleComment(job as Job<CommunityCommentData>);
+      case JobType.COMMUNITY_COMMENT_REPLY:
+        return this.handleCommentReply(job as Job<CommunityCommentReplyData>);
       case JobType.COMMUNITY_MEMBER_JOINED:
         return this.handleMemberJoined(job as Job<CommunityMemberJoinedData>);
       case JobType.COMMUNITY_MEMBER_APPROVED:
@@ -106,7 +118,7 @@ export class CommunityWorker {
       return;
     }
 
-    const body = `${actorName} โพสต์ ${post_type} ใหม่ใน community`;
+    const body = `${actorName} โพสต์ ${translatePostType(post_type)} ใหม่ใน community`;
 
     const notificationId = await saveNotification(this.dataSource, {
       actorId: actor_id,
@@ -118,6 +130,7 @@ export class CommunityWorker {
     await saveReceivers(this.dataSource, notificationId, receiverIds);
 
     await Promise.all([
+      // Foreground: Socket → WebSocket banner
       publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
         type: 'NOTIFICATION',
         payload: {
@@ -132,17 +145,23 @@ export class CommunityWorker {
           feature: 'community',
           community_id: String(community_id),
         },
-      })),
-      sendFCMInBatches(this.dataSource, receiverIds, {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(post_id),
-        ref_type: 'community-post',
-        feature: 'community',
-        notification_id: String(notificationId),
-        community_id: String(community_id),
-      }),
+      }), RABBITMQ_ROUTING_KEY_SOCKET),
+      // Background: FCMConsumer → Firebase push notification
+      publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
+        type: 'FCM_SEND',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(userId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(post_id),
+          ref_type: 'community-post',
+          feature: 'community',
+          community_id: String(community_id),
+        },
+      }), RABBITMQ_ROUTING_KEY_FIREBASE),
     ]);
 
     this.logger.log('Completed', ctx, { post_id, total: receiverIds.length });
@@ -162,7 +181,7 @@ export class CommunityWorker {
       return;
     }
 
-    const body = `${actorName} อัปเดต ${post_type} ใน community`;
+    const body = `${actorName} อัปเดต ${translatePostType(post_type)} ใน community`;
 
     const notificationId = await saveNotification(this.dataSource, {
       actorId: actor_id,
@@ -174,6 +193,7 @@ export class CommunityWorker {
     await saveReceivers(this.dataSource, notificationId, receiverIds);
 
     await Promise.all([
+      // Foreground: Socket → WebSocket banner
       publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
         type: 'NOTIFICATION',
         payload: {
@@ -188,17 +208,23 @@ export class CommunityWorker {
           feature: 'community',
           community_id: String(community_id),
         },
-      })),
-      sendFCMInBatches(this.dataSource, receiverIds, {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(post_id),
-        ref_type: 'community-post',
-        feature: 'community',
-        notification_id: String(notificationId),
-        community_id: String(community_id),
-      }),
+      }), RABBITMQ_ROUTING_KEY_SOCKET),
+      // Background: FCMConsumer → Firebase push notification
+      publishInBatches(this.rabbitmq, job, receiverIds, (userId) => ({
+        type: 'FCM_SEND',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(userId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(post_id),
+          ref_type: 'community-post',
+          feature: 'community',
+          community_id: String(community_id),
+        },
+      }), RABBITMQ_ROUTING_KEY_FIREBASE),
     ]);
 
     this.logger.log('Completed', ctx, { post_id, total: receiverIds.length });
@@ -210,7 +236,11 @@ export class CommunityWorker {
 
     if (actor_id === post_owner_id) return;
 
-    const actorName = await getActorName(this.dataSource, actor_id);
+    const [actorName, postTitle] = await Promise.all([
+      getActorName(this.dataSource, actor_id),
+      this.getCommunityPostContent(post_id),
+    ]);
+
     const title = 'มีคอมเมนต์ใหม่';
     const body = `${actorName} แสดงความคิดเห็นในโพสต์ community ของคุณ`;
 
@@ -218,42 +248,99 @@ export class CommunityWorker {
       actorId: actor_id,
       type: 'comment',
       feature: 'community',
-      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post', community_id: String(community_id) },
+      notiData: { title, body, actor_name: actorName, ref_id: String(post_id), ref_type: 'community-post', community_id: String(community_id), post_title: postTitle },
     });
 
     await saveReceivers(this.dataSource, notificationId, [post_owner_id]);
     await job.updateProgress(50);
 
+    const notificationPayload = {
+      notification_id: String(notificationId),
+      receive_user_id: String(post_owner_id),
+      actor_id: String(actor_id),
+      actor_name: actorName,
+      title,
+      body,
+      ref_id: String(post_id),
+      ref_type: 'community-post',
+      feature: 'community',
+      community_id: String(community_id),
+    };
+
     await Promise.all([
-      this.rabbitmq.publish('linklian_events', 'notification.send', {
+      // Foreground: Socket → WebSocket banner
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, {
         type: 'NOTIFICATION',
-        payload: {
-          notification_id: String(notificationId),
-          receive_user_id: String(post_owner_id),
-          actor_id: String(actor_id),
-          actor_name: actorName,
-          title,
-          body,
-          ref_id: String(post_id),
-          ref_type: 'community-post',
-          feature: 'community',
-          community_id: String(community_id),
-        },
+        payload: notificationPayload,
       }),
-      sendFCMInBatches(this.dataSource, [post_owner_id], {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(post_id),
-        ref_type: 'community-post',
-        feature: 'community',
-        notification_id: String(notificationId),
-        community_id: String(community_id),
+      // Background: FCMConsumer → Firebase push notification
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, {
+        type: 'FCM_SEND',
+        payload: notificationPayload,
       }),
     ]);
 
     await job.updateProgress(100);
     this.logger.log('Completed', ctx, { post_id });
+  }
+
+  private async handleCommentReply(job: Job<CommunityCommentReplyData>): Promise<void> {
+    const { actor_id, post_id, parent_comment_id, parent_owner_id, community_id } = job.data;
+    const ctx = 'CommunityWorker:comment-reply';
+
+    // ไม่แจ้งเตือนถ้า reply ตัวเอง
+    if (actor_id === parent_owner_id) return;
+
+    const actorName = await getActorName(this.dataSource, actor_id);
+
+    const title = 'มีการตอบกลับความคิดเห็นของคุณ';
+    const body = `${actorName} ตอบกลับความคิดเห็นของคุณ`;
+
+    const notificationId = await saveNotification(this.dataSource, {
+      actorId: actor_id,
+      type: 'comment-reply',
+      feature: 'community',
+      notiData: {
+        title,
+        body,
+        actor_name: actorName,
+        ref_id: String(post_id),
+        ref_type: 'community-comment',
+        community_id: String(community_id),
+      },
+    });
+
+    await saveReceivers(this.dataSource, notificationId, [parent_owner_id]);
+    await job.updateProgress(50);
+
+    const notificationPayload = {
+      notification_id: String(notificationId),
+      receive_user_id: String(parent_owner_id),
+      actor_id: String(actor_id),
+      actor_name: actorName,
+      title,
+      body,
+      ref_id: String(post_id),
+      ref_type: 'community-comment',
+      feature: 'community',
+      community_id: String(community_id),
+    };
+
+    await Promise.all([
+      // Foreground: Socket → WebSocket banner
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, {
+        type: 'NOTIFICATION',
+        payload: notificationPayload,
+      }),
+      // Background: FCMConsumer → Firebase push notification
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, {
+        type: 'FCM_SEND',
+        payload: notificationPayload,
+      }),
+    ]);
+
+    await job.updateProgress(100);
+    this.logger.log('Completed', ctx, { post_id, parent_comment_id });
   }
 
   private async handleMemberJoined(job: Job<CommunityMemberJoinedData>): Promise<void> {
@@ -281,31 +368,36 @@ export class CommunityWorker {
     await job.updateProgress(50);
 
     await Promise.all([
-      ...ownerIds.map((ownerId) =>
-        this.rabbitmq.publish('linklian_events', 'notification.send', {
-          type: 'NOTIFICATION',
-          payload: {
-            notification_id: String(notificationId),
-            receive_user_id: String(ownerId),
-            actor_id: String(actor_id),
-            actor_name: actorName,
-            title,
-            body,
-            ref_id: String(community_id),
-            ref_type: 'community',
-            feature: 'community',
-          },
-        }),
-      ),
-      sendFCMInBatches(this.dataSource, ownerIds, {
-        title, body,
-        actor_id: String(actor_id),
-        actor_name: actorName,
-        ref_id: String(community_id),
-        ref_type: 'community',
-        feature: 'community',
-        notification_id: String(notificationId),
-      }),
+      // Foreground: Socket → WebSocket banner
+      publishInBatches(this.rabbitmq, job, ownerIds, (ownerId) => ({
+        type: 'NOTIFICATION',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(ownerId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(community_id),
+          ref_type: 'community',
+          feature: 'community',
+        },
+      }), RABBITMQ_ROUTING_KEY_SOCKET),
+      // Background: FCMConsumer → Firebase push notification
+      publishInBatches(this.rabbitmq, job, ownerIds, (ownerId) => ({
+        type: 'FCM_SEND',
+        payload: {
+          notification_id: String(notificationId),
+          receive_user_id: String(ownerId),
+          actor_id: String(actor_id),
+          actor_name: actorName,
+          title,
+          body,
+          ref_id: String(community_id),
+          ref_type: 'community',
+          feature: 'community',
+        },
+      }), RABBITMQ_ROUTING_KEY_FIREBASE),
     ]);
 
     await job.updateProgress(100);
@@ -330,29 +422,28 @@ export class CommunityWorker {
     await saveReceivers(this.dataSource, notificationId, [target_user_id]);
     await job.updateProgress(50);
 
+    const notificationPayload = {
+      notification_id: String(notificationId),
+      receive_user_id: String(target_user_id),
+      actor_id: String(approver_id),
+      actor_name: resolvedApproverName,
+      title,
+      body,
+      ref_id: String(community_id),
+      ref_type: 'community',
+      feature: 'community',
+    };
+
     await Promise.all([
-      this.rabbitmq.publish('linklian_events', 'notification.send', {
+      // Foreground: Socket → WebSocket banner
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, {
         type: 'NOTIFICATION',
-        payload: {
-          notification_id: String(notificationId),
-          receive_user_id: String(target_user_id),
-          actor_id: String(approver_id),
-          actor_name: resolvedApproverName,
-          title,
-          body,
-          ref_id: String(community_id),
-          ref_type: 'community',
-          feature: 'community',
-        },
+        payload: notificationPayload,
       }),
-      sendFCMInBatches(this.dataSource, [target_user_id], {
-        title, body,
-        actor_id: String(approver_id),
-        actor_name: resolvedApproverName,
-        ref_id: String(community_id),
-        ref_type: 'community',
-        feature: 'community',
-        notification_id: String(notificationId),
+      // Background: FCMConsumer → Firebase push notification
+      this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, {
+        type: 'FCM_SEND',
+        payload: notificationPayload,
       }),
     ]);
 
@@ -377,6 +468,14 @@ export class CommunityWorker {
       [communityId, excludeActorId],
     );
     return rows.map((r: { user_id: number }) => r.user_id);
+  }
+
+  private async getCommunityPostContent(postCommuId: number): Promise<string> {
+    const rows = await this.dataSource.query(
+      `SELECT content FROM post_in_community WHERE post_commu_id = $1`,
+      [postCommuId],
+    );
+    return rows[0]?.content ?? '';
   }
 
   private async getCommunityOwners(communityId: number): Promise<number[]> {

@@ -347,17 +347,44 @@ export class PostCommentService {
       );
 
       if (postOwnerRow.length > 0) {
-        this.bullmq.addJob({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.SOCIAL_FEED_COMMENT,
-          data: {
-            type: JobType.SOCIAL_FEED_COMMENT,
-            actor_id: userId,
-            post_content_id: postOwnerRow[0].post_content_id,
-            post_owner_id: postOwnerRow[0].owner_id,
-            section_ids: postOwnerRow[0].section_ids ?? [],
-          },
-        });
+        if (parent_id) {
+          // Reply → หาเจ้าของ parent comment แล้วแจ้งเตือนเขา
+          const parentOwnerRow = await this.dataSource.query(
+            `SELECT user_sys_id AS owner_id
+             FROM post_comment
+             WHERE comment_id = $1 AND flag_valid = true
+             LIMIT 1`,
+            [parent_id],
+          );
+
+          if (parentOwnerRow.length > 0) {
+            this.bullmq.addJob({
+              queue: NOTIFICATION_QUEUE,
+              job: JobType.SOCIAL_FEED_COMMENT_REPLY,
+              data: {
+                type: JobType.SOCIAL_FEED_COMMENT_REPLY,
+                actor_id: userId,
+                post_content_id: postOwnerRow[0].post_content_id,
+                parent_comment_id: parent_id,
+                parent_owner_id: parentOwnerRow[0].owner_id,
+                section_ids: postOwnerRow[0].section_ids ?? [],
+              },
+            });
+          }
+        } else {
+          // Comment ธรรมดา → แจ้งเจ้าของโพสต์ + ครูใน section
+          this.bullmq.addJob({
+            queue: NOTIFICATION_QUEUE,
+            job: JobType.SOCIAL_FEED_COMMENT,
+            data: {
+              type: JobType.SOCIAL_FEED_COMMENT,
+              actor_id: userId,
+              post_content_id: postOwnerRow[0].post_content_id,
+              post_owner_id: postOwnerRow[0].owner_id,
+              section_ids: postOwnerRow[0].section_ids ?? [],
+            },
+          });
+        }
       }
 
       return {

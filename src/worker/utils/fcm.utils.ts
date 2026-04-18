@@ -6,8 +6,21 @@ import { PUBLISH_BATCH_SIZE } from '../worker.constants';
 
 let initialized = false;
 
+function validateFirebaseEnv(): void {
+  const missing = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'].filter(
+    (key) => !process.env[key],
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Firebase Admin SDK: missing required environment variables: ${missing.join(', ')}. ` +
+        'FCM notifications will not work until these are set.',
+    );
+  }
+}
+
 function getFirebaseApp(): admin.app.App {
   if (!initialized) {
+    validateFirebaseEnv();
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
@@ -31,8 +44,13 @@ export interface FCMPayload {
   ref_type: string;
   feature: string;
   notification_id: string;
+  receive_user_id: string;      // ใช้ระบุ device ที่รับ + ส่งกลับไปใน data block ให้ Flutter
   section_id?: string;
   community_id?: string;
+  post_type?: string;           // social-feed: 'assignment' | 'announcement' | 'question'
+  post_title?: string;          // ชื่อโพสต์ที่ถูก comment
+  days_until_deadline?: number; // จำนวนวันก่อนถึงกำหนดส่ง assignment
+  qa_live_id?: string;          // QnA Live ID สำหรับ navigate
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -88,6 +106,7 @@ export async function sendFCMInBatches(
       },
       data: {
         notification_id: payload.notification_id,
+        receive_user_id: payload.receive_user_id,
         actor_id: payload.actor_id,
         actor_name: payload.actor_name,
         title: payload.title,
@@ -95,8 +114,12 @@ export async function sendFCMInBatches(
         ref_id: payload.ref_id,
         ref_type: payload.ref_type,
         feature: payload.feature,
-        ...(payload.section_id ? { section_id: payload.section_id } : {}),
-        ...(payload.community_id ? { community_id: payload.community_id } : {}),
+        ...(payload.section_id && { section_id: payload.section_id }),
+        ...(payload.community_id && { community_id: payload.community_id }),
+        ...(payload.post_type && { post_type: payload.post_type }),
+        ...(payload.post_title && { post_title: payload.post_title }),
+        ...(payload.days_until_deadline != null && { days_until_deadline: String(payload.days_until_deadline) }),
+        ...(payload.qa_live_id && { qa_live_id: payload.qa_live_id }),
       },
       android: { priority: 'high' },
       apns: { payload: { aps: { sound: 'default' } } },
