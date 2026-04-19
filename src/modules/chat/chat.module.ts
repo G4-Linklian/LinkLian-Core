@@ -6,12 +6,12 @@ import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
 import { FileStorageModule } from '../file-storage/file-storage.module';
-import { BullMQModule } from 'src/common/bullmq/bullmq.module';
+import { ChatNotificationService } from './chat-notification.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize]), FileStorageModule, BullMQModule],
+  imports: [TypeOrmModule.forFeature([Chat, Message, UserSysChatNormalize]), FileStorageModule],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [ChatService, ChatNotificationService],
   exports: [ChatService],
 })
 export class ChatModule { }

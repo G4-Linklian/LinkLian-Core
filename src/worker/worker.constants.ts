@@ -40,8 +40,6 @@ export const JobType = {
   QNA_QUESTION_CREATED: 'qna.question-created',
   QNA_QUESTION_UPDATED: 'qna.question-updated',
 
-  // Chat
-  CHAT_MESSAGE: 'chat.message',
 } as const;
 
 export type JobTypeName = (typeof JobType)[keyof typeof JobType];

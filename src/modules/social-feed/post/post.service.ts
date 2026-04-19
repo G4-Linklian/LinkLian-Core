@@ -1180,18 +1180,7 @@ export class PostService {
         }
       }
 
-      const [sectionRows, postContentRows] = await Promise.all([
-        this.dataSource.query(
-          `SELECT section_id FROM post_in_class WHERE post_content_id = $1 AND flag_valid = true`,
-          [targetPostContentId],
-        ),
-        this.dataSource.query(
-          `SELECT post_type, title FROM post_content WHERE post_content_id = $1`,
-          [targetPostContentId],
-        ),
-      ]);
-      const sectionIds = sectionRows.map((r: { section_id: number }) => r.section_id);
-      const postContent = postContentRows[0];
+      const postContentData = result[0];
 
       this.bullmq.addJob({
         queue: NOTIFICATION_QUEUE,
@@ -1200,9 +1189,9 @@ export class PostService {
           type: JobType.SOCIAL_FEED_POST_UPDATED,
           actor_id: userId,
           post_content_id: targetPostContentId,
-          post_type: postContent?.post_type ?? '',
-          title: postContent?.title ?? '',
-          section_ids: sectionIds,
+          post_type: postContentData?.post_type ?? '',
+          title: postContentData?.title ?? '',
+          section_ids: dto.section_id ? [dto.section_id] : [],
         },
       });
 

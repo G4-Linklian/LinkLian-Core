@@ -188,12 +188,6 @@ export class QALiveService {
             const eventAsker = this.maskedAskerEvent(dto.qa_live_id, dto.is_anonymous, askerInfo);
             await this.newQuestion(dto.qa_live_id, savedQuestion, eventAsker);
 
-            const liveRows = await this.dataSource.query(
-              `SELECT section_id FROM qa_live WHERE qa_live_id = $1`,
-              [dto.qa_live_id],
-            );
-            const sectionId = liveRows[0]?.section_id ?? 0;
-
             this.bullmq.addJob({
               queue: NOTIFICATION_QUEUE,
               job: JobType.QNA_QUESTION_CREATED,
@@ -202,7 +196,7 @@ export class QALiveService {
                 actor_id: dto.asker_id,
                 qa_question_id: savedQuestion.qa_question_id,
                 qa_live_id: dto.qa_live_id,
-                section_id: sectionId,
+                section_id: dto.section_id,
                 question: dto.question,
               },
             });

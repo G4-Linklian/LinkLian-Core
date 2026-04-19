@@ -163,6 +163,14 @@ export class CreatePostDto {
  */
 export class UpdatePostDto {
   @ApiPropertyOptional({
+    description: 'Section ID (for notification)',
+    example: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  section_id?: number;
+
+  @ApiPropertyOptional({
     description: 'Post title',
     example: 'Updated Assignment',
   })

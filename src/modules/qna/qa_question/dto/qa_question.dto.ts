@@ -128,6 +128,11 @@ export class CreateQuestionDto {
     @Type(() => Number)
     @IsInt()
     slide_number!: number;
+
+    @ApiProperty({ description: 'Section ID', example: 1 })
+    @Type(() => Number)
+    @IsInt()
+    section_id!: number;
 }
 
 export class UpdateQuestionDto {

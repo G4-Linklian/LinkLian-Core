@@ -185,15 +185,15 @@ export class CommunityCommentService {
     }
     const post = await this.dataSource.query(
       `
-      
-     SELECT c.status,
-         c.is_private,
-         c.community_id
-  FROM post_in_community p
-  JOIN community c
-    ON c.community_id = p.community_id
-  WHERE p.post_commu_id=$1
-    AND p.flag_valid=true
+      SELECT c.status,
+             c.is_private,
+             c.community_id,
+             p.user_sys_id AS owner_id
+      FROM post_in_community p
+      JOIN community c
+        ON c.community_id = p.community_id
+      WHERE p.post_commu_id=$1
+        AND p.flag_valid=true
       `,
       [post_commu_id],
     );
@@ -265,17 +265,7 @@ export class CommunityCommentService {
 
       await queryRunner.commitTransaction();
 
-      // หา post_owner_id สำหรับ notification
-      const postOwnerRow = await this.dataSource.query(
-        `SELECT user_sys_id AS owner_id, community_id
-         FROM post_in_community
-         WHERE post_commu_id = $1 AND flag_valid = true
-         LIMIT 1`,
-        [post_commu_id],
-      );
-
-      if (postOwnerRow.length > 0) {
-        if (parent_id) {
+      if (parent_id) {
           // Reply → แจ้งเจ้าของ parent comment
           const parentOwnerRow = await this.dataSource.query(
             `SELECT user_sys_id AS owner_id
@@ -295,7 +285,7 @@ export class CommunityCommentService {
                 post_id: post_commu_id,
                 parent_comment_id: parent_id,
                 parent_owner_id: parentOwnerRow[0].owner_id,
-                community_id: postOwnerRow[0].community_id,
+                community_id: post[0].community_id,
               },
             });
           }
@@ -308,12 +298,11 @@ export class CommunityCommentService {
               type: JobType.COMMUNITY_COMMENT,
               actor_id: userId,
               post_id: post_commu_id,
-              post_owner_id: postOwnerRow[0].owner_id,
-              community_id: postOwnerRow[0].community_id,
+              post_owner_id: post[0].owner_id,
+              community_id: post[0].community_id,
             },
           });
         }
-      }
 
       return {
         success: true,

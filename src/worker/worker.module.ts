@@ -3,7 +3,6 @@ import { LoggerModule } from '../common/logger/logger.module';
 import { NotificationWorker } from './notification.worker';
 import { SocialFeedWorker } from './social-feed/social-feed.worker';
 import { CommunityWorker } from './community/community.worker';
-import { ChatWorker } from './chat/chat.worker';
 import { QnaWorker } from './qna/qna.worker';
 import { FCMConsumerService } from './fcm-consumer.service';
 
@@ -15,7 +14,6 @@ import { FCMConsumerService } from './fcm-consumer.service';
     // Sub-workers
     SocialFeedWorker,
     CommunityWorker,
-    ChatWorker,
     QnaWorker,
     // Background notification consumer (RabbitMQ → Firebase)
     FCMConsumerService,

@@ -16,12 +16,14 @@ import {
   SearchChatDto,
   CreateMessageDto,
   SearchMessageDto,
+  ChatSendEvent,
   SearchUserForChatDto,
 } from './dto/chat.dto';
 import { AppLogger } from 'src/common/logger/app-logger.service';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
-import { NOTIFICATION_QUEUE, JobType } from 'src/worker/worker.constants';
+import { RABBITMQ_EXCHANGE } from 'src/worker/worker.constants';
+import { ChatNotificationService } from './chat-notification.service';
 
 @Injectable()
 export class ChatService {
@@ -34,8 +36,9 @@ export class ChatService {
     private userSysChatNormalizeRepo: Repository<UserSysChatNormalize>,
     private dataSource: DataSource,
     private readonly logger: AppLogger,
-    private readonly bullmq: BullMQService,
+    private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
+    private readonly chatNotification: ChatNotificationService,
   ) { }
 
   private async ensureActiveUser(userId: number) {
@@ -532,38 +535,43 @@ export class ChatService {
   }
 
   /**
-   * Enqueue chat message job via BullMQ
-   * ChatWorker will handle: save notification to DB, publish to RabbitMQ (foreground + background)
+   * ส่ง chat.deliver ไป RabbitMQ → Queue → Socket (real-time delivery)
+   * แล้วเรียก ChatNotificationService แยกสำหรับ save notification + firebase
    */
   private async sendMessageToRabbitMQ(message: Message): Promise<void> {
-    // Find the other participant in the chat (receiver)
-    const receiverRows = await this.dataSource.query(
-      `SELECT user_sys_id FROM user_sys_chat_normalize
-       WHERE chat_id = $1 AND user_sys_id <> $2
-       LIMIT 1`,
-      [message.chat_id, message.sender_id],
+    // หา receiver + sender name (1-1 chat มี receiver 1 คนเสมอ)
+    const { receiverId, senderName } = await this.chatNotification.getChatDeliveryInfo(
+      message.chat_id,
+      message.sender_id,
     );
-    const receiveUserId: number = receiverRows?.[0]?.user_sys_id ?? 0;
 
-    await this.bullmq.addJob({
-      queue: NOTIFICATION_QUEUE,
-      job: JobType.CHAT_MESSAGE,
-      data: {
-        type: JobType.CHAT_MESSAGE,
-        sender_id: message.sender_id,
-        receiver_ids: receiveUserId ? [receiveUserId] : [],
+    if (!receiverId) return;
+
+    // Save notification + firebase (แยกกัน ถ้า fail ไม่บล็อก delivery)
+    const notificationId = await this.chatNotification.notify(message, receiverId, senderName);
+
+    // Publish chat.deliver → Queue → Socket
+    const eventMessage: ChatSendEvent = {
+      type: 'CHAT_DELIVER',
+      payload: {
         chat_id: message.chat_id,
-        message_id: message.message_id,
+        sender_id: message.sender_id,
+        sender_name: senderName,
+        receive_user_id: receiverId,
+        notification_id: notificationId,
         content: message.content,
-        created_at: message.created_at?.toISOString() ?? new Date().toISOString(),
-        reply_id: message.reply_id ?? undefined,
+        reply_id: message.reply_id ?? null,
+        file_url: (message.file as object[]) ?? [],
+        created_at: message.created_at,
       },
-    });
+    };
 
-    this.logger.debug('Chat message job enqueued to BullMQ', 'ChatService', {
+    await this.rabbitMQService.publish(RABBITMQ_EXCHANGE, 'chat.deliver', eventMessage);
+
+    this.logger.debug('Chat message delivered', 'ChatService', {
       chat_id: message.chat_id,
       sender_id: message.sender_id,
-      receiver_id: receiveUserId,
+      receiver_id: receiverId,
     });
   }
 }

@@ -5,7 +5,6 @@ import { AppLogger } from '../common/logger/app-logger.service';
 import { NOTIFICATION_QUEUE, WORKER_CONCURRENCY, JobType } from './worker.constants';
 import { SocialFeedWorker, SocialFeedJobData } from './social-feed/social-feed.worker';
 import { CommunityWorker, CommunityJobData } from './community/community.worker';
-import { ChatWorker, ChatJobData } from './chat/chat.worker';
 import { QnaWorker, QnaJobData } from './qna/qna.worker';
 
 // ─── Union ของ Job ทั้งหมด ────────────────────────────────────────────────────
@@ -13,7 +12,6 @@ import { QnaWorker, QnaJobData } from './qna/qna.worker';
 export type NotificationJobData =
   | SocialFeedJobData
   | CommunityJobData
-  | ChatJobData
   | QnaJobData;
 
 // ─── Main Dispatcher Worker ───────────────────────────────────────────────────
@@ -24,7 +22,6 @@ export class NotificationWorker implements OnModuleInit {
     private readonly bullmq: BullMQService,
     private readonly socialFeedWorker: SocialFeedWorker,
     private readonly communityWorker: CommunityWorker,
-    private readonly chatWorker: ChatWorker,
     private readonly qnaWorker: QnaWorker,
     private readonly logger: AppLogger,
   ) {}
@@ -70,10 +67,6 @@ export class NotificationWorker implements OnModuleInit {
       case JobType.QNA_QUESTION_CREATED:
       case JobType.QNA_QUESTION_UPDATED:
         return this.qnaWorker.handle(job as Job<QnaJobData>);
-
-      // ── Chat ─────────────────────────────────────────────────────────────
-      case JobType.CHAT_MESSAGE:
-        return this.chatWorker.handle(job as Job<ChatJobData>);
 
       // ── Unknown ──────────────────────────────────────────────────────────
       default:
