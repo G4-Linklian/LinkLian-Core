@@ -22,6 +22,8 @@ import {
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
+import { RABBITMQ_EXCHANGE } from 'src/worker/worker.constants';
+import { ChatNotificationService } from './chat-notification.service';
 
 @Injectable()
 export class ChatService {
@@ -36,6 +38,7 @@ export class ChatService {
     private readonly logger: AppLogger,
     private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
+    private readonly chatNotification: ChatNotificationService,
   ) { }
 
   private async ensureActiveUser(userId: number) {
@@ -532,14 +535,30 @@ export class ChatService {
   }
 
   /**
-   * Send message event to RabbitMQ for socket delivery
+   * ส่ง chat.deliver ไป RabbitMQ → Queue → Socket (real-time delivery)
+   * แล้วเรียก ChatNotificationService แยกสำหรับ save notification + firebase
    */
   private async sendMessageToRabbitMQ(message: Message): Promise<void> {
+    // หา receiver + sender name (1-1 chat มี receiver 1 คนเสมอ)
+    const { receiverId, senderName } = await this.chatNotification.getChatDeliveryInfo(
+      message.chat_id,
+      message.sender_id,
+    );
+
+    if (!receiverId) return;
+
+    // Save notification + firebase (แยกกัน ถ้า fail ไม่บล็อก delivery)
+    const notificationId = await this.chatNotification.notify(message, receiverId, senderName);
+
+    // Publish chat.deliver → Queue → Socket
     const eventMessage: ChatSendEvent = {
       type: 'CHAT_DELIVER',
       payload: {
         chat_id: message.chat_id,
         sender_id: message.sender_id,
+        sender_name: senderName,
+        receive_user_id: receiverId,
+        notification_id: notificationId,
         content: message.content,
         reply_id: message.reply_id ?? null,
         file_url: (message.file as object[]) ?? [],
@@ -547,14 +566,12 @@ export class ChatService {
       },
     };
 
-    this.logger.debug(
-      'Publishing message to RabbitMQ:',
-      'ChatService',
-      eventMessage,
-    );
+    await this.rabbitMQService.publish(RABBITMQ_EXCHANGE, 'chat.deliver', eventMessage);
 
-    await this.rabbitMQService.publish('linklian_events', 'chat.deliver', eventMessage);
-
-    this.logger.debug('Message published to RabbitMQ successfully', 'ChatService');
+    this.logger.debug('Chat message delivered', 'ChatService', {
+      chat_id: message.chat_id,
+      sender_id: message.sender_id,
+      receiver_id: receiverId,
+    });
   }
 }

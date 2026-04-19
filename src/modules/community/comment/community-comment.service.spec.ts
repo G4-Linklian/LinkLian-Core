@@ -3,6 +3,10 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CommunityCommentService } from './community-comment.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+
+const mockAddJob = jest.fn();
 
 describe('CommunityCommentService', () => {
   let service: CommunityCommentService;
@@ -35,6 +39,7 @@ describe('CommunityCommentService', () => {
         CommunityCommentService,
         { provide: DataSource, useValue: mockDataSource },
         { provide: AppLogger, useValue: mockLogger },
+        { provide: BullMQService, useValue: { addJob: mockAddJob } },
       ],
     }).compile();
 
@@ -44,6 +49,7 @@ describe('CommunityCommentService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockAddJob.mockReset();
   });
 
   describe('getComments', () => {
@@ -94,12 +100,71 @@ describe('CommunityCommentService', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
+      // post owner for notification
+      dataSource.query.mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }]);
+
       const result = await service.createComment(1, {
         post_commu_id: 1,
         comment_text: 'New',
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it('should enqueue COMMUNITY_COMMENT notification when commenting on a post', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{}])                                                       // ensureActiveUser
+        .mockResolvedValueOnce([{ status: 'active', is_private: false, community_id: 5 }]) // post check
+        .mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }]);                        // post owner
+
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ commu_comment_id: 10 }]) // INSERT comment
+        .mockResolvedValueOnce([]);                          // INSERT self path
+
+      await service.createComment(1, { post_commu_id: 1, comment_text: 'Hello' });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.COMMUNITY_COMMENT,
+          data: expect.objectContaining({
+            type: JobType.COMMUNITY_COMMENT,
+            actor_id: 1,
+            post_id: 1,
+            post_owner_id: 2,
+          }),
+        }),
+      );
+    });
+
+    it('should enqueue COMMUNITY_COMMENT_REPLY when replying to a comment', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{}])                                                       // ensureActiveUser
+        .mockResolvedValueOnce([{ status: 'active', is_private: false, community_id: 5 }]) // post check
+        .mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }])                         // post owner
+        .mockResolvedValueOnce([{ owner_id: 3 }]);                                          // parent comment owner
+
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ commu_comment_id: 11 }]) // INSERT comment
+        .mockResolvedValueOnce([])                          // INSERT self path
+        .mockResolvedValueOnce([]);                         // INSERT ancestor paths
+
+      await service.createComment(1, {
+        post_commu_id: 1,
+        comment_text: 'Reply',
+        parent_id: 50,
+      });
+
+      expect(mockAddJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          job: JobType.COMMUNITY_COMMENT_REPLY,
+          data: expect.objectContaining({
+            type: JobType.COMMUNITY_COMMENT_REPLY,
+            actor_id: 1,
+            parent_owner_id: 3,
+          }),
+        }),
+      );
     });
   });
 

@@ -18,9 +18,11 @@ import {
   UpdateCommunityCommentDto,
   DeleteCommunityCommentDto,
 } from './dto/community-comment.dto';
-import { ApiHeader, ApiQuery } from '@nestjs/swagger';
+import { ApiHeader, ApiQuery, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Access } from 'src/common/decorators/access.decorator';
 
+@ApiTags('Community Comment')
+@ApiBearerAuth('access-token')
 @Controller('community-comment')
 export class CommunityCommentController {
   constructor(private readonly service: CommunityCommentService) {}

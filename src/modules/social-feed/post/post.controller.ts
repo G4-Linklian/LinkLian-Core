@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiHeader,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { PostService } from './post.service';
 import {
@@ -101,6 +102,7 @@ export class PostController {
    * Create a new post
    */
   @Post()
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new post in class' })
   @ApiHeader({
     name: 'x-user-id',

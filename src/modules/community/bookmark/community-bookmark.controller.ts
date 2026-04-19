@@ -8,12 +8,13 @@ import {
   Param,
 } from '@nestjs/common';
 
-import { ApiTags, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiHeader, ApiBearerAuth } from '@nestjs/swagger';
 import { CommunityBookmarkService } from './community-bookmark.service';
 import { ToggleCommunityBookmarkDto } from './dto/bookmark-community.dto';
 import { Access } from 'src/common/decorators/access.decorator';
 
 @ApiTags('Community Bookmark')
+@ApiBearerAuth('access-token')
 @Controller('community/bookmark')
 export class CommunityBookmarkController {
   constructor(private readonly service: CommunityBookmarkService) {}

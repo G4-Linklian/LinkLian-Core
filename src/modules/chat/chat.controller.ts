@@ -17,6 +17,7 @@ import {
   ApiParam,
   ApiBody,
   ApiConsumes,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service';
 import {
@@ -30,6 +31,7 @@ import { UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Chat')
+@ApiBearerAuth('access-token')
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) { }

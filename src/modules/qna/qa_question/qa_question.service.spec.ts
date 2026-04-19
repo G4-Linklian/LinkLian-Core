@@ -8,6 +8,7 @@ import { UserSys } from 'src/modules/users/entities/user-sys.entity';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { QnaRedisService } from '../redis/qna-redis.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
 
 const mockQAQuestionRepo = {
   findOne: jest.fn(),
@@ -32,6 +33,7 @@ const mockUserRepo = {
 
 const mockDataSource = {
   getRepository: jest.fn().mockReturnValue(mockUserRepo),
+  query: jest.fn(),
 };
 
 const mockQnaRedisService = {
@@ -54,11 +56,13 @@ describe('QAQuestion Service', () => {
         { provide: AppLogger, useValue: mockLogger },
         { provide: RabbitMQService, useValue: mockRabbitMQService },
         { provide: QnaRedisService, useValue: mockQnaRedisService },
+        { provide: BullMQService, useValue: { addJob: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<QALiveService>(QALiveService);
     jest.clearAllMocks();
+    mockDataSource.getRepository.mockReturnValue(mockUserRepo);
   });
 
   describe('findQuestionById', () => {
@@ -127,6 +131,7 @@ describe('QAQuestion Service', () => {
       mockQAQuestionRepo.create.mockReturnValueOnce(createdQuestion);
       mockQAQuestionRepo.save.mockResolvedValueOnce(createdQuestion);
       mockUserRepo.findOne.mockResolvedValueOnce(askerInfo);
+      mockDataSource.query.mockResolvedValueOnce([{ section_id: 1 }]);
 
       const result = await service.createQuestion(dto as any);
 
@@ -155,6 +160,7 @@ describe('QAQuestion Service', () => {
       };
       mockQAQuestionRepo.findOne.mockResolvedValueOnce(existing);
       mockQAQuestionRepo.update.mockResolvedValueOnce({ affected: 1 });
+      mockDataSource.query.mockResolvedValueOnce([{ live_by: 2 }]);
 
       const result = await service.updateQuestion(1, { status: 'ANSWERED' } as any);
 

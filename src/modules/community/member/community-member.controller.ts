@@ -1,8 +1,11 @@
 import { Controller, Post, Delete, Get, Param, Headers } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { CommunityMemberService } from './community-member.service';
 import { Access } from 'src/common/decorators/access.decorator';
 
+@ApiTags('Community Member')
+@ApiBearerAuth('access-token')
 @Controller('community/member')
 export class CommunityMemberController {
   constructor(private readonly service: CommunityMemberService) {}

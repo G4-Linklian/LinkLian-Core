@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 @Injectable()
 export class CommunityCommentService {
   constructor(
     private dataSource: DataSource,
+    private readonly bullmq: BullMQService,
     private readonly logger: AppLogger,
   ) { }
 
@@ -182,15 +185,15 @@ export class CommunityCommentService {
     }
     const post = await this.dataSource.query(
       `
-      
-     SELECT c.status,
-         c.is_private,
-         c.community_id
-  FROM post_in_community p
-  JOIN community c
-    ON c.community_id = p.community_id
-  WHERE p.post_commu_id=$1
-    AND p.flag_valid=true
+      SELECT c.status,
+             c.is_private,
+             c.community_id,
+             p.user_sys_id AS owner_id
+      FROM post_in_community p
+      JOIN community c
+        ON c.community_id = p.community_id
+      WHERE p.post_commu_id=$1
+        AND p.flag_valid=true
       `,
       [post_commu_id],
     );
@@ -261,12 +264,50 @@ export class CommunityCommentService {
       }
 
       await queryRunner.commitTransaction();
-      const commentData = { comment_id: newId };
+
+      if (parent_id) {
+          // Reply → แจ้งเจ้าของ parent comment
+          const parentOwnerRow = await this.dataSource.query(
+            `SELECT user_sys_id AS owner_id
+             FROM community_comment
+             WHERE commu_comment_id = $1 AND flag_valid = true
+             LIMIT 1`,
+            [parent_id],
+          );
+
+          if (parentOwnerRow.length > 0) {
+            this.bullmq.addJob({
+              queue: NOTIFICATION_QUEUE,
+              job: JobType.COMMUNITY_COMMENT_REPLY,
+              data: {
+                type: JobType.COMMUNITY_COMMENT_REPLY,
+                actor_id: userId,
+                post_id: post_commu_id,
+                parent_comment_id: parent_id,
+                parent_owner_id: parentOwnerRow[0].owner_id,
+                community_id: post[0].community_id,
+              },
+            });
+          }
+        } else {
+          // Comment ธรรมดา → แจ้งเจ้าของโพสต์
+          this.bullmq.addJob({
+            queue: NOTIFICATION_QUEUE,
+            job: JobType.COMMUNITY_COMMENT,
+            data: {
+              type: JobType.COMMUNITY_COMMENT,
+              actor_id: userId,
+              post_id: post_commu_id,
+              post_owner_id: post[0].owner_id,
+              community_id: post[0].community_id,
+            },
+          });
+        }
 
       return {
         success: true,
         message: 'Comment created successfully',
-        data: commentData,
+        data: { comment_id: newId },
       };
     } catch (e) {
       await queryRunner.rollbackTransaction();

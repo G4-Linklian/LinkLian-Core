@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 @Injectable()
 export class CommunityMemberService {
   constructor(
     private dataSource: DataSource,
+    private readonly bullmq: BullMQService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -18,7 +21,7 @@ export class CommunityMemberService {
     try {
       const community = await this.dataSource.query(
         `
-    SELECT status, is_private
+    SELECT status, is_private, name
     FROM community
     WHERE community_id=$1
     AND flag_valid=true
@@ -79,6 +82,20 @@ export class CommunityMemberService {
           [communityId, userId, newStatus],
         );
       }
+      // แจ้ง owner เฉพาะ community private (status = pending = ต้องรออนุมัติ)
+      if (newStatus === 'pending') {
+        this.bullmq.addJob({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.COMMUNITY_MEMBER_JOINED,
+          data: {
+            type: JobType.COMMUNITY_MEMBER_JOINED,
+            actor_id: userId,
+            community_id: communityId,
+            community_name: community[0].name,
+          },
+        });
+      }
+
       return {
         success: true,
         data: result[0],
@@ -105,7 +122,7 @@ export class CommunityMemberService {
   ) {
     const community = await this.dataSource.query(
       `
-      SELECT status FROM community
+      SELECT status, name FROM community
       WHERE community_id=$1
       `,
       [communityId],
@@ -173,6 +190,18 @@ export class CommunityMemberService {
       if (!result.length) {
         throw new BadRequestException('Invalid member status');
       }
+
+      this.bullmq.addJob({
+        queue: NOTIFICATION_QUEUE,
+        job: JobType.COMMUNITY_MEMBER_APPROVED,
+        data: {
+          type: JobType.COMMUNITY_MEMBER_APPROVED,
+          target_user_id: targetUserId,
+          community_id: communityId,
+          community_name: community[0].name,
+          approver_id: ownerId,
+        },
+      });
 
       return {
         success: true,
