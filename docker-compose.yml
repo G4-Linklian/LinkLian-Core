@@ -40,9 +40,17 @@ services:
       start_period: 40s
     # deploy:
     #   mode: replicated
-    #   replicas: 3      # รัน 3 Instances พร้อมกัน
+    #   replicas: 3
+    #   endpoint_mode: vip
     #   restart_policy:
     #     condition: on-failure
+    #   update_config:
+    #     parallelism: 1
+    #     delay: 10s
+    #     order: start-first
+    #   rollback_config:
+    #     parallelism: 1
+    #     delay: 5s
     mem_limit: 500m
     restart: on-failure
     networks:
