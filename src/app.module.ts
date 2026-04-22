@@ -45,6 +45,7 @@ import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
 import { QnaModule } from './modules/qna/qna.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportModule } from './modules/report/report.module';
 
 @Module({
@@ -103,6 +104,7 @@ import { ReportModule } from './modules/report/report.module';
     RedisModule,
     AssetsModule,
     QnaModule,
+    DashboardModule,
     ReportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
@@ -137,6 +139,8 @@ export class AppModule implements NestModule {
         { path: 'auth/resend-otp', method: RequestMethod.ALL },
         { path: 'auth/verify', method: RequestMethod.ALL },
         { path: 'auth/forgot-password', method: RequestMethod.ALL },
+        { path: 'dashboard/(.*)', method: RequestMethod.ALL },
+        { path: 'dashboard', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )
       .forRoutes('*');
