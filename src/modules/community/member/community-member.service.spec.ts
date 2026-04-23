@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { CommunityMemberService } from './community-member.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
-import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+import { CommunityCommentNotificationService } from '../comment/community-comment-notification.service';
 
-const mockAddJob = jest.fn();
+const mockNotifyMemberJoined = jest.fn();
+const mockNotifyMemberApproved = jest.fn();
 
 describe('CommunityMemberService', () => {
   let service: CommunityMemberService;
@@ -37,12 +37,18 @@ describe('CommunityMemberService', () => {
         CommunityMemberService,
         { provide: DataSource, useValue: dataSource },
         { provide: AppLogger, useValue: { log: jest.fn(), error: jest.fn(), warn: jest.fn() } },
-        { provide: BullMQService, useValue: { addJob: mockAddJob } },
+        {
+          provide: CommunityCommentNotificationService,
+          useValue: {
+            notifyMemberJoined: mockNotifyMemberJoined,
+            notifyMemberApproved: mockNotifyMemberApproved,
+          },
+        },
       ],
     }).compile();
 
     service = module.get(CommunityMemberService);
-    mockAddJob.mockReset();
+    jest.clearAllMocks();
   });
 
   describe('joinCommunity', () => {
@@ -68,7 +74,7 @@ describe('CommunityMemberService', () => {
       expect(result.message).toContain('Join request');
     });
 
-    it('should enqueue COMMUNITY_MEMBER_JOINED notification for private community', async () => {
+    it('should call notifyMemberJoined for private community', async () => {
       dataSource.query
         .mockResolvedValueOnce([{ status: 'active', is_private: true, name: 'Dev Club' }])
         .mockResolvedValueOnce([])
@@ -76,21 +82,14 @@ describe('CommunityMemberService', () => {
 
       await service.joinCommunity(5, 1);
 
-      expect(mockAddJob).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.COMMUNITY_MEMBER_JOINED,
-          data: expect.objectContaining({
-            type: JobType.COMMUNITY_MEMBER_JOINED,
-            actor_id: 5,
-            community_id: 1,
-            community_name: 'Dev Club',
-          }),
-        }),
-      );
+      expect(mockNotifyMemberJoined).toHaveBeenCalledWith({
+        actorId: 5,
+        communityId: 1,
+        communityName: 'Dev Club',
+      });
     });
 
-    it('should NOT enqueue notification for public community', async () => {
+    it('should NOT call notifyMemberJoined for public community', async () => {
       dataSource.query
         .mockResolvedValueOnce([{ status: 'active', is_private: false, name: 'Public' }])
         .mockResolvedValueOnce([])
@@ -98,7 +97,7 @@ describe('CommunityMemberService', () => {
 
       await service.joinCommunity(1, 1);
 
-      expect(mockAddJob).not.toHaveBeenCalled();
+      expect(mockNotifyMemberJoined).not.toHaveBeenCalled();
     });
 
     it('should throw if community not found', async () => {
@@ -153,7 +152,7 @@ describe('CommunityMemberService', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should enqueue COMMUNITY_MEMBER_APPROVED notification after approval', async () => {
+    it('should call notifyMemberApproved after approval', async () => {
       dataSource.query
         .mockResolvedValueOnce([{ status: 'active', name: 'Science Club' }])
         .mockResolvedValueOnce([1])                      // owner check
@@ -162,19 +161,12 @@ describe('CommunityMemberService', () => {
 
       await service.approveMember(1, 1, 2);
 
-      expect(mockAddJob).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.COMMUNITY_MEMBER_APPROVED,
-          data: expect.objectContaining({
-            type: JobType.COMMUNITY_MEMBER_APPROVED,
-            target_user_id: 2,
-            community_id: 1,
-            community_name: 'Science Club',
-            approver_id: 1,
-          }),
-        }),
-      );
+      expect(mockNotifyMemberApproved).toHaveBeenCalledWith({
+        targetUserId: 2,
+        communityId: 1,
+        communityName: 'Science Club',
+        approverId: 1,
+      });
     });
 
     it('should throw if not owner', async () => {

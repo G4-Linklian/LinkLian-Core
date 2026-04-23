@@ -6,14 +6,13 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
-import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+import { CommunityCommentNotificationService } from '../comment/community-comment-notification.service';
 
 @Injectable()
 export class CommunityMemberService {
   constructor(
     private dataSource: DataSource,
-    private readonly bullmq: BullMQService,
+    private readonly communityNotification: CommunityCommentNotificationService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -84,15 +83,10 @@ export class CommunityMemberService {
       }
       // แจ้ง owner เฉพาะ community private (status = pending = ต้องรออนุมัติ)
       if (newStatus === 'pending') {
-        this.bullmq.addJob({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.COMMUNITY_MEMBER_JOINED,
-          data: {
-            type: JobType.COMMUNITY_MEMBER_JOINED,
-            actor_id: userId,
-            community_id: communityId,
-            community_name: community[0].name,
-          },
+        void this.communityNotification.notifyMemberJoined({
+          actorId: userId,
+          communityId,
+          communityName: community[0].name,
         });
       }
 
@@ -191,16 +185,11 @@ export class CommunityMemberService {
         throw new BadRequestException('Invalid member status');
       }
 
-      this.bullmq.addJob({
-        queue: NOTIFICATION_QUEUE,
-        job: JobType.COMMUNITY_MEMBER_APPROVED,
-        data: {
-          type: JobType.COMMUNITY_MEMBER_APPROVED,
-          target_user_id: targetUserId,
-          community_id: communityId,
-          community_name: community[0].name,
-          approver_id: ownerId,
-        },
+      void this.communityNotification.notifyMemberApproved({
+        targetUserId,
+        communityId,
+        communityName: community[0].name,
+        approverId: ownerId,
       });
 
       return {

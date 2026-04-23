@@ -51,15 +51,11 @@ export class NotificationWorker implements OnModuleInit {
       // ── Social Feed ──────────────────────────────────────────────────────
       case JobType.SOCIAL_FEED_POST_CREATED:
       case JobType.SOCIAL_FEED_POST_UPDATED:
-      case JobType.SOCIAL_FEED_COMMENT:
         return this.socialFeedWorker.handle(job as Job<SocialFeedJobData>);
 
       // ── Community ────────────────────────────────────────────────────────
       case JobType.COMMUNITY_POST_CREATED:
       case JobType.COMMUNITY_POST_UPDATED:
-      case JobType.COMMUNITY_COMMENT:
-      case JobType.COMMUNITY_MEMBER_JOINED:
-      case JobType.COMMUNITY_MEMBER_APPROVED:
         return this.communityWorker.handle(job as Job<CommunityJobData>);
 
       // ── QnA ──────────────────────────────────────────────────────────────

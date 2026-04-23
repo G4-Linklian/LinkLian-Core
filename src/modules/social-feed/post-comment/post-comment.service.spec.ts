@@ -11,10 +11,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
-import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+import { PostCommentNotificationService } from './post-comment-notification.service';
 
-const mockAddJob = jest.fn();
+const mockNotifyComment = jest.fn();
+const mockNotifyCommentReply = jest.fn();
 
 const mockQuery = jest.fn();
 const mockQueryRunner = {
@@ -58,13 +58,15 @@ describe('PostCommentService', () => {
         { provide: AppLogger, useValue: mockLogger },
         { provide: getRepositoryToken(PostComment), useValue: mockRepo },
         { provide: getRepositoryToken(PostCommentPath), useValue: mockRepo },
-        { provide: BullMQService, useValue: { addJob: mockAddJob } },
+        {
+          provide: PostCommentNotificationService,
+          useValue: { notifyComment: mockNotifyComment, notifyCommentReply: mockNotifyCommentReply },
+        },
       ],
     }).compile();
 
     service = module.get<PostCommentService>(PostCommentService);
     jest.clearAllMocks();
-    mockAddJob.mockReset();
     mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner);
   });
 
@@ -247,12 +249,11 @@ describe('PostCommentService', () => {
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
-    it('should enqueue SOCIAL_FEED_COMMENT notification for root comment', async () => {
+    it('should call notifyComment for root comment', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 5 }]) // insert comment
         .mockResolvedValueOnce([]);                  // insert self path
 
-      // post owner query
       mockQuery.mockResolvedValueOnce([{
         post_content_id: 20,
         owner_id: 3,
@@ -261,31 +262,23 @@ describe('PostCommentService', () => {
 
       await service.createPostComment(1, { post_id: 10, comment_text: 'Hello' });
 
-      expect(mockAddJob).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.SOCIAL_FEED_COMMENT,
-          data: expect.objectContaining({
-            type: JobType.SOCIAL_FEED_COMMENT,
-            actor_id: 1,
-            post_content_id: 20,
-            post_owner_id: 3,
-          }),
-        }),
-      );
+      expect(mockNotifyComment).toHaveBeenCalledWith({
+        actorId: 1,
+        postContentId: 20,
+        postOwnerId: 3,
+        sectionIds: [1, 2],
+      });
     });
 
-    it('should enqueue SOCIAL_FEED_COMMENT_REPLY notification for reply', async () => {
+    it('should call notifyCommentReply for reply', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 6 }]) // insert comment
-        .mockResolvedValueOnce([])                  // insert self path
-        .mockResolvedValueOnce([]);                 // insert ancestor paths
+        .mockResolvedValueOnce([])                   // insert self path
+        .mockResolvedValueOnce([]);                  // insert ancestor paths
 
-      // post owner
       mockQuery
         .mockResolvedValueOnce([{ post_content_id: 20, owner_id: 3, section_ids: [1] }])
-        // parent comment owner
-        .mockResolvedValueOnce([{ owner_id: 7 }]);
+        .mockResolvedValueOnce([{ owner_id: 7 }]); // parent comment owner
 
       await service.createPostComment(1, {
         post_id: 10,
@@ -293,18 +286,13 @@ describe('PostCommentService', () => {
         parent_id: 4,
       });
 
-      expect(mockAddJob).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queue: NOTIFICATION_QUEUE,
-          job: JobType.SOCIAL_FEED_COMMENT_REPLY,
-          data: expect.objectContaining({
-            type: JobType.SOCIAL_FEED_COMMENT_REPLY,
-            actor_id: 1,
-            post_content_id: 20,
-            parent_owner_id: 7,
-          }),
-        }),
-      );
+      expect(mockNotifyCommentReply).toHaveBeenCalledWith({
+        actorId: 1,
+        postContentId: 20,
+        parentCommentId: 4,
+        parentOwnerId: 7,
+        sectionIds: [1],
+      });
     });
   });
 

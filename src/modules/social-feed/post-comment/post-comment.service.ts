@@ -19,8 +19,7 @@ import {
 } from './dto/post-comment.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { AppLogger } from '../../../common/logger/app-logger.service';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
-import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+import { PostCommentNotificationService } from './post-comment-notification.service';
 @Injectable()
 export class PostCommentService {
   constructor(
@@ -29,7 +28,7 @@ export class PostCommentService {
     @InjectRepository(PostCommentPath)
     private postCommentPathRepo: Repository<PostCommentPath>,
     private dataSource: DataSource,
-    private readonly bullmq: BullMQService,
+    private readonly commentNotification: PostCommentNotificationService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -358,31 +357,21 @@ export class PostCommentService {
           );
 
           if (parentOwnerRow.length > 0) {
-            this.bullmq.addJob({
-              queue: NOTIFICATION_QUEUE,
-              job: JobType.SOCIAL_FEED_COMMENT_REPLY,
-              data: {
-                type: JobType.SOCIAL_FEED_COMMENT_REPLY,
-                actor_id: userId,
-                post_content_id: postOwnerRow[0].post_content_id,
-                parent_comment_id: parent_id,
-                parent_owner_id: parentOwnerRow[0].owner_id,
-                section_ids: postOwnerRow[0].section_ids ?? [],
-              },
+            void this.commentNotification.notifyCommentReply({
+              actorId: userId,
+              postContentId: Number(postOwnerRow[0].post_content_id),
+              parentCommentId: parent_id,
+              parentOwnerId: Number(parentOwnerRow[0].owner_id),
+              sectionIds: postOwnerRow[0].section_ids ?? [],
             });
           }
         } else {
-          // Comment ธรรมดา → แจ้งเจ้าของโพสต์ + ครูใน section
-          this.bullmq.addJob({
-            queue: NOTIFICATION_QUEUE,
-            job: JobType.SOCIAL_FEED_COMMENT,
-            data: {
-              type: JobType.SOCIAL_FEED_COMMENT,
-              actor_id: userId,
-              post_content_id: postOwnerRow[0].post_content_id,
-              post_owner_id: postOwnerRow[0].owner_id,
-              section_ids: postOwnerRow[0].section_ids ?? [],
-            },
+          // Comment ธรรมดา → แจ้งเจ้าของโพสต์
+          void this.commentNotification.notifyComment({
+            actorId: userId,
+            postContentId: Number(postOwnerRow[0].post_content_id),
+            postOwnerId: Number(postOwnerRow[0].owner_id),
+            sectionIds: postOwnerRow[0].section_ids ?? [],
           });
         }
       }

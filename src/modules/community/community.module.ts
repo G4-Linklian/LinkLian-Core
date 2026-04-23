@@ -21,6 +21,7 @@ import { CommunityPostEntity } from './post/entities/community-post.entity';
 // comment
 import { CommunityCommentController } from './comment/community-comment.controller';
 import { CommunityCommentService } from './comment/community-comment.service';
+import { CommunityCommentNotificationService } from './comment/community-comment-notification.service';
 import { CommunityComment } from './comment/entities/community-comment.entity';
 import { CommunityCommentPath } from './comment/entities/community-comment-path.entity';
 // bookmark
@@ -60,6 +61,7 @@ import { CommunityAttachmentEntity } from './post/entities/community-attachment.
     CommunityMemberService,
     CommunityPostService,
     CommunityCommentService,
+    CommunityCommentNotificationService,
     CommunityBookmarkService,
   ],
 
@@ -68,6 +70,7 @@ import { CommunityAttachmentEntity } from './post/entities/community-attachment.
     CommunityMemberService,
     CommunityPostService,
     CommunityCommentService,
+    CommunityCommentNotificationService,
     CommunityBookmarkService,
   ],
 })

@@ -6,14 +6,13 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
-import { BullMQService } from 'src/common/bullmq/bullmq.service';
-import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
+import { CommunityCommentNotificationService } from './community-comment-notification.service';
 
 @Injectable()
 export class CommunityCommentService {
   constructor(
     private dataSource: DataSource,
-    private readonly bullmq: BullMQService,
+    private readonly commentNotification: CommunityCommentNotificationService,
     private readonly logger: AppLogger,
   ) { }
 
@@ -276,31 +275,20 @@ export class CommunityCommentService {
           );
 
           if (parentOwnerRow.length > 0) {
-            this.bullmq.addJob({
-              queue: NOTIFICATION_QUEUE,
-              job: JobType.COMMUNITY_COMMENT_REPLY,
-              data: {
-                type: JobType.COMMUNITY_COMMENT_REPLY,
-                actor_id: userId,
-                post_id: post_commu_id,
-                parent_comment_id: parent_id,
-                parent_owner_id: parentOwnerRow[0].owner_id,
-                community_id: post[0].community_id,
-              },
+            void this.commentNotification.notifyCommentReply({
+              actorId: userId,
+              postId: post_commu_id,
+              parentOwnerId: Number(parentOwnerRow[0].owner_id),
+              communityId: Number(post[0].community_id),
             });
           }
-        } else {
+        } else if (post[0].owner_id) {
           // Comment ธรรมดา → แจ้งเจ้าของโพสต์
-          this.bullmq.addJob({
-            queue: NOTIFICATION_QUEUE,
-            job: JobType.COMMUNITY_COMMENT,
-            data: {
-              type: JobType.COMMUNITY_COMMENT,
-              actor_id: userId,
-              post_id: post_commu_id,
-              post_owner_id: post[0].owner_id,
-              community_id: post[0].community_id,
-            },
+          void this.commentNotification.notifyComment({
+            actorId: userId,
+            postId: post_commu_id,
+            postOwnerId: Number(post[0].owner_id),
+            communityId: Number(post[0].community_id),
           });
         }
 
