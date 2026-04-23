@@ -91,7 +91,8 @@ export class ChatService {
       c.*, 
       COALESCE(us.first_name, '') as first_name,
       COALESCE(us.last_name, '') as last_name,
-      us.profile_pic
+      us.profile_pic,
+      us.user_sys_id
       FROM chat c
       LEFT JOIN user_sys_chat_normalize uscn 
       ON c.chat_id = uscn.chat_id
@@ -152,6 +153,11 @@ export class ChatService {
 
     try {
       const result = await this.dataSource.query(query, values);
+      this.logger.debug(
+        'Executed searchChat query:',
+        'SearchChat',
+        result,
+      );
       return { success: true, data: result };
     } catch (error: unknown) {
       this.logger.error(
