@@ -22,7 +22,8 @@ export class ClassInfoService {
         u.user_sys_id,
         CONCAT(u.first_name, ' ', u.last_name) as display_name,
         u.email,
-        u.profile_pic
+        u.profile_pic,
+        u.code as educator_code
       FROM section_educator se
       JOIN user_sys u ON se.educator_id = u.user_sys_id
       WHERE se.section_id = $1
@@ -133,7 +134,8 @@ export class ClassInfoService {
           u.user_sys_id,
           CONCAT(u.first_name, ' ', u.last_name) as display_name,
           u.profile_pic,
-          (se.position = 'main_teacher') as is_main_teacher
+          (se.position = 'main_teacher') as is_main_teacher,
+          u.code as educator_code
         FROM section_educator se
         JOIN user_sys u ON se.educator_id = u.user_sys_id
         WHERE se.section_id = $1
