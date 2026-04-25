@@ -1,4 +1,3 @@
-// chat.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -7,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not, MoreThan } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
@@ -37,6 +36,17 @@ export class ChatService {
     private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
   ) { }
+
+  /**
+   * Mark chat as read (update last_read for user in chat)
+   */
+  async markChatRead(userId: number, chatId: number) {
+    await this.userSysChatNormalizeRepo.update(
+      { user_sys_id: userId, chat_id: chatId },
+      { last_read: new Date() }
+    );
+    return { success: true };
+  }
 
   private async ensureActiveUser(userId: number) {
     const user = await this.dataSource.query(
@@ -135,37 +145,44 @@ export class ChatService {
     }
 
     // Sort
-    if (dto.sort_by) {
-      const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
-    }
-
-    // Pagination
-    if (dto.limit) {
-      query += ` LIMIT $${index++}`;
-      values.push(dto.limit);
-    }
-
-    if (dto.offset) {
-      query += ` OFFSET $${index++}`;
-      values.push(dto.offset);
-    }
-
     try {
       const result = await this.dataSource.query(query, values);
+      let userId = dto.user_sys_id;
+      if (!userId && result.length > 0) {
+        userId = result[0].user_sys_id;
+      }
+      const chatsWithUnread = await Promise.all(result.map(async (chat: any) => {
+        let unreadCount = 0;
+        let isRead = true;
+        if (userId) {
+          const userChatNorm = await this.userSysChatNormalizeRepo.findOne({ where: { user_sys_id: userId, chat_id: chat.chat_id } });
+          const lastRead = userChatNorm?.last_read;
+          isRead = userChatNorm?.is_read ?? true;
+          const where: any = {
+            chat_id: chat.chat_id,
+            flag_valid: true,
+            sender_id: Not(userId)
+          };
+          if (lastRead) {
+            where.created_at = MoreThan(lastRead);
+          }
+          unreadCount = await this.messageRepo.count({ where });
+        }
+        return { ...chat, unread_count: unreadCount, is_read: isRead };
+      }));
       this.logger.debug(
         'Executed searchChat query:',
         'SearchChat',
-        result,
+        chatsWithUnread,
       );
-      return { success: true, data: result };
+      return { success: true, data: chatsWithUnread };
     } catch (error: unknown) {
       this.logger.error(
         'Error executing searchChat query:',
         'SearchChat',
         error,
       );
-      throw new InternalServerErrorException('Error fetching chats');
+      throw new InternalServerErrorException('Error searching chats');
     }
   }
 
@@ -288,7 +305,13 @@ export class ChatService {
 
     const query = this.messageRepo
       .createQueryBuilder('m')
-      .select('m.*')
+      // .select('m.*')
+      .leftJoin('user_sys', 'u', 'u.user_sys_id = m.sender_id')
+      .select([
+        'm.*',
+        'u.first_name as first_name',
+        'u.last_name as last_name',
+      ])
       .addSelect('COUNT(*) OVER()', 'total_count');
 
     if (dto.message_id) {
@@ -338,9 +361,27 @@ export class ChatService {
     if (dto.limit) query.limit(dto.limit);
     if (dto.offset) query.offset(dto.offset);
 
+    // --- Update last_read_at in user_sys_chat_normalize when viewing messages (from read chat) ---
+    if (dto.chat_id && dto.from_read_chat && dto.viewer_id) {
+      await this.userSysChatNormalizeRepo.update(
+        { user_sys_id: dto.viewer_id, chat_id: dto.chat_id },
+        { last_read: new Date() }
+      );
+    }
+
     try {
       const result = await query.getRawMany();
-      return { success: true, data: result };
+      let unreadCount = 0;
+      if (dto.chat_id && dto.viewer_id) {
+        const chat = await this.chatRepo.findOne({ where: { chat_id: dto.chat_id } });
+        const userChatNorm = await this.userSysChatNormalizeRepo.findOne({ where: { user_sys_id: dto.viewer_id, chat_id: dto.chat_id } });
+        if (chat && chat.last_sent) {
+          if (!userChatNorm || !userChatNorm.last_read || chat.last_sent > userChatNorm.last_read) {
+            unreadCount = 1;
+          }
+        }
+      }
+      return { success: true, data: result, unread_count: unreadCount };
     } catch (error: unknown) {
       this.logger.error(
         'Error executing searchMessages query:',

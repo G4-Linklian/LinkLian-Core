@@ -1,4 +1,3 @@
-// chat.controller.ts
 import {
   Controller,
   Get,
@@ -9,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -33,6 +33,20 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) { }
+
+  @Patch('mark-read')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mark chat as read',
+    description: 'Update last_read for user in chat (mark as read)',
+  })
+  @ApiResponse({ status: 200, description: 'Marked as read' })
+  async markChatRead(
+    @Query('user_sys_id', ParseIntPipe) userId: number,
+    @Query('chat_id', ParseIntPipe) chatId: number,
+  ) {
+    return this.chatService.markChatRead(userId, chatId);
+  }
 
   // ========== Chat Endpoints ==========
 
@@ -81,7 +95,7 @@ export class ChatController {
     summary: 'Get chat by ID',
     description: 'Get a specific chat by its ID',
   })
-  @ApiParam({ name: 'id', description: 'Chat ID', type: Number })
+  @ApiParam({ name: 'id', description: 'Chat ID', type: 'number' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiResponse({ status: 404, description: 'Chat not found' })
   async getChatById(@Param('id', ParseIntPipe) id: number) {
