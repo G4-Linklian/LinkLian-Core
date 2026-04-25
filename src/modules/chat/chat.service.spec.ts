@@ -23,6 +23,7 @@ const mockQb = {
   orderBy: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   offset: jest.fn().mockReturnThis(),
+  leftJoin: jest.fn().mockReturnThis(),
   getRawMany: jest.fn(),
 };
 
@@ -287,7 +288,7 @@ describe('ChatService', () => {
 
       const result = await service.searchMessages({ chat_id: 5 });
 
-      expect(result).toEqual({ success: true, data: mockMessages });
+      expect(result).toEqual({ success: true, data: mockMessages, unread_count: 0 });
       expect(mockQb.andWhere).toHaveBeenCalledWith('m.chat_id = :chatId', { chatId: 5 });
     });
 
