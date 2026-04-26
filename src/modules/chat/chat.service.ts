@@ -95,24 +95,41 @@ export class ChatService {
       throw new BadRequestException('No value input!');
     }
 
-    // Build raw query for complex joins
+    // Build query to join user_sys_chat_normalize and count unread messages
+    // Business logic: join normalize, get is_read, last_read, and unread_count in one query
     let query = `
       SELECT DISTINCT ON (c.chat_id)
-      c.*, 
-      COALESCE(us.first_name, '') as first_name,
-      COALESCE(us.last_name, '') as last_name,
-      us.profile_pic,
-      us.user_sys_id
+        c.*,
+        COALESCE(us.first_name, '') as first_name,
+        COALESCE(us.last_name, '') as last_name,
+        us.profile_pic,
+        us.user_sys_id,
+        uscn.is_read,
+        uscn.last_read,
+        (
+          SELECT COUNT(*)
+          FROM message m
+          WHERE m.chat_id = c.chat_id
+            AND m.flag_valid = true
+            AND m.sender_id != $1
+            AND (
+              uscn.last_read IS NULL OR m.created_at > uscn.last_read
+            )
+        ) as unread_count
       FROM chat c
-      LEFT JOIN user_sys_chat_normalize uscn 
-      ON c.chat_id = uscn.chat_id
-      AND uscn.user_sys_id <> $1
-      LEFT JOIN user_sys us ON uscn.user_sys_id = us.user_sys_id
+      LEFT JOIN user_sys_chat_normalize uscn
+        ON c.chat_id = uscn.chat_id
+        AND uscn.user_sys_id = $1
+      LEFT JOIN user_sys_chat_normalize uscn_other
+        ON c.chat_id = uscn_other.chat_id
+        AND uscn_other.user_sys_id <> $1
+      LEFT JOIN user_sys us ON uscn_other.user_sys_id = us.user_sys_id
       WHERE 1=1
     `;
 
     const values: any[] = [];
-    let index = 1;
+    let index = 2;
+    values.push(dto.user_sys_id);
 
     if (dto.chat_id) {
       query += ` AND c.chat_id = $${index++}`;
@@ -122,16 +139,13 @@ export class ChatService {
     // Filter chats that include the specified user
     if (dto.user_sys_id) {
       query += `
-    AND EXISTS (
-      SELECT 1
-      FROM user_sys_chat_normalize uscn2
-      WHERE uscn2.chat_id = c.chat_id
-        AND uscn2.user_sys_id = $${index}
-    )
-  `;
-      values.push(dto.user_sys_id);
-      index++;
-
+        AND EXISTS (
+          SELECT 1
+          FROM user_sys_chat_normalize uscn2
+          WHERE uscn2.chat_id = c.chat_id
+            AND uscn2.user_sys_id = $1
+        )
+      `;
     }
 
     if (typeof dto.is_ai_chat === 'boolean') {
@@ -147,35 +161,13 @@ export class ChatService {
     // Sort
     try {
       const result = await this.dataSource.query(query, values);
-      let userId = dto.user_sys_id;
-      if (!userId && result.length > 0) {
-        userId = result[0].user_sys_id;
-      }
-      const chatsWithUnread = await Promise.all(result.map(async (chat: any) => {
-        let unreadCount = 0;
-        let isRead = true;
-        if (userId) {
-          const userChatNorm = await this.userSysChatNormalizeRepo.findOne({ where: { user_sys_id: userId, chat_id: chat.chat_id } });
-          const lastRead = userChatNorm?.last_read;
-          isRead = userChatNorm?.is_read ?? true;
-          const where: any = {
-            chat_id: chat.chat_id,
-            flag_valid: true,
-            sender_id: Not(userId)
-          };
-          if (lastRead) {
-            where.created_at = MoreThan(lastRead);
-          }
-          unreadCount = await this.messageRepo.count({ where });
-        }
-        return { ...chat, unread_count: unreadCount, is_read: isRead };
-      }));
       this.logger.debug(
         'Executed searchChat query:',
         'SearchChat',
-        chatsWithUnread,
+        result,
       );
-      return { success: true, data: chatsWithUnread };
+      // Return is_read, last_read, unread_count directly from query
+      return { success: true, data: result };
     } catch (error: unknown) {
       this.logger.error(
         'Error executing searchChat query:',
@@ -352,6 +344,21 @@ export class ChatService {
     }
 
     // Sort
+    //   if (dto.sort_by) {
+    //   const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    //   query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
+    // }
+
+    // // Pagination
+    // if (dto.limit) {
+    //   query += ` LIMIT $${index++}`;
+    //   values.push(dto.limit);
+    // }
+
+    // if (dto.offset) {
+    //   query += ` OFFSET $${index++}`;
+    //   values.push(dto.offset);
+    // }
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
       query.orderBy(`m.${dto.sort_by}`, order);
