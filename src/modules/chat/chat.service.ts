@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Not, MoreThan } from 'typeorm';
+import { Repository, DataSource} from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';

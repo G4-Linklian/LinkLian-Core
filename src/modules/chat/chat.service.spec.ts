@@ -143,14 +143,9 @@ describe('ChatService', () => {
     });
 
     it('should return chats filtered by chat_id', async () => {
-      // mockDataSource.query จะถูกเรียกใน service แล้ว map ใส่ unread_count, is_read
+      // mockDataSource.query returns only chat_id and is_ai_chat fields
       const mockChats = [{ chat_id: 1, is_ai_chat: false }];
       mockDataSource.query.mockResolvedValueOnce(mockChats);
-
-      // mock userSysChatNormalizeRepo.findOne ให้คืนค่า is_read true
-      mockUserSysChatNormalizeRepo.findOne = jest.fn().mockResolvedValue({ is_read: true });
-      // mock messageRepo.count ให้คืนค่า 2
-      mockMessageRepo.count = jest.fn().mockResolvedValue(2);
 
       const result = await service.searchChat({ chat_id: 1, user_sys_id: 1 });
 
@@ -158,8 +153,6 @@ describe('ChatService', () => {
       expect(result.data[0]).toMatchObject({
         chat_id: 1,
         is_ai_chat: false,
-        unread_count: 2,
-        is_read: true,
       });
       const [calledQuery, calledValues] = mockDataSource.query.mock.calls[0];
       expect(calledQuery).toContain('c.chat_id');
