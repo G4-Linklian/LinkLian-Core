@@ -547,10 +547,10 @@ export class ChatService {
 
     if (!receiverId) return;
 
-    // Save notification + firebase (แยกกัน ถ้า fail ไม่บล็อก delivery)
-    const notificationId = await this.chatNotification.notify(message, receiverId, senderName);
+    // Save notification + firebase + socket notification (แยกกัน ถ้า fail ไม่บล็อก delivery)
+    await this.chatNotification.notify(message, receiverId, senderName);
 
-    // Publish chat.deliver → Queue → Socket
+    // Publish chat.deliver → Queue → Socket (ไม่มี notification_id แล้ว)
     const eventMessage: ChatSendEvent = {
       type: 'CHAT_DELIVER',
       payload: {
@@ -558,7 +558,6 @@ export class ChatService {
         sender_id: message.sender_id,
         sender_name: senderName,
         receive_user_id: receiverId,
-        notification_id: notificationId,
         content: message.content,
         reply_id: message.reply_id ?? null,
         file_url: (message.file as object[]) ?? [],

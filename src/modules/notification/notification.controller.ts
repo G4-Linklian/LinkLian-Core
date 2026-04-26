@@ -29,8 +29,12 @@ export class NotificationController {
    */
   @Access('notification', 'read')
   @Get('unread-count')
-  getUnreadCount(@Headers('x-user-id') userId: string) {
-    return this.service.getUnreadCount(Number(userId));
+  getUnreadCount(
+    @Headers('x-user-id') userId: string,
+    @Query('feature') feature?: string,
+    @Query('exclude_feature') excludeFeature?: string,
+  ) {
+    return this.service.getUnreadCount(Number(userId), feature, excludeFeature);
   }
 
   /**

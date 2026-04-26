@@ -176,7 +176,6 @@ export interface ChatSendEvent {
     sender_id: number;
     sender_name: string;
     receive_user_id: number;
-    notification_id: number;
     content: string;
     reply_id: number | null;
     file_url: object[] | null;

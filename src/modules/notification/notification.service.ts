@@ -59,15 +59,27 @@ export class NotificationService {
   /**
    * นับ notification ที่ยังไม่ได้อ่าน
    */
-  async getUnreadCount(userId: number) {
+  async getUnreadCount(userId: number, feature?: string, excludeFeature?: string) {
+    const params: (number | string)[] = [userId];
+    let featureClause = '';
+
+    if (feature) {
+      params.push(feature);
+      featureClause = `AND n.feature = $${params.length}`;
+    } else if (excludeFeature) {
+      params.push(excludeFeature);
+      featureClause = `AND n.feature != $${params.length}`;
+    }
+
     const rows = await this.dataSource.query(
       `SELECT COUNT(*) AS count
        FROM notification_receive nr
        JOIN notification n ON n.notification_id = nr.notification_id AND n.flag_valid = true
        WHERE nr.receiver_id = $1
          AND nr.flag_valid = true
-         AND nr.is_read = false`,
-      [userId],
+         AND nr.is_read = false
+         ${featureClause}`,
+      params,
     );
 
     return {

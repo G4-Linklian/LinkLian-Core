@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
-import { RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE } from 'src/worker/worker.constants';
+import { RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, RABBITMQ_ROUTING_KEY_SOCKET } from 'src/worker/worker.constants';
 import {
   getActorName,
   saveNotification,
@@ -42,7 +42,7 @@ export class ChatNotificationService {
   }
 
   /**
-   * บันทึก notification ลง DB และส่ง Firebase push
+   * บันทึก notification ลง DB, ส่ง Firebase push, และส่ง socket notification
    * แยกออกจาก delivery flow — ถ้า fail จะ log เฉยๆ ไม่กระทบการส่งข้อความ
    */
   async notify(message: Message, receiverId: number, senderName: string): Promise<number> {
@@ -62,19 +62,28 @@ export class ChatNotificationService {
 
       await saveReceivers(this.dataSource, notificationId, [receiverId]);
 
+      const notificationPayload = {
+        notification_id: String(notificationId),
+        receive_user_id: String(receiverId),
+        actor_id:        String(message.sender_id),
+        actor_name:      senderName,
+        title:           senderName,
+        body:            message.content,
+        ref_id:          String(message.chat_id),
+        ref_type:        'chat',
+        feature:         'chat',
+      };
+
+      // Firebase push (background)
       await this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_FIREBASE, {
         type: 'FCM_SEND',
-        payload: {
-          notification_id: String(notificationId),
-          receive_user_id: String(receiverId),
-          actor_id: String(message.sender_id),
-          actor_name: senderName,
-          title: senderName,
-          body: message.content,
-          ref_id: String(message.chat_id),
-          ref_type: 'chat',
-          feature: 'chat',
-        },
+        payload: notificationPayload,
+      });
+
+      // Socket notification (foreground) — แยกอิสระจาก chat.deliver
+      await this.rabbitmq.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY_SOCKET, {
+        type: 'NOTIFICATION',
+        payload: notificationPayload,
       });
 
       return notificationId;
