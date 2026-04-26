@@ -1,4 +1,3 @@
-// chat.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -7,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource} from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
@@ -37,6 +36,17 @@ export class ChatService {
     private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
   ) { }
+
+  /**
+   * Mark chat as read (update last_read for user in chat)
+   */
+  async markChatRead(userId: number, chatId: number) {
+    await this.userSysChatNormalizeRepo.update(
+      { user_sys_id: userId, chat_id: chatId },
+      { last_read: new Date() }
+    );
+    return { success: true };
+  }
 
   private async ensureActiveUser(userId: number) {
     const user = await this.dataSource.query(
@@ -85,24 +95,41 @@ export class ChatService {
       throw new BadRequestException('No value input!');
     }
 
-    // Build raw query for complex joins
+    // Build query to join user_sys_chat_normalize and count unread messages
+    // Business logic: join normalize, get is_read, last_read, and unread_count in one query
     let query = `
       SELECT DISTINCT ON (c.chat_id)
-      c.*, 
-      COALESCE(us.first_name, '') as first_name,
-      COALESCE(us.last_name, '') as last_name,
-      us.profile_pic,
-      us.user_sys_id
+        c.*,
+        COALESCE(us.first_name, '') as first_name,
+        COALESCE(us.last_name, '') as last_name,
+        us.profile_pic,
+        us.user_sys_id,
+        uscn.is_read,
+        uscn.last_read,
+        (
+          SELECT COUNT(*)
+          FROM message m
+          WHERE m.chat_id = c.chat_id
+            AND m.flag_valid = true
+            AND m.sender_id != $1
+            AND (
+              uscn.last_read IS NULL OR m.created_at > uscn.last_read
+            )
+        ) as unread_count
       FROM chat c
-      LEFT JOIN user_sys_chat_normalize uscn 
-      ON c.chat_id = uscn.chat_id
-      AND uscn.user_sys_id <> $1
-      LEFT JOIN user_sys us ON uscn.user_sys_id = us.user_sys_id
+      LEFT JOIN user_sys_chat_normalize uscn
+        ON c.chat_id = uscn.chat_id
+        AND uscn.user_sys_id = $1
+      LEFT JOIN user_sys_chat_normalize uscn_other
+        ON c.chat_id = uscn_other.chat_id
+        AND uscn_other.user_sys_id <> $1
+      LEFT JOIN user_sys us ON uscn_other.user_sys_id = us.user_sys_id
       WHERE 1=1
     `;
 
     const values: any[] = [];
-    let index = 1;
+    let index = 2;
+    values.push(dto.user_sys_id);
 
     if (dto.chat_id) {
       query += ` AND c.chat_id = $${index++}`;
@@ -112,16 +139,13 @@ export class ChatService {
     // Filter chats that include the specified user
     if (dto.user_sys_id) {
       query += `
-    AND EXISTS (
-      SELECT 1
-      FROM user_sys_chat_normalize uscn2
-      WHERE uscn2.chat_id = c.chat_id
-        AND uscn2.user_sys_id = $${index}
-    )
-  `;
-      values.push(dto.user_sys_id);
-      index++;
-
+        AND EXISTS (
+          SELECT 1
+          FROM user_sys_chat_normalize uscn2
+          WHERE uscn2.chat_id = c.chat_id
+            AND uscn2.user_sys_id = $1
+        )
+      `;
     }
 
     if (typeof dto.is_ai_chat === 'boolean') {
@@ -135,22 +159,6 @@ export class ChatService {
     }
 
     // Sort
-    if (dto.sort_by) {
-      const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-      query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
-    }
-
-    // Pagination
-    if (dto.limit) {
-      query += ` LIMIT $${index++}`;
-      values.push(dto.limit);
-    }
-
-    if (dto.offset) {
-      query += ` OFFSET $${index++}`;
-      values.push(dto.offset);
-    }
-
     try {
       const result = await this.dataSource.query(query, values);
       this.logger.debug(
@@ -158,6 +166,7 @@ export class ChatService {
         'SearchChat',
         result,
       );
+      // Return is_read, last_read, unread_count directly from query
       return { success: true, data: result };
     } catch (error: unknown) {
       this.logger.error(
@@ -165,7 +174,7 @@ export class ChatService {
         'SearchChat',
         error,
       );
-      throw new InternalServerErrorException('Error fetching chats');
+      throw new InternalServerErrorException('Error searching chats');
     }
   }
 
@@ -288,7 +297,13 @@ export class ChatService {
 
     const query = this.messageRepo
       .createQueryBuilder('m')
-      .select('m.*')
+      // .select('m.*')
+      .leftJoin('user_sys', 'u', 'u.user_sys_id = m.sender_id')
+      .select([
+        'm.*',
+        'u.first_name as first_name',
+        'u.last_name as last_name',
+      ])
       .addSelect('COUNT(*) OVER()', 'total_count');
 
     if (dto.message_id) {
@@ -329,6 +344,21 @@ export class ChatService {
     }
 
     // Sort
+    //   if (dto.sort_by) {
+    //   const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    //   query += ` ORDER BY c.chat_id, c.${dto.sort_by} ${order}`;
+    // }
+
+    // // Pagination
+    // if (dto.limit) {
+    //   query += ` LIMIT $${index++}`;
+    //   values.push(dto.limit);
+    // }
+
+    // if (dto.offset) {
+    //   query += ` OFFSET $${index++}`;
+    //   values.push(dto.offset);
+    // }
     if (dto.sort_by) {
       const order = dto.sort_order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
       query.orderBy(`m.${dto.sort_by}`, order);
@@ -338,9 +368,27 @@ export class ChatService {
     if (dto.limit) query.limit(dto.limit);
     if (dto.offset) query.offset(dto.offset);
 
+    // --- Update last_read_at in user_sys_chat_normalize when viewing messages (from read chat) ---
+    if (dto.chat_id && dto.from_read_chat && dto.viewer_id) {
+      await this.userSysChatNormalizeRepo.update(
+        { user_sys_id: dto.viewer_id, chat_id: dto.chat_id },
+        { last_read: new Date() }
+      );
+    }
+
     try {
       const result = await query.getRawMany();
-      return { success: true, data: result };
+      let unreadCount = 0;
+      if (dto.chat_id && dto.viewer_id) {
+        const chat = await this.chatRepo.findOne({ where: { chat_id: dto.chat_id } });
+        const userChatNorm = await this.userSysChatNormalizeRepo.findOne({ where: { user_sys_id: dto.viewer_id, chat_id: dto.chat_id } });
+        if (chat && chat.last_sent) {
+          if (!userChatNorm || !userChatNorm.last_read || chat.last_sent > userChatNorm.last_read) {
+            unreadCount = 1;
+          }
+        }
+      }
+      return { success: true, data: result, unread_count: unreadCount };
     } catch (error: unknown) {
       this.logger.error(
         'Error executing searchMessages query:',

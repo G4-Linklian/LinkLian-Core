@@ -23,6 +23,7 @@ const mockQb = {
   orderBy: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   offset: jest.fn().mockReturnThis(),
+  leftJoin: jest.fn().mockReturnThis(),
   getRawMany: jest.fn(),
 };
 
@@ -49,9 +50,12 @@ const mockChatRepo = {
 
 const mockMessageRepo = {
   createQueryBuilder: jest.fn(),
+  count: jest.fn(),
 };
 
-const mockUserSysChatNormalizeRepo = {};
+const mockUserSysChatNormalizeRepo = {
+  findOne: jest.fn(),
+};
 
 const mockDataSource = {
   query: jest.fn(),
@@ -133,17 +137,23 @@ describe('ChatService', () => {
   // ─── searchChat ────────────────────────────────────────────────────────────
 
   describe('searchChat', () => {
+
     it('should throw BadRequestException when no input provided', async () => {
       await expect(service.searchChat({})).rejects.toThrow(BadRequestException);
     });
 
     it('should return chats filtered by chat_id', async () => {
+      // mockDataSource.query returns only chat_id and is_ai_chat fields
       const mockChats = [{ chat_id: 1, is_ai_chat: false }];
       mockDataSource.query.mockResolvedValueOnce(mockChats);
 
-      const result = await service.searchChat({ chat_id: 1 });
+      const result = await service.searchChat({ chat_id: 1, user_sys_id: 1 });
 
-      expect(result).toEqual({ success: true, data: mockChats });
+      expect(result.success).toBe(true);
+      expect(result.data[0]).toMatchObject({
+        chat_id: 1,
+        is_ai_chat: false,
+      });
       const [calledQuery, calledValues] = mockDataSource.query.mock.calls[0];
       expect(calledQuery).toContain('c.chat_id');
       expect(calledValues).toContain(1);
@@ -271,7 +281,7 @@ describe('ChatService', () => {
 
       const result = await service.searchMessages({ chat_id: 5 });
 
-      expect(result).toEqual({ success: true, data: mockMessages });
+      expect(result).toEqual({ success: true, data: mockMessages, unread_count: 0 });
       expect(mockQb.andWhere).toHaveBeenCalledWith('m.chat_id = :chatId', { chatId: 5 });
     });
 
