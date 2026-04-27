@@ -10,4 +10,11 @@ export class UserSysChatNormalize {
 
   @Column({ name: 'flag_valid', default: true })
   flag_valid!: boolean;
+
+  @Column({ name: 'is_read', default: false })
+  is_read!: boolean;
+
+  @Column({ name: 'last_read' })
+  last_read!: Date;
 }
+

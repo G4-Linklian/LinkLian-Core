@@ -79,6 +79,17 @@ export class CreateChatDto {
 // ========== Message DTOs ==========
 
 export class SearchMessageDto {
+  @ApiPropertyOptional({ description: 'Mark as read when viewing', example: false })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  from_read_chat?: boolean;
+
+  @ApiPropertyOptional({ description: 'User ID of viewer', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  viewer_id?: number;
   @ApiPropertyOptional({ description: 'Message ID', example: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -174,8 +185,6 @@ export interface ChatSendEvent {
   payload: {
     chat_id: number;
     sender_id: number;
-    sender_name: string;
-    receive_user_id: number;
     content: string;
     reply_id: number | null;
     file_url: object[] | null;
