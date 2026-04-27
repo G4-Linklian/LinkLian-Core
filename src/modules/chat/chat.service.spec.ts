@@ -11,8 +11,9 @@ import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
 import { AppLogger } from 'src/common/logger/app-logger.service';
-import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
 import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 // ─── Mock QueryBuilder (used by messageRepo) ──────────────────────────────────
 
@@ -65,8 +66,8 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-const mockRabbitMQService = {
-  publish: jest.fn(),
+const mockBullMQService = {
+  addJob: jest.fn(),
 };
 
 const mockFileStorageService = {
@@ -90,7 +91,7 @@ describe('ChatService', () => {
         },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AppLogger, useValue: mockLogger },
-        { provide: RabbitMQService, useValue: mockRabbitMQService },
+        { provide: BullMQService, useValue: mockBullMQService },
         { provide: FileStorageService, useValue: mockFileStorageService },
       ],
     }).compile();
@@ -350,12 +351,14 @@ describe('ChatService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should save message, update chat, and publish to RabbitMQ', async () => {
-      // mock ensureActiveUser ให้ return array เสมอ
-      mockDataSource.query.mockResolvedValueOnce([{}]);
+    it('should save message, update chat, and enqueue notification via BullMQ', async () => {
+      // mock ensureActiveUser
+      mockDataSource.query
+        .mockResolvedValueOnce([{}])   // ensureActiveUser
+        .mockResolvedValueOnce([{ user_sys_id: 99 }]); // receiver lookup in sendMessageToRabbitMQ
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
-      mockRabbitMQService.publish.mockResolvedValueOnce(undefined);
+      mockBullMQService.addJob.mockResolvedValueOnce(undefined);
 
       const result = await service.createMessage(dto);
 
@@ -366,17 +369,29 @@ describe('ChatService', () => {
         { chat_id: dto.chat_id },
         expect.objectContaining({ last_messages: dto.content }),
       );
-      expect(mockRabbitMQService.publish).toHaveBeenCalled();
+      expect(mockBullMQService.addJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.CHAT_MESSAGE,
+          data: expect.objectContaining({
+            type: JobType.CHAT_MESSAGE,
+            sender_id: dto.sender_id,
+            chat_id: dto.chat_id,
+          }),
+        }),
+      );
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockSavedMsg);
     });
 
-    it('should still commit when RabbitMQ publish fails (degraded gracefully)', async () => {
-      mockDataSource.query.mockResolvedValueOnce([{}]);
+    it('should still commit when BullMQ enqueue fails (degraded gracefully)', async () => {
+      mockDataSource.query
+        .mockResolvedValueOnce([{}])
+        .mockResolvedValueOnce([{ user_sys_id: 99 }]);
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
-      mockRabbitMQService.publish.mockRejectedValueOnce(new Error('RabbitMQ down'));
+      mockBullMQService.addJob.mockRejectedValueOnce(new Error('BullMQ down'));
 
       const result = await service.createMessage(dto);
 

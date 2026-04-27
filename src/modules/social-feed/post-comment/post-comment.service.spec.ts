@@ -11,6 +11,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { PostCommentNotificationService } from './post-comment-notification.service';
+
+const mockNotifyComment = jest.fn();
+const mockNotifyCommentReply = jest.fn();
 
 const mockQuery = jest.fn();
 const mockQueryRunner = {
@@ -54,6 +58,10 @@ describe('PostCommentService', () => {
         { provide: AppLogger, useValue: mockLogger },
         { provide: getRepositoryToken(PostComment), useValue: mockRepo },
         { provide: getRepositoryToken(PostCommentPath), useValue: mockRepo },
+        {
+          provide: PostCommentNotificationService,
+          useValue: { notifyComment: mockNotifyComment, notifyCommentReply: mockNotifyCommentReply },
+        },
       ],
     }).compile();
 
@@ -180,7 +188,9 @@ describe('PostCommentService', () => {
     it('should create a root comment successfully', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 1 }]) // insert comment
-        .mockResolvedValueOnce([]); // insert self path
+        .mockResolvedValueOnce([]);                  // insert self path
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -196,8 +206,10 @@ describe('PostCommentService', () => {
     it('should create a reply comment with parent_id', async () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 2 }]) // insert comment
-        .mockResolvedValueOnce([]) // insert self path
-        .mockResolvedValueOnce([]); // insert reply paths
+        .mockResolvedValueOnce([])                   // insert self path
+        .mockResolvedValueOnce([]);                  // insert reply paths
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -213,6 +225,8 @@ describe('PostCommentService', () => {
       mockQueryRunner.query
         .mockResolvedValueOnce([{ comment_id: 3 }])
         .mockResolvedValueOnce([]);
+
+      mockQuery.mockResolvedValueOnce([]); // post owner query (no owner → skip notification)
 
       const result = await service.createPostComment(1, {
         post_id: 10,
@@ -233,6 +247,52 @@ describe('PostCommentService', () => {
       ).rejects.toThrow(InternalServerErrorException);
 
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should call notifyComment for root comment', async () => {
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ comment_id: 5 }]) // insert comment
+        .mockResolvedValueOnce([]);                  // insert self path
+
+      mockQuery.mockResolvedValueOnce([{
+        post_content_id: 20,
+        owner_id: 3,
+        section_ids: [1, 2],
+      }]);
+
+      await service.createPostComment(1, { post_id: 10, comment_text: 'Hello' });
+
+      expect(mockNotifyComment).toHaveBeenCalledWith({
+        actorId: 1,
+        postContentId: 20,
+        postOwnerId: 3,
+        sectionIds: [1, 2],
+      });
+    });
+
+    it('should call notifyCommentReply for reply', async () => {
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ comment_id: 6 }]) // insert comment
+        .mockResolvedValueOnce([])                   // insert self path
+        .mockResolvedValueOnce([]);                  // insert ancestor paths
+
+      mockQuery
+        .mockResolvedValueOnce([{ post_content_id: 20, owner_id: 3, section_ids: [1] }])
+        .mockResolvedValueOnce([{ owner_id: 7 }]); // parent comment owner
+
+      await service.createPostComment(1, {
+        post_id: 10,
+        comment_text: 'Reply',
+        parent_id: 4,
+      });
+
+      expect(mockNotifyCommentReply).toHaveBeenCalledWith({
+        actorId: 1,
+        postContentId: 20,
+        parentCommentId: 4,
+        parentOwnerId: 7,
+        sectionIds: [1],
+      });
     });
   });
 

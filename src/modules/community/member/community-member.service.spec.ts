@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { CommunityMemberService } from './community-member.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { CommunityCommentNotificationService } from '../comment/community-comment-notification.service';
+
+const mockNotifyMemberJoined = jest.fn();
+const mockNotifyMemberApproved = jest.fn();
 
 describe('CommunityMemberService', () => {
   let service: CommunityMemberService;
@@ -32,11 +36,19 @@ describe('CommunityMemberService', () => {
       providers: [
         CommunityMemberService,
         { provide: DataSource, useValue: dataSource },
-        { provide: AppLogger, useValue: { log: jest.fn() } },
+        { provide: AppLogger, useValue: { log: jest.fn(), error: jest.fn(), warn: jest.fn() } },
+        {
+          provide: CommunityCommentNotificationService,
+          useValue: {
+            notifyMemberJoined: mockNotifyMemberJoined,
+            notifyMemberApproved: mockNotifyMemberApproved,
+          },
+        },
       ],
     }).compile();
 
     service = module.get(CommunityMemberService);
+    jest.clearAllMocks();
   });
 
   describe('joinCommunity', () => {
@@ -53,13 +65,39 @@ describe('CommunityMemberService', () => {
 
     it('should send request for private community', async () => {
       dataSource.query
-        .mockResolvedValueOnce([{ status: 'active', is_private: true }])
+        .mockResolvedValueOnce([{ status: 'active', is_private: true, name: 'Test' }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([{ community_id: 1 }]);
 
       const result = await service.joinCommunity(1, 1);
 
       expect(result.message).toContain('Join request');
+    });
+
+    it('should call notifyMemberJoined for private community', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{ status: 'active', is_private: true, name: 'Dev Club' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ community_id: 1 }]);
+
+      await service.joinCommunity(5, 1);
+
+      expect(mockNotifyMemberJoined).toHaveBeenCalledWith({
+        actorId: 5,
+        communityId: 1,
+        communityName: 'Dev Club',
+      });
+    });
+
+    it('should NOT call notifyMemberJoined for public community', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{ status: 'active', is_private: false, name: 'Public' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ community_id: 1 }]);
+
+      await service.joinCommunity(1, 1);
+
+      expect(mockNotifyMemberJoined).not.toHaveBeenCalled();
     });
 
     it('should throw if community not found', async () => {
@@ -104,7 +142,7 @@ describe('CommunityMemberService', () => {
   describe('approveMember', () => {
     it('should approve pending member', async () => {
       dataSource.query
-        .mockResolvedValueOnce([{ status: 'active' }])
+        .mockResolvedValueOnce([{ status: 'active', name: 'Club' }])
         .mockResolvedValueOnce([1])
         .mockResolvedValueOnce([{ status: 'pending' }])
         .mockResolvedValueOnce([[{ user_sys_id: 2 }]]);
@@ -112,6 +150,23 @@ describe('CommunityMemberService', () => {
       const result = await service.approveMember(1, 1, 2);
 
       expect(result.success).toBe(true);
+    });
+
+    it('should call notifyMemberApproved after approval', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{ status: 'active', name: 'Science Club' }])
+        .mockResolvedValueOnce([1])                      // owner check
+        .mockResolvedValueOnce([{ status: 'pending' }])  // target status
+        .mockResolvedValueOnce([[{ user_sys_id: 2 }]]);  // UPDATE result
+
+      await service.approveMember(1, 1, 2);
+
+      expect(mockNotifyMemberApproved).toHaveBeenCalledWith({
+        targetUserId: 2,
+        communityId: 1,
+        communityName: 'Science Club',
+        approverId: 1,
+      });
     });
 
     it('should throw if not owner', async () => {

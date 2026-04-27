@@ -22,6 +22,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CommunityService } from './community.service';
@@ -32,6 +33,7 @@ import { AppLogger } from 'src/common/logger/app-logger.service';
 import { Access } from 'src/common/decorators/access.decorator';
 
 @ApiTags('Community')
+@ApiBearerAuth('access-token')
 @Controller('community')
 export class CommunityController {
   constructor(

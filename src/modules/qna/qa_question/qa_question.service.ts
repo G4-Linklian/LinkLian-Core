@@ -19,6 +19,8 @@ import { UserSys } from 'src/modules/users/entities/user-sys.entity';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { QnaRedisService } from '../redis/qna-redis.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 
 @Injectable()
 export class QALiveService {
@@ -29,6 +31,7 @@ export class QALiveService {
         private readonly logger: AppLogger,
         private readonly rabbitMQService: RabbitMQService,
         private readonly qnaRedisService: QnaRedisService,
+        private readonly bullmq: BullMQService,
     ) { }
 
     async findQuestionById(qa_question_id: number) {
@@ -185,6 +188,19 @@ export class QALiveService {
             const eventAsker = this.maskedAskerEvent(dto.qa_live_id, dto.is_anonymous, askerInfo);
             await this.newQuestion(dto.qa_live_id, savedQuestion, eventAsker);
 
+            this.bullmq.addJob({
+              queue: NOTIFICATION_QUEUE,
+              job: JobType.QNA_QUESTION_CREATED,
+              data: {
+                type: JobType.QNA_QUESTION_CREATED,
+                actor_id: dto.asker_id,
+                qa_question_id: savedQuestion.qa_question_id,
+                qa_live_id: dto.qa_live_id,
+                section_id: dto.section_id,
+                question: dto.question,
+              },
+            });
+
             return { success: true, data: newQuestion };
         } catch (error) {
             this.logger.error('Error creating QA Question', 'Create QA Question', error);
@@ -233,6 +249,27 @@ export class QALiveService {
                 }
 
                 await this.questionUpdated(updatedQuestion.qa_live_id, updatedQuestion);
+
+                if (updateData.status) {
+                  const liveRows = await this.dataSource.query(
+                    `SELECT live_by FROM qa_live WHERE qa_live_id = $1`,
+                    [question.qa_live_id],
+                  );
+                  const liveBy = liveRows[0]?.live_by ?? 0;
+
+                  this.bullmq.addJob({
+                    queue: NOTIFICATION_QUEUE,
+                    job: JobType.QNA_QUESTION_UPDATED,
+                    data: {
+                      type: JobType.QNA_QUESTION_UPDATED,
+                      actor_id: liveBy,
+                      qa_question_id,
+                      qa_live_id: question.qa_live_id,
+                      asker_id: question.asker_id,
+                      new_status: updateData.status,
+                    },
+                  });
+                }
             }
 
             return { success: true, message: `QA Question with ID ${qa_question_id} updated successfully` };

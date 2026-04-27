@@ -8,8 +8,6 @@ import { PostService } from '../social-feed/post/post.service';
 import { AiRedisService } from './redis/ai-redis.service';
 import { AiChatService } from '../ai-chat/ai-chat.service';
 
-const AI_QUEUE = 'ai-queue';
-
 @Injectable()
 export class AiService {
     constructor(

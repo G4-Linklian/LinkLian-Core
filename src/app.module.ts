@@ -47,6 +47,8 @@ import { AssetsModule } from './modules/asset/asset.module';
 import { QnaModule } from './modules/qna/qna.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportModule } from './modules/report/report.module';
+import { WorkerModule } from './worker/worker.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
@@ -106,6 +108,8 @@ import { ReportModule } from './modules/report/report.module';
     QnaModule,
     DashboardModule,
     ReportModule,
+    WorkerModule,
+    NotificationModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),

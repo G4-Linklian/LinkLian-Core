@@ -3,6 +3,10 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CommunityCommentService } from './community-comment.service';
 import { AppLogger } from 'src/common/logger/app-logger.service';
+import { CommunityCommentNotificationService } from './community-comment-notification.service';
+
+const mockNotifyComment = jest.fn();
+const mockNotifyCommentReply = jest.fn();
 
 describe('CommunityCommentService', () => {
   let service: CommunityCommentService;
@@ -35,6 +39,10 @@ describe('CommunityCommentService', () => {
         CommunityCommentService,
         { provide: DataSource, useValue: mockDataSource },
         { provide: AppLogger, useValue: mockLogger },
+        {
+          provide: CommunityCommentNotificationService,
+          useValue: { notifyComment: mockNotifyComment, notifyCommentReply: mockNotifyCommentReply },
+        },
       ],
     }).compile();
 
@@ -94,12 +102,61 @@ describe('CommunityCommentService', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
+      // post owner for notification
+      dataSource.query.mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }]);
+
       const result = await service.createComment(1, {
         post_commu_id: 1,
         comment_text: 'New',
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it('should call notifyComment when commenting on a post', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{}])                                                        // ensureActiveUser
+        .mockResolvedValueOnce([{ status: 'active', is_private: false, community_id: 5 }]) // post check
+        .mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }]);                         // post owner
+
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ commu_comment_id: 10 }]) // INSERT comment
+        .mockResolvedValueOnce([]);                          // INSERT self path
+
+      await service.createComment(1, { post_commu_id: 1, comment_text: 'Hello' });
+
+      expect(mockNotifyComment).toHaveBeenCalledWith({
+        actorId: 1,
+        postId: 1,
+        postOwnerId: 2,
+        communityId: 5,
+      });
+    });
+
+    it('should call notifyCommentReply when replying to a comment', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{}])                                                        // ensureActiveUser
+        .mockResolvedValueOnce([{ status: 'active', is_private: false, community_id: 5 }]) // post check
+        .mockResolvedValueOnce([{ owner_id: 2, community_id: 5 }])                          // post owner
+        .mockResolvedValueOnce([{ owner_id: 3 }]);                                           // parent comment owner
+
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ commu_comment_id: 11 }]) // INSERT comment
+        .mockResolvedValueOnce([])                          // INSERT self path
+        .mockResolvedValueOnce([]);                         // INSERT ancestor paths
+
+      await service.createComment(1, {
+        post_commu_id: 1,
+        comment_text: 'Reply',
+        parent_id: 50,
+      });
+
+      expect(mockNotifyCommentReply).toHaveBeenCalledWith({
+        actorId: 1,
+        postId: 1,
+        parentOwnerId: 3,
+        communityId: 5,
+      });
     });
   });
 
@@ -120,35 +177,35 @@ describe('CommunityCommentService', () => {
   });
 
   describe('deleteComment', () => {
-  it('should delete comment by owner', async () => {
-    dataSource.query
-      .mockResolvedValueOnce([{ status: 'active' }])
-      .mockResolvedValueOnce([{ commu_comment_id: 1 }]);
+    it('should delete comment by owner', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{ status: 'active' }])
+        .mockResolvedValueOnce([{ commu_comment_id: 1 }]);
 
-    mockQueryRunner.query
-      .mockResolvedValueOnce([{ user_sys_id: 1 }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ user_sys_id: 1 }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
-    const result = await service.deleteComment(1, 1);
+      const result = await service.deleteComment(1, 1);
 
-    expect(result.success).toBe(true);
-    expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should throw error when not owner', async () => {
+      dataSource.query
+        .mockResolvedValueOnce([{ status: 'active' }])
+        .mockResolvedValueOnce([{ commu_comment_id: 1 }]);
+
+      mockQueryRunner.query
+        .mockResolvedValueOnce([{ user_sys_id: 999 }]);
+
+      await expect(service.deleteComment(1, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
   });
-
-  it('should throw error when not owner', async () => {
-    dataSource.query
-      .mockResolvedValueOnce([{ status: 'active' }])
-      .mockResolvedValueOnce([{ commu_comment_id: 1 }]);
-
-    mockQueryRunner.query
-      .mockResolvedValueOnce([{ user_sys_id: 999 }]);
-
-    await expect(service.deleteComment(1, 1)).rejects.toThrow(
-      ForbiddenException,
-    );
-
-    expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
-  });
-});
 });

@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { DataSource } from 'typeorm';
+import { CommunityCommentNotificationService } from '../comment/community-comment-notification.service';
 
 @Injectable()
 export class CommunityMemberService {
   constructor(
     private dataSource: DataSource,
+    private readonly communityNotification: CommunityCommentNotificationService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -18,7 +20,7 @@ export class CommunityMemberService {
     try {
       const community = await this.dataSource.query(
         `
-    SELECT status, is_private
+    SELECT status, is_private, name
     FROM community
     WHERE community_id=$1
     AND flag_valid=true
@@ -79,6 +81,15 @@ export class CommunityMemberService {
           [communityId, userId, newStatus],
         );
       }
+      // แจ้ง owner เฉพาะ community private (status = pending = ต้องรออนุมัติ)
+      if (newStatus === 'pending') {
+        void this.communityNotification.notifyMemberJoined({
+          actorId: userId,
+          communityId,
+          communityName: community[0].name,
+        });
+      }
+
       return {
         success: true,
         data: result[0],
@@ -105,7 +116,7 @@ export class CommunityMemberService {
   ) {
     const community = await this.dataSource.query(
       `
-      SELECT status FROM community
+      SELECT status, name FROM community
       WHERE community_id=$1
       `,
       [communityId],
@@ -173,6 +184,13 @@ export class CommunityMemberService {
       if (!result.length) {
         throw new BadRequestException('Invalid member status');
       }
+
+      void this.communityNotification.notifyMemberApproved({
+        targetUserId,
+        communityId,
+        communityName: community[0].name,
+        approverId: ownerId,
+      });
 
       return {
         success: true,

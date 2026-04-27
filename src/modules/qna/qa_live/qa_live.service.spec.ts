@@ -8,6 +8,7 @@ import { QALiveLog } from './entities/qa_live_log.entity';
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { QnaRedisService } from '../redis/qna-redis.service';
+import { BullMQService } from 'src/common/bullmq/bullmq.service';
 
 const mockQALiveRepo = {
   findOne: jest.fn(),
@@ -66,6 +67,7 @@ describe('QALiveService', () => {
         { provide: AppLogger, useValue: mockLogger },
         { provide: RabbitMQService, useValue: mockRabbitMQService },
         { provide: QnaRedisService, useValue: mockQnaRedisService },
+        { provide: BullMQService, useValue: { addJob: jest.fn() } },
       ],
     }).compile();
 

@@ -19,6 +19,7 @@ import {
 } from './dto/post-comment.dto';
 import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { AppLogger } from '../../../common/logger/app-logger.service';
+import { PostCommentNotificationService } from './post-comment-notification.service';
 @Injectable()
 export class PostCommentService {
   constructor(
@@ -27,6 +28,7 @@ export class PostCommentService {
     @InjectRepository(PostCommentPath)
     private postCommentPathRepo: Repository<PostCommentPath>,
     private dataSource: DataSource,
+    private readonly commentNotification: PostCommentNotificationService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -331,6 +333,48 @@ export class PostCommentService {
       }
 
       await queryRunner.commitTransaction();
+
+      // หา post_content_id และ owner สำหรับ notification
+      const postOwnerRow = await this.dataSource.query(
+        `SELECT pic.post_content_id, pc.user_sys_id AS owner_id, ARRAY_AGG(pic.section_id) AS section_ids
+         FROM post_in_class pic
+         JOIN post_content pc ON pc.post_content_id = pic.post_content_id
+         WHERE pic.post_id = $1 AND pic.flag_valid = true
+         GROUP BY pic.post_content_id, pc.user_sys_id
+         LIMIT 1`,
+        [post_id],
+      );
+
+      if (postOwnerRow.length > 0) {
+        if (parent_id) {
+          // Reply → หาเจ้าของ parent comment แล้วแจ้งเตือนเขา
+          const parentOwnerRow = await this.dataSource.query(
+            `SELECT user_sys_id AS owner_id
+             FROM post_comment
+             WHERE comment_id = $1 AND flag_valid = true
+             LIMIT 1`,
+            [parent_id],
+          );
+
+          if (parentOwnerRow.length > 0) {
+            void this.commentNotification.notifyCommentReply({
+              actorId: userId,
+              postContentId: Number(postOwnerRow[0].post_content_id),
+              parentCommentId: parent_id,
+              parentOwnerId: Number(parentOwnerRow[0].owner_id),
+              sectionIds: postOwnerRow[0].section_ids ?? [],
+            });
+          }
+        } else {
+          // Comment ธรรมดา → แจ้งเจ้าของโพสต์
+          void this.commentNotification.notifyComment({
+            actorId: userId,
+            postContentId: Number(postOwnerRow[0].post_content_id),
+            postOwnerId: Number(postOwnerRow[0].owner_id),
+            sectionIds: postOwnerRow[0].section_ids ?? [],
+          });
+        }
+      }
 
       return {
         success: true,

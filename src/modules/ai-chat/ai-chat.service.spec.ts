@@ -198,8 +198,8 @@ describe('AiChatService', () => {
   describe('createAiChat', () => {
         beforeEach(() => {
           mockDataSource.query.mockReset();
-          mockAiService.postSummary.mockReset && mockAiService.postSummary.mockReset();
-          mockAiChatRepo.save.mockReset && mockAiChatRepo.save.mockReset();
+          mockAiService.postSummary.mockReset();
+          mockAiChatRepo.save.mockReset();
         });
     const dto = { post_content_id: 10 };
 
@@ -461,10 +461,6 @@ describe('AiChatService', () => {
     const aiChatId = 1;
     const userQuestion = 'What is gravity?';
     const assistantAnswer = 'It is a fundamental force.';
-
-    const mockChat = { ai_chat_id: 1, flag_valid: true };
-    const savedUser = { ai_message_id: '10', role: 'user', content: userQuestion };
-    const savedSystem = { ai_message_id: '11', role: 'system', content: assistantAnswer };
 
     it('should save user and system messages in a transaction', async () => {
       mockQueryRunner.manager.findOne.mockResolvedValueOnce(undefined); // simulate user deleted

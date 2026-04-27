@@ -174,6 +174,8 @@ export interface ChatSendEvent {
   payload: {
     chat_id: number;
     sender_id: number;
+    sender_name: string;
+    receive_user_id: number;
     content: string;
     reply_id: number | null;
     file_url: object[] | null;

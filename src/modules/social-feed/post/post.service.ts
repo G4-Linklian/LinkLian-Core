@@ -23,6 +23,7 @@ import { generateAnonymousName } from '../../../common/utils/anonymous.util';
 import { BaseResponse } from '../../../common/utils/baseResponse';
 import { AppLogger } from '../../../common/logger/app-logger.service';
 import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 @Injectable()
 export class PostService {
   constructor(
@@ -723,6 +724,19 @@ export class PostService {
 
       await queryRunner.commitTransaction();
 
+      this.bullmq.addJob({
+        queue: NOTIFICATION_QUEUE,
+        job: JobType.SOCIAL_FEED_POST_CREATED,
+        data: {
+          type: JobType.SOCIAL_FEED_POST_CREATED,
+          actor_id: userId,
+          post_content_id: postContent.post_content_id,
+          post_type: postContent.post_type,
+          title: postContent.title ?? '',
+          section_ids: sectionIds,
+        },
+      });
+
       if (announcementSummaryJobData) {
         await this.bullmq.addJob({
           queue: 'ai_summary_queue',
@@ -1165,6 +1179,21 @@ export class PostService {
           );
         }
       }
+
+      const postContentData = result[0];
+
+      this.bullmq.addJob({
+        queue: NOTIFICATION_QUEUE,
+        job: JobType.SOCIAL_FEED_POST_UPDATED,
+        data: {
+          type: JobType.SOCIAL_FEED_POST_UPDATED,
+          actor_id: userId,
+          post_content_id: targetPostContentId,
+          post_type: postContentData?.post_type ?? '',
+          title: postContentData?.title ?? '',
+          section_ids: dto.section_id ? [dto.section_id] : [],
+        },
+      });
 
       return {
         success: true,

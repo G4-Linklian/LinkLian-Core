@@ -7,6 +7,7 @@ import { PostContent } from './entities/post-content.entity';
 import { PostInClass } from './entities/post-in-class.entity';
 import { PostAttachment } from './entities/post-attachment.entity';
 import { BullMQService } from 'src/common/bullmq/bullmq.service';
+import { JobType, NOTIFICATION_QUEUE } from 'src/worker/worker.constants';
 import {
   BadRequestException,
   ForbiddenException,
@@ -262,6 +263,37 @@ describe('PostService', () => {
       expect(result.message).toBe('Post created successfully');
     });
 
+    it('should enqueue SOCIAL_FEED_POST_CREATED notification after creating post', async () => {
+      setupQueryRunner([
+        [
+          {
+            post_content_id: 10,
+            title: 'Test',
+            content: 'Content',
+            post_type: 'normal',
+            is_anonymous: false,
+            created_at: new Date(),
+          },
+        ],
+        [{ post_id: 1 }],
+      ]);
+
+      await service.createPost(5, { ...baseDto, section_id: 2 });
+
+      expect(mockBullMQService.addJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.SOCIAL_FEED_POST_CREATED,
+          data: expect.objectContaining({
+            type: JobType.SOCIAL_FEED_POST_CREATED,
+            actor_id: 5,
+            post_content_id: 10,
+            post_type: 'normal',
+          }),
+        }),
+      );
+    });
+
     it('should throw BadRequestException if no section_id provided', async () => {
       await expect(
         service.createPost(1, {
@@ -357,10 +389,34 @@ describe('PostService', () => {
     it('should update post successfully by postContentId', async () => {
       mockQuery
         .mockResolvedValueOnce([{ user_sys_id: 1, post_content_id: 10 }]) // owner check
-        .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }]); // update
+        .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }]) // update
+        .mockResolvedValueOnce([{ section_id: 1 }])                          // section lookup
+        .mockResolvedValueOnce([{ post_type: 'normal', title: 'Updated' }]); // post content lookup
 
       const result = await service.updatePost(1, 0, { title: 'Updated' }, 10);
       expect(result.success).toBe(true);
+    });
+
+    it('should enqueue SOCIAL_FEED_POST_UPDATED notification after updating post', async () => {
+      mockQuery
+        .mockResolvedValueOnce([{ user_sys_id: 1, post_content_id: 10 }])
+        .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }])
+        .mockResolvedValueOnce([{ section_id: 2 }])
+        .mockResolvedValueOnce([{ post_type: 'normal', title: 'Updated' }]);
+
+      await service.updatePost(1, 0, { title: 'Updated' }, 10);
+
+      expect(mockBullMQService.addJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: NOTIFICATION_QUEUE,
+          job: JobType.SOCIAL_FEED_POST_UPDATED,
+          data: expect.objectContaining({
+            type: JobType.SOCIAL_FEED_POST_UPDATED,
+            actor_id: 1,
+            post_content_id: 10,
+          }),
+        }),
+      );
     });
 
     it('should throw NotFoundException if post not found by postContentId', async () => {
@@ -394,8 +450,10 @@ describe('PostService', () => {
             pic_flag_valid: true,
             pc_flag_valid: true,
           },
-        ]) // findPostOwner
-        .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }]); // update
+        ])                                                      // findPostOwner
+        .mockResolvedValueOnce([{ post_content_id: 10, title: 'Updated' }]) // update
+        .mockResolvedValueOnce([{ section_id: 1 }])            // section lookup for notification
+        .mockResolvedValueOnce([{ post_type: 'normal', title: 'Updated' }]); // postContent lookup
 
       const result = await service.updatePost(1, 1, { title: 'Updated' });
       expect(result.success).toBe(true);
