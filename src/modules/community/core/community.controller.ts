@@ -72,7 +72,13 @@ export class CommunityController {
   })
   @ApiResponse({ status: 201, description: 'Community created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(
+  FileInterceptor('image', {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+    },
+  }),
+)
   async create(
     @Headers('x-user-id') userIdHeader: string,
     @UploadedFile() file: Express.Multer.File,
