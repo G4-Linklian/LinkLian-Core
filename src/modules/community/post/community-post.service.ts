@@ -595,13 +595,12 @@ COALESCE(
         data: { posts: result },
         message: 'Search completed successfully!',
       };
-    } catch (error) {
-      this.logger.error(
-        `SEARCH POSTS ERROR: ${error?.message}`,
-        error?.stack,
-        'SearchPostCommu',
-      );
-      throw new InternalServerErrorException('Error searching posts');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(error.message, error.stack, 'GetPostCommu');
+      } else {
+        this.logger.error('Unknown error', '', 'GetPostCommu');
+      }
     }
   }
 }
