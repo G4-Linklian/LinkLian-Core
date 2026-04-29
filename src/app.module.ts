@@ -44,6 +44,9 @@ import { AccessGuard } from './common/guard/access.guard';
 import { RequestMethod } from '@nestjs/common';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { AssetsModule } from './modules/asset/asset.module';
+import { QnaModule } from './modules/qna/qna.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -100,6 +103,9 @@ import { AssetsModule } from './modules/asset/asset.module';
     BullMQModule,
     RedisModule,
     AssetsModule,
+    QnaModule,
+    DashboardModule,
+    ReportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),
@@ -123,10 +129,18 @@ export class AppModule implements NestModule {
         { path: 'institution', method: RequestMethod.ALL },
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'admin', method: RequestMethod.ALL },
+        { path: 'report/(.*)', method: RequestMethod.ALL },
+        { path: 'report', method: RequestMethod.ALL },
         { path: 'assets/(.*)', method: RequestMethod.ALL },
         { path: 'assets', method: RequestMethod.ALL },
         { path: 'file-storage/upload/institution/(.*)', method: RequestMethod.ALL },
-        { path: 'auth/(.*)', method: RequestMethod.ALL },
+        { path: 'auth/login', method: RequestMethod.ALL },
+        { path: 'auth/verify-otp', method: RequestMethod.ALL },
+        { path: 'auth/resend-otp', method: RequestMethod.ALL },
+        { path: 'auth/verify', method: RequestMethod.ALL },
+        { path: 'auth/forgot-password', method: RequestMethod.ALL },
+        { path: 'dashboard/(.*)', method: RequestMethod.ALL },
+        { path: 'dashboard', method: RequestMethod.ALL },
         { path: 'health', method: RequestMethod.ALL },
       )
       .forRoutes('*');

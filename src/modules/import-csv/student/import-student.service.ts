@@ -398,9 +398,9 @@ export class ImportStudentService {
       const mappedStatus = statusMap[rawStatus] || 'Active';
 
       const insertQuery = `
-                INSERT INTO user_sys 
-                (email, password, first_name, last_name, phone, role_id, code, edu_lev_id, inst_id, user_status, flag_valid, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+                INSERT INTO user_sys
+                (email, password, first_name, last_name, phone, role_id, code, edu_lev_id, inst_id, user_status, flag_valid, is_repassword, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
                 RETURNING user_sys_id
             `;
 
@@ -416,6 +416,7 @@ export class ImportStudentService {
         instId,
         mappedStatus,
         true,
+        false,
       ];
 
       const result = await queryRunner.manager.query(insertQuery, values);

@@ -9,8 +9,14 @@ export class AiChat {
   @PrimaryGeneratedColumn('increment')
   ai_chat_id!: number;
 
+  // @Column({ name: 'user_sys_id', type: 'int', nullable: true })
+  // user_sys_id?: number | null;
+
   @Column({ name: 'post_content_id', type: 'int' })
   post_content_id!: number;
+
+  @Column({ name: 'user_sys_id', type: 'bigint' })
+  user_sys_id!: number;
 
   @Column({ name: 'chat_title', type: 'varchar', nullable: true })
   chat_title?: string;
@@ -23,5 +29,5 @@ export class AiChat {
 
   @Column({ name: 'flag_valid', type: 'boolean', default: true })
   flag_valid!: boolean;
-  
+
 }

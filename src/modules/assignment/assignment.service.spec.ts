@@ -232,6 +232,42 @@ describe('AssignmentService', () => {
       expect(result!.data.submission.submission_id).toBe(1);
     });
 
+    it('should return student group with deleted member pattern', async () => {
+      const mockGroup = {
+        group_id: 10,
+        group_name: 'Group A',
+        members: [
+          {
+            user_sys_id: 8,
+            first_name: 'กิตติกร',
+            last_name: 'พิมเทศ',
+            profile_pic: null,
+            name: 'กิตติกร พิมเทศ',
+          },
+          {
+            user_sys_id: null,
+            first_name: '',
+            last_name: '',
+            profile_pic: null,
+            name: 'ไม่มีบัญชีผู้ใช้งาน',
+          },
+        ],
+      };
+
+      mockQuery
+        .mockResolvedValueOnce([mockPost])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([mockGroup]);
+
+      const result = await service.getPostAssignment(1, 2, 'uni student');
+      expect(result!.data.group.group_id).toBe(10);
+      expect(result!.data.group.members[1].user_sys_id).toBeNull();
+      expect(result!.data.group.members[1].name).toBe(
+        'ไม่มีบัญชีผู้ใช้งาน',
+      );
+    });
+
     it('should return null submission when student has not submitted', async () => {
       mockQuery
         .mockResolvedValueOnce([mockPost])
@@ -283,6 +319,29 @@ describe('AssignmentService', () => {
       expect(result!.data.post.attachments[0].file_url).toBe(
         'https://cdn.example.com/a.pdf',
       );
+    });
+
+    it('should return user_sys_id as null when post creator is deleted', async () => {
+      // LEFT JOIN user_sys / LEFT JOIN role → _user_sys_id อาจเป็น null เมื่อ user ถูกลบ
+      const deletedUserPost = {
+        ...mockPost,
+        _user_sys_id: null,
+        _email: null,
+        _profile_pic: null,
+        _display_name: null,
+        _role_name: null,
+        is_anonymous: false,
+      };
+
+      mockQuery
+        .mockResolvedValueOnce([deletedUserPost]) // postQuery
+        .mockResolvedValueOnce([])                // attachmentQuery
+        .mockResolvedValueOnce([]);               // groupsQuery (teacher)
+
+      const result = await service.getPostAssignment(1, 1, 'teacher');
+      expect(result).not.toBeNull();
+      expect(result!.data.post.user.user_sys_id).toBeNull();
+      expect(result!.data.post.user.email).toBeNull();
     });
 
     it('should throw InternalServerErrorException on error', async () => {
@@ -419,6 +478,34 @@ describe('AssignmentService', () => {
       const result = await service.getGroup(1, 1);
       expect(result.data).toEqual(mockGroup);
     });
+
+    it('should keep deleted members in group data', async () => {
+      const mockGroup = {
+        group_id: 1,
+        group_name: 'Group A',
+        members: [
+          {
+            user_sys_id: 8,
+            first_name: 'กิตติกร',
+            last_name: 'พิมเทศ',
+            profile_pic: null,
+            name: 'กิตติกร พิมเทศ',
+          },
+          {
+            user_sys_id: null,
+            first_name: '',
+            last_name: '',
+            profile_pic: null,
+            name: 'ไม่มีบัญชีผู้ใช้งาน',
+          },
+        ],
+      };
+      mockQuery.mockResolvedValueOnce([mockGroup]);
+      const result = await service.getGroup(8, 1);
+      expect(result.data.members).toHaveLength(2);
+      expect(result.data.members[1].user_sys_id).toBeNull();
+      expect(result.data.members[1].first_name).toBe('');
+    });
   });
 
   // ─── getAllGroups ──────────────────────────────────────────────────────────
@@ -440,6 +527,29 @@ describe('AssignmentService', () => {
       mockQuery.mockResolvedValueOnce([]);
       const result = await service.getAllGroups(1);
       expect(result.data).toHaveLength(0);
+    });
+
+    it('should include deleted members in group list', async () => {
+      const mockGroups = [
+        {
+          group_id: 1,
+          group_name: 'Group A',
+          members: [
+            {
+              user_sys_id: null,
+              code: null,
+              first_name: '',
+              last_name: '',
+              profile_pic: null,
+              name: 'ไม่มีบัญชีผู้ใช้งาน',
+            },
+          ],
+        },
+      ];
+      mockQuery.mockResolvedValueOnce(mockGroups);
+      const result = await service.getAllGroups(1);
+      expect(result.data[0].members[0].user_sys_id).toBeNull();
+      expect(result.data[0].members[0].name).toBe('ไม่มีบัญชีผู้ใช้งาน');
     });
   });
 
@@ -593,6 +703,26 @@ describe('AssignmentService', () => {
 
       const result = await service.getSubmission(1, 1);
       expect(result.data.attachments).toHaveLength(1);
+    });
+
+    it('should return deleted members in submission detail', async () => {
+      const deletedMember = {
+        user_sys_id: null,
+        first_name: '',
+        last_name: '',
+        profile_pic: null,
+        name: 'ไม่มีบัญชีผู้ใช้งาน',
+      };
+      mockQuery
+        .mockResolvedValueOnce([mockSubmissionRow])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ group_id: 10 }])
+        .mockResolvedValueOnce([deletedMember]);
+
+      const result = await service.getSubmission(1, 1);
+      expect(result.data.members[0].user_sys_id).toBeNull();
+      expect(result.data.members[0].name).toBe('ไม่มีบัญชีผู้ใช้งาน');
+      expect(result.data.members[0].first_name).toBe('');
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
@@ -834,6 +964,7 @@ describe('AssignmentService', () => {
       assignment_id: 5,
       group_id: 10,
       max_score: 100,
+      is_group: true, // group assignment — ข้าม deleted-user guard
     };
 
     it('should throw BadRequestException if neither score nor feedback provided', async () => {
@@ -920,6 +1051,399 @@ describe('AssignmentService', () => {
       await expect(
         service.gradeSubmission(1, { submission_id: 1, score: 80 }),
       ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('should throw BadRequestException when grading individual assignment with deleted user', async () => {
+      const individualRow = { ...mockSubmissionRow, is_group: false };
+      mockQuery
+        .mockResolvedValueOnce([individualRow]) // submission found
+        .mockResolvedValueOnce([{ 1: 1 }]); // deletedCheck — deleted member exists
+
+      await expect(
+        service.gradeSubmission(1, { submission_id: 1, score: 80 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should grade successfully for individual assignment when user is NOT deleted', async () => {
+      const individualRow = { ...mockSubmissionRow, is_group: false };
+      mockQuery
+        .mockResolvedValueOnce([individualRow]) // submission found
+        .mockResolvedValueOnce([]) // deletedCheck — no deleted members
+        .mockResolvedValueOnce([
+          { submission_id: 1, score: 70, feedback: null, marked_at: new Date() },
+        ]); // update result
+
+      const result = await service.gradeSubmission(1, {
+        submission_id: 1,
+        score: 70,
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.score).toBe(70);
+    });
+  });
+
+  // ─── getGroup (deleted-user pattern) ─────────────────────────────────────
+
+  describe('getGroup — deleted user handling', () => {
+    it('should include is_deleted=true member when user_sys_id is null', async () => {
+      const mockGroup = {
+        group_id: 1,
+        group_name: 'Group A',
+        members: [
+          {
+            user_sys_id: 8,
+            first_name: 'กิตติกร',
+            last_name: 'พิมเทศ',
+            profile_pic: null,
+            name: 'กิตติกร พิมเทศ',
+            is_deleted: false,
+          },
+          {
+            user_sys_id: 99,
+            first_name: null,
+            last_name: null,
+            profile_pic: null,
+            name: 'ไม่มีบัญชีผู้ใช้งาน',
+            is_deleted: true,
+          },
+        ],
+      };
+      mockQuery.mockResolvedValueOnce([mockGroup]);
+
+      const result = await service.getGroup(8, 1);
+      expect(result.success).toBe(true);
+      const deleted = result.data.members.find((m: any) => m.is_deleted);
+      expect(deleted).toBeDefined();
+      expect(deleted.name).toBe('ไม่มีบัญชีผู้ใช้งาน');
+    });
+
+    it('should still return group even if all members are deleted', async () => {
+      const mockGroup = {
+        group_id: 2,
+        group_name: 'Ghost Group',
+        members: [
+          { user_sys_id: 42, name: 'ไม่มีบัญชีผู้ใช้งาน', is_deleted: true, profile_pic: null },
+        ],
+      };
+      mockQuery.mockResolvedValueOnce([mockGroup]);
+
+      const result = await service.getGroup(42, 1);
+      expect(result.success).toBe(true);
+      expect(result.data.members).toHaveLength(1);
+    });
+  });
+
+  // ─── getAllGroups (deleted-user pattern) ──────────────────────────────────
+
+  describe('getAllGroups — deleted user handling', () => {
+    it('should include is_deleted flag in member objects', async () => {
+      const mockGroups = [
+        {
+          group_id: 1,
+          group_name: 'G1',
+          members: [
+            { user_sys_id: 8, name: 'กิตติกร พิมเทศ', is_deleted: false, profile_pic: null },
+            { user_sys_id: 55, name: 'ไม่มีบัญชีผู้ใช้งาน', is_deleted: true, profile_pic: null },
+          ],
+        },
+      ];
+      mockQuery.mockResolvedValueOnce(mockGroups);
+
+      const result = await service.getAllGroups(1);
+      expect(result.success).toBe(true);
+      const group = result.data[0];
+      expect(group.members.some((m: any) => m.is_deleted)).toBe(true);
+      expect(group.members.find((m: any) => m.is_deleted).name).toBe(
+        'ไม่มีบัญชีผู้ใช้งาน',
+      );
+    });
+  });
+
+  // ─── updateGroup (existing deleted members allowed) ───────────────────────
+
+  describe('updateGroup — deleted member handling', () => {
+    it('should allow keeping existing deleted member without validation error', async () => {
+      // member_ids: [1, 2] — member 2 ถูกลบไปแล้วแต่ยังอยู่ใน group เดิม
+      const dto = {
+        assignment_id: 1,
+        group_id: 10,
+        group_name: 'Updated Group',
+        member_ids: [1, 2],
+      };
+
+      mockTransaction.mockImplementationOnce(async (cb) => {
+        const manager = {
+          query: jest
+            .fn()
+            .mockResolvedValueOnce([{ group_id: 10 }]) // group exists
+            .mockResolvedValueOnce([{ user_sys_id: 1 }, { user_sys_id: 2 }]) // currentGroupMembers — both already in group
+            // no validation query since newMemberIds is empty
+            .mockResolvedValueOnce([]) // update group name
+            .mockResolvedValueOnce([]) // delete old members
+            .mockResolvedValueOnce([]), // insert new members
+        };
+        return cb(manager);
+      });
+
+      const result = await service.updateGroup(1, dto);
+      expect(result.success).toBe(true);
+      expect(result.data.group_name).toBe('Updated Group');
+    });
+
+    it('should validate only newly added members, not existing ones', async () => {
+      // member_ids: [1, 2, 3] — member 3 is new and valid
+      const dto = {
+        assignment_id: 1,
+        group_id: 10,
+        group_name: 'Updated Group',
+        member_ids: [1, 2, 3],
+      };
+
+      mockTransaction.mockImplementationOnce(async (cb) => {
+        const manager = {
+          query: jest
+            .fn()
+            .mockResolvedValueOnce([{ group_id: 10 }]) // group exists
+            .mockResolvedValueOnce([{ user_sys_id: 1 }, { user_sys_id: 2 }]) // currentGroupMembers
+            .mockResolvedValueOnce([{ user_sys_id: 3 }]) // validNewMembers — member 3 is active
+            .mockResolvedValueOnce([]) // update group name
+            .mockResolvedValueOnce([]) // delete old members
+            .mockResolvedValueOnce([]), // insert new members
+        };
+        return cb(manager);
+      });
+
+      const result = await service.updateGroup(1, dto);
+      expect(result.success).toBe(true);
+      expect(result.data.members).toHaveLength(3);
+    });
+
+    it('should throw BadRequestException when new member is inactive or not enrolled', async () => {
+      const dto = {
+        assignment_id: 1,
+        group_id: 10,
+        group_name: 'Updated Group',
+        member_ids: [1, 99], // 99 is new but inactive/not enrolled
+      };
+
+      mockTransaction.mockImplementationOnce(async (cb) => {
+        const manager = {
+          query: jest
+            .fn()
+            .mockResolvedValueOnce([{ group_id: 10 }]) // group exists
+            .mockResolvedValueOnce([{ user_sys_id: 1 }]) // currentGroupMembers — only 1 exists
+            .mockResolvedValueOnce([]), // validNewMembers — 99 is invalid (empty result)
+        };
+        return cb(manager);
+      });
+
+      await expect(service.updateGroup(1, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  // ─── getStudentsSubmissionStatus ──────────────────────────────────────────
+
+  describe('getStudentsSubmissionStatus', () => {
+    const mockAssignmentRow = [{ assignment_id: 1, section_id: 2 }];
+
+    it('should return success=false if assignment not found', async () => {
+      mockQuery.mockResolvedValueOnce([]); // assignment not found
+
+      const result = await service.getStudentsSubmissionStatus(999);
+      expect(result.success).toBe(false);
+    });
+
+    it('should return students with submission status', async () => {
+      const studentRow = {
+        user_sys_id: 8,
+        first_name: 'กิตติกร',
+        last_name: 'พิมเทศ',
+        profile_pic: null,
+        code: '202600',
+        is_deleted: false,
+        submission_id: 1,
+        submitted_at: new Date(),
+        score: null,
+        feedback: null,
+        marked_at: null,
+        group_id: 10,
+        group_name: 'individual_student_8',
+        submission_status: 'submitted',
+      };
+
+      mockQuery
+        .mockResolvedValueOnce(mockAssignmentRow)
+        .mockResolvedValueOnce([studentRow]);
+
+      const result = await service.getStudentsSubmissionStatus(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].user_sys_id).toBe(8);
+      expect(result.data[0].submission_status).toBe('submitted');
+      expect(result.data[0].first_name).toBe('กิตติกร');
+      expect(result.data[0].last_name).toBe('พิมเทศ');
+    });
+
+    it('should show deleted pattern when user_sys_id is null (user removed)', async () => {
+      const deletedRow = {
+        user_sys_id: null,
+        first_name: '',
+        last_name: '',
+        profile_pic: null,
+        code: null,
+        submission_id: 12,
+        submitted_at: new Date(),
+        score: null,
+        feedback: null,
+        marked_at: null,
+        group_id: 10,
+        group_name: 'Group Deleted',
+        submission_status: 'submitted',
+      };
+
+      mockQuery
+        .mockResolvedValueOnce(mockAssignmentRow)
+        .mockResolvedValueOnce([deletedRow]);
+
+      const result = await service.getStudentsSubmissionStatus(1);
+      expect(result.data[0].user_sys_id).toBeNull();
+      expect(result.data[0].first_name).toBe('');
+      expect(result.data[0].last_name).toBe('');
+      expect(result.data[0].profile_pic).toBeNull();
+      expect(result.data[0].submission_status).toBe('submitted');
+      expect(result.data[0].group_name).toBe('Group Deleted');
+    });
+
+    it('should not include Inactive users (Inactive filtered at SQL level)', async () => {
+      // ยืนยัน query ไม่มีเงื่อนไข user_status = Active ที่เปิดให้ Inactive ผ่าน
+      // ตรวจ query string ว่า filter ถูก
+      mockQuery
+        .mockResolvedValueOnce(mockAssignmentRow)
+        .mockResolvedValueOnce([]);
+
+      await service.getStudentsSubmissionStatus(1);
+
+      const studentQuery: string = mockQuery.mock.calls[1][0];
+      // ต้องมี filter ที่กัน Inactive: LEFT JOIN + OR condition
+      expect(studentQuery).toContain('user_status');
+    });
+
+    it('should return empty data array when no students', async () => {
+      mockQuery
+        .mockResolvedValueOnce(mockAssignmentRow)
+        .mockResolvedValueOnce([]);
+
+      const result = await service.getStudentsSubmissionStatus(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(0);
+    });
+
+    it('should throw InternalServerErrorException on DB error', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('DB error'));
+      await expect(service.getStudentsSubmissionStatus(1)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+  });
+
+  // ─── getSubmissionDetailForTeacher ────────────────────────────────────────
+
+  describe('getSubmissionDetailForTeacher', () => {
+    const mockSubmission = {
+      submission_id: 1,
+      assignment_id: 5,
+      submitted_at: new Date(),
+      score: null,
+      feedback: null,
+      marked_at: null,
+      group_id: 10,
+      group_name: 'Group A',
+      max_score: 100,
+      due_date: new Date(),
+      is_group: true,
+    };
+
+    it('should return success=false if submission not found', async () => {
+      mockQuery.mockResolvedValueOnce([]);
+      const result = await service.getSubmissionDetailForTeacher(999);
+      expect(result.success).toBe(false);
+    });
+
+    it('should return submission detail with can_grade=true for group assignment', async () => {
+      const members = [
+        { user_sys_id: 8, first_name: 'กิตติกร', last_name: 'พิมเทศ', profile_pic: null, display_name: 'กิตติกร พิมเทศ', is_deleted: false },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([mockSubmission]) // submission
+        .mockResolvedValueOnce([]) // attachments
+        .mockResolvedValueOnce(members); // members
+
+      const result = await service.getSubmissionDetailForTeacher(1);
+      expect(result.success).toBe(true);
+      expect(result.data!.can_grade).toBe(true);
+      expect(result.data!.grade_disabled_reason).toBeNull();
+      expect(result.data!.members).toHaveLength(1);
+    });
+
+    it('should return can_grade=false for individual assignment with deleted user', async () => {
+      const individualSubmission = { ...mockSubmission, is_group: false };
+      const members = [
+        { user_sys_id: 42, first_name: null, last_name: null, profile_pic: null, display_name: 'ไม่มีบัญชีผู้ใช้งาน', is_deleted: true },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([individualSubmission])
+        .mockResolvedValueOnce([]) // attachments
+        .mockResolvedValueOnce(members); // deleted member
+
+      const result = await service.getSubmissionDetailForTeacher(1);
+      expect(result.data!.can_grade).toBe(false);
+      expect(result.data!.grade_disabled_reason).toBe(
+        'ไม่มีบัญชีผู้ใช้งาน ไม่สามารถให้คะแนนและข้อแนะนำได้',
+      );
+    });
+
+    it('should return can_grade=true for group assignment even if one member is deleted', async () => {
+      // งานกลุ่ม: ถึงแม้มี deleted member ก็ยังให้คะแนนได้
+      const members = [
+        { user_sys_id: 8, display_name: 'กิตติกร พิมเทศ', is_deleted: false, profile_pic: null },
+        { user_sys_id: 99, display_name: 'ไม่มีบัญชีผู้ใช้งาน', is_deleted: true, profile_pic: null },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([mockSubmission]) // is_group: true
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(members);
+
+      const result = await service.getSubmissionDetailForTeacher(1);
+      expect(result.data!.can_grade).toBe(true);
+    });
+
+    it('should include attachments in response', async () => {
+      const mockAttachments = [
+        { attachment_id: 1, file_url: 'f.pdf', original_name: 'f.pdf', file_type: 'pdf' },
+      ];
+      const members = [
+        { user_sys_id: 8, display_name: 'กิตติกร', is_deleted: false, profile_pic: null },
+      ];
+
+      mockQuery
+        .mockResolvedValueOnce([mockSubmission])
+        .mockResolvedValueOnce(mockAttachments)
+        .mockResolvedValueOnce(members);
+
+      const result = await service.getSubmissionDetailForTeacher(1);
+      expect(result.data!.attachments).toHaveLength(1);
+    });
+
+    it('should throw InternalServerErrorException on DB error', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('DB error'));
+      await expect(service.getSubmissionDetailForTeacher(1)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });

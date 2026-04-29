@@ -667,25 +667,44 @@ describe('UsersService', () => {
       await expect(service.delete(999)).rejects.toThrow(NotFoundException);
     });
 
-    it('should delete user and return data without password', async () => {
-      mockUserSysRepo.findOne.mockResolvedValue(mockUserSys());
-      mockUserSysRepo.delete.mockResolvedValue({ affected: 1 });
+    it('should delete student relations and user then return data without password', async () => {
+      mockUserSysRepo.findOne.mockResolvedValue(mockUserSys({ role_id: 2 }));
+      mockDataSource.query.mockResolvedValueOnce([]);
 
       const result = await service.delete(1);
 
       expect(result.success).toBe(true);
       expect(result.data).not.toHaveProperty('password');
       expect(result.message).toBeDefined();
-      expect(mockUserSysRepo.delete).toHaveBeenCalledWith({ user_sys_id: 1 });
+      expect(mockDataSource.query).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('DELETE FROM user_sys'),
+        [1],
+      );
+    });
+
+    it('should delete teacher user from user_sys only', async () => {
+      mockUserSysRepo.findOne.mockResolvedValue(mockUserSys({ role_id: 4 }));
+      mockDataSource.query.mockResolvedValueOnce([]);
+
+      const result = await service.delete(1);
+
+      expect(result.success).toBe(true);
+      expect(mockDataSource.query).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('DELETE FROM user_sys'),
+        [1],
+      );
     });
 
     it('should throw InternalServerErrorException on delete error', async () => {
-      mockUserSysRepo.findOne.mockResolvedValue(mockUserSys());
-      mockUserSysRepo.delete.mockRejectedValue(new Error('DB error'));
+      mockUserSysRepo.findOne.mockResolvedValue(mockUserSys({ role_id: 2 }));
+      mockDataSource.query.mockRejectedValue(new Error('DB error'));
 
       await expect(service.delete(1)).rejects.toThrow(
         InternalServerErrorException,
       );
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 });

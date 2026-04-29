@@ -23,6 +23,7 @@ const mockQb = {
   orderBy: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   offset: jest.fn().mockReturnThis(),
+  leftJoin: jest.fn().mockReturnThis(),
   getRawMany: jest.fn(),
 };
 
@@ -49,9 +50,12 @@ const mockChatRepo = {
 
 const mockMessageRepo = {
   createQueryBuilder: jest.fn(),
+  count: jest.fn(),
 };
 
-const mockUserSysChatNormalizeRepo = {};
+const mockUserSysChatNormalizeRepo = {
+  findOne: jest.fn(),
+};
 
 const mockDataSource = {
   query: jest.fn(),
@@ -133,17 +137,23 @@ describe('ChatService', () => {
   // ─── searchChat ────────────────────────────────────────────────────────────
 
   describe('searchChat', () => {
+
     it('should throw BadRequestException when no input provided', async () => {
       await expect(service.searchChat({})).rejects.toThrow(BadRequestException);
     });
 
     it('should return chats filtered by chat_id', async () => {
+      // mockDataSource.query returns only chat_id and is_ai_chat fields
       const mockChats = [{ chat_id: 1, is_ai_chat: false }];
       mockDataSource.query.mockResolvedValueOnce(mockChats);
 
-      const result = await service.searchChat({ chat_id: 1 });
+      const result = await service.searchChat({ chat_id: 1, user_sys_id: 1 });
 
-      expect(result).toEqual({ success: true, data: mockChats });
+      expect(result.success).toBe(true);
+      expect(result.data[0]).toMatchObject({
+        chat_id: 1,
+        is_ai_chat: false,
+      });
       const [calledQuery, calledValues] = mockDataSource.query.mock.calls[0];
       expect(calledQuery).toContain('c.chat_id');
       expect(calledValues).toContain(1);
@@ -271,7 +281,7 @@ describe('ChatService', () => {
 
       const result = await service.searchMessages({ chat_id: 5 });
 
-      expect(result).toEqual({ success: true, data: mockMessages });
+      expect(result).toEqual({ success: true, data: mockMessages, unread_count: 0 });
       expect(mockQb.andWhere).toHaveBeenCalledWith('m.chat_id = :chatId', { chatId: 5 });
     });
 
@@ -280,9 +290,10 @@ describe('ChatService', () => {
 
       await service.searchMessages({ sender_id: 3 });
 
-      expect(mockQb.andWhere).toHaveBeenCalledWith('m.sender_id = :senderId', {
-        senderId: 3,
-      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(m.sender_id = :senderId OR m.sender_id IS NULL)',
+        { senderId: 3 },
+      );
     });
 
     it('should apply ILIKE filter for content search', async () => {
@@ -350,6 +361,8 @@ describe('ChatService', () => {
     });
 
     it('should save message, update chat, and publish to RabbitMQ', async () => {
+      // mock ensureActiveUser ให้ return array เสมอ
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
       mockRabbitMQService.publish.mockResolvedValueOnce(undefined);
@@ -370,6 +383,7 @@ describe('ChatService', () => {
     });
 
     it('should still commit when RabbitMQ publish fails (degraded gracefully)', async () => {
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockResolvedValueOnce(mockSavedMsg);
       mockQueryRunner.manager.update.mockResolvedValueOnce({});
       mockRabbitMQService.publish.mockRejectedValueOnce(new Error('RabbitMQ down'));
@@ -381,6 +395,7 @@ describe('ChatService', () => {
     });
 
     it('should rollback and throw InternalServerErrorException on DB error', async () => {
+      mockDataSource.query.mockResolvedValueOnce([{}]);
       mockQueryRunner.manager.save.mockRejectedValueOnce(new Error('DB error'));
 
       await expect(service.createMessage(dto)).rejects.toThrow(

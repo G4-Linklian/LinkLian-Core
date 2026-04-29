@@ -55,6 +55,9 @@ export class UserSys {
   @Column({ name: 'flag_valid', default: true })
   flag_valid?: boolean;
 
+  @Column({ name: 'is_repassword', default: false })
+  is_repassword?: boolean;
+
   @Column({
     name: 'created_at',
     type: 'timestamp',

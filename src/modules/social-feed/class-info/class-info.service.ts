@@ -22,7 +22,8 @@ export class ClassInfoService {
         u.user_sys_id,
         CONCAT(u.first_name, ' ', u.last_name) as display_name,
         u.email,
-        u.profile_pic
+        u.profile_pic,
+        u.code as educator_code
       FROM section_educator se
       JOIN user_sys u ON se.educator_id = u.user_sys_id
       WHERE se.section_id = $1
@@ -107,17 +108,20 @@ export class ClassInfoService {
       ]);
 
       // 3. Get members (enrolled students)
+      // กรอง student_id IS NOT NULL เพื่อไม่แสดง user ที่ถูกลบออกไปแล้ว
+      // (ใช้สำหรับ group creation และ class info ทั่วไป)
       const membersQuery = `
-        SELECT 
+        SELECT
           e.student_id,
           u.user_sys_id,
           u.code as student_code,
           CONCAT(u.first_name, ' ', u.last_name) as display_name,
           u.profile_pic
         FROM enrollment e
-        JOIN user_sys u ON e.student_id = u.user_sys_id
+        JOIN user_sys u ON e.student_id = u.user_sys_id AND u.flag_valid = true AND u.user_status = 'Active'
         WHERE e.section_id = $1
           AND e.flag_valid = true
+          AND e.student_id IS NOT NULL
         ORDER BY u.first_name ASC
       `;
       const members = await this.dataSource.query(membersQuery, [sectionId]);
@@ -130,7 +134,8 @@ export class ClassInfoService {
           u.user_sys_id,
           CONCAT(u.first_name, ' ', u.last_name) as display_name,
           u.profile_pic,
-          (se.position = 'main_teacher') as is_main_teacher
+          (se.position = 'main_teacher') as is_main_teacher,
+          u.code as educator_code
         FROM section_educator se
         JOIN user_sys u ON se.educator_id = u.user_sys_id
         WHERE se.section_id = $1
