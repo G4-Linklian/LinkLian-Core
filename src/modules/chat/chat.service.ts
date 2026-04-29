@@ -406,9 +406,11 @@ export class ChatService {
    */
   //async createMessage(dto: CreateMessageDto) {
   async createMessage(dto: CreateMessageDto, files?: Express.Multer.File[],) {
-    if (!dto.chat_id || !dto.sender_id || !dto.content) {
+    if (!dto.chat_id || !dto.sender_id || !dto.receiver_id || !dto.content) {
       throw new BadRequestException('Missing required fields!');
     }
+
+    this.logger.debug('Creating message with DTO:', 'CreateMessage', dto);
 
     await this.ensureActiveUser(dto.sender_id);
 
@@ -470,7 +472,7 @@ export class ChatService {
       // Must succeed before committing — failure will trigger rollback
       ///await this.sendMessageToRabbitMQ(savedMessage);
       try {
-        await this.sendMessageToRabbitMQ(savedMessage);
+        await this.sendMessageToRabbitMQ(savedMessage, dto.receiver_id);
       } catch (error) {
         this.logger.error(
           'RabbitMQ failed but message saved',
@@ -588,12 +590,16 @@ export class ChatService {
   /**
    * Send message event to RabbitMQ for socket delivery
    */
-  private async sendMessageToRabbitMQ(message: Message): Promise<void> {
+  private async sendMessageToRabbitMQ(
+    message: Message,
+    receiverId: number,
+  ): Promise<void> {
     const eventMessage: ChatSendEvent = {
       type: 'CHAT_DELIVER',
       payload: {
         chat_id: message.chat_id,
         sender_id: message.sender_id,
+        receiver_id: receiverId,
         content: message.content,
         reply_id: message.reply_id ?? null,
         file_url: (message.file as object[]) ?? [],

@@ -167,6 +167,11 @@ export class CreateMessageDto {
   @IsInt()
   sender_id!: number;
 
+  @ApiProperty({ description: 'Receiver ID', example: 2 })
+  @Type(() => Number)
+  @IsInt()
+  receiver_id!: number;
+
   @ApiProperty({
     description: 'Message content',
     example: 'Hello',
@@ -185,6 +190,7 @@ export interface ChatSendEvent {
   payload: {
     chat_id: number;
     sender_id: number;
+    receiver_id: number;
     content: string;
     reply_id: number | null;
     file_url: object[] | null;
