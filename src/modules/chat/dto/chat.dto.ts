@@ -198,6 +198,18 @@ export interface ChatSendEvent {
   };
 }
 
+export interface ChatNotiEvent {
+  type: string;
+  payload: {
+    ref_id: string;
+    sender_id: string;
+    body: string;
+    title: string;
+    target_user_sys_ids: string[];
+    created_at: Date;
+  };
+}
+
 export class SearchUserForChatDto {
   @ApiProperty({ example: 8 })
   @Type(() => Number)
