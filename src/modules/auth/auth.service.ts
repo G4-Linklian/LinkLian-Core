@@ -497,7 +497,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
 
   async resetPassword(userId: number, dto: ResetPasswordDto) {
-    const { new_password, confirm_password } = dto;
+    const { old_password, new_password, confirm_password } = dto;
 
     if (new_password !== confirm_password) {
       throw new BadRequestException(
@@ -517,6 +517,11 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    const isOldPasswordValid = await verifyPassword(old_password, String(user.password));
+    if (!isOldPasswordValid) {
+      throw new UnauthorizedException('Old password is incorrect');
     }
 
     // Hash new password

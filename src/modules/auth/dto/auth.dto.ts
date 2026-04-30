@@ -15,7 +15,7 @@ export class LoginDto {
   })
   @IsString()
   @IsNotEmpty()
-  username: string;
+  username!: string;
 
   @ApiProperty({
     description: 'Password',
@@ -23,7 +23,7 @@ export class LoginDto {
   })
   @IsString()
   @IsNotEmpty()
-  password: string;
+  password!: string;
 
   @ApiProperty({
     description: 'User group (student/teacher)',
@@ -52,7 +52,7 @@ export class VerifyTokenDto {
   })
   @IsString()
   @IsNotEmpty()
-  token: string;
+  token!: string;
 }
 
 export class VerifyOTPDto {
@@ -62,7 +62,7 @@ export class VerifyOTPDto {
   })
   @IsString()
   @IsNotEmpty()
-  otp: string;
+  otp!: string;
 
   @ApiProperty({
     description: 'OTP Session ID',
@@ -70,7 +70,7 @@ export class VerifyOTPDto {
   })
   @IsString()
   @IsNotEmpty()
-  otp_session_id: string;
+  otp_session_id!: string;
 
   @ApiProperty({
     description: 'Remember me',
@@ -89,26 +89,31 @@ export class ResendOTPDto {
   })
   @IsString()
   @IsNotEmpty()
-  otp_session_id: string;
+  otp_session_id!: string;
 }
 
 export class ResetPasswordDto {
+  @ApiProperty({ description: 'Old Password' })
+  @IsString()
+  @IsNotEmpty()
+  old_password!: string;
+
   @ApiProperty({ description: 'New Password' })
   @IsString()
   @IsNotEmpty()
-  new_password: string;
+  new_password!: string;
 
   @ApiProperty({ description: 'Confirm New Password' })
   @IsString()
   @IsNotEmpty()
-  confirm_password: string;
+  confirm_password!: string;
 }
 
 export class ForgotPasswordDto {
   @ApiProperty({ description: 'Email' })
   @IsString()
   @IsNotEmpty()
-  email: string;
+  email!: string;
 }
 
 export class RegisterDto {
@@ -116,17 +121,17 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ description: 'First Name' })
   @IsString()
   @IsNotEmpty()
-  first_name: string;
+  first_name!: string;
 
   @ApiProperty({ description: 'Last Name' })
   @IsString()
   @IsNotEmpty()
-  last_name: string;
+  last_name!: string;
 
   @ApiProperty({ description: 'Middle Name (optional)' })
   @IsString()
@@ -141,17 +146,17 @@ export class RegisterDto {
   @ApiProperty({ description: 'Role ID' })
   @IsNumber()
   @IsNotEmpty()
-  role_id: number;
+  role_id!: number;
 
   @ApiProperty({ description: 'User Code' })
   @IsString()
   @IsNotEmpty()
-  code: string;
+  code!: string;
 
   @ApiProperty({ description: 'Institution ID' })
   @IsNumber()
   @IsNotEmpty()
-  inst_id: number;
+  inst_id!: number;
 
   @ApiProperty({ description: 'Education Level ID (optional)' })
   @IsNumber()
