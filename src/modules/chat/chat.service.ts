@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource} from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { UserSysChatNormalize } from './entities/user-sys-chat-normalize.entity';
@@ -21,6 +21,7 @@ import {
 import { AppLogger } from 'src/common/logger/app-logger.service';
 import { RabbitMQService } from 'src/common/rabbitmq/rabbitmq.service';
 import { FileStorageService } from 'src/modules/file-storage/file-storage.service';
+import { RabbitNotiService } from 'src/modules/notification/common/rabbitNoti';
 
 @Injectable()
 export class ChatService {
@@ -35,6 +36,7 @@ export class ChatService {
     private readonly logger: AppLogger,
     private readonly rabbitMQService: RabbitMQService,
     private readonly fileStorageService: FileStorageService,
+    private readonly rabbitNotiService: RabbitNotiService,
   ) { }
 
   /**
@@ -473,6 +475,13 @@ export class ChatService {
       ///await this.sendMessageToRabbitMQ(savedMessage);
       try {
         await this.sendMessageToRabbitMQ(savedMessage, dto.receiver_id);
+        await this.rabbitNotiService.sendChatNotification({
+          refId: String(savedMessage.chat_id),
+          senderId: String(savedMessage.sender_id),
+          body: savedMessage.content,
+          targetUserSysIds: [String(dto.receiver_id)],
+          createdAt: savedMessage.created_at,
+        });
       } catch (error) {
         this.logger.error(
           'RabbitMQ failed but message saved',
@@ -617,4 +626,5 @@ export class ChatService {
 
     this.logger.debug('Message published to RabbitMQ successfully', 'ChatService');
   }
+
 }
